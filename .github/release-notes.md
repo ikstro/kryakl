@@ -1,20 +1,18 @@
-## What's new in 0.16.0
+## What's new in 0.17.0
 
-**A window by task.** The sidebar is now eleven places: Translate, English, Voice typing, Recordings and meetings, Keyboard layout and a few more. Every line says what it does: Listen is now called Translate and read aloud. Listen and Screen live in Translate, Talk and Check in English. Home sums up Kryakl's state, your downloads and your keys.
+**Screenshots (new).** Give it a key, Print Screen if you like, and the screen freezes. Draw right on it: a frame, an oval, an arrow, a line, a pencil, a marker, a label, a number, a blur or pixels. Each tool has one letter, and the one you used last is in hand next time. Ctrl+C copies the picture with your drawings, Text reads its words to copy or translate, Save writes a PNG. A blur replaces what was under it, so it cannot be read back. Kryakl asks once before it takes Print Screen, and never changes Windows' own setting.
 
-**All actions on one key (new).** Set one key, and Kryakl's menu opens by the text cursor. Press a letter to pick an action, in any layout. Each action keeps its own key too.
+**Screen recording (new).** The same frame has a Video switch. Record a window, a monitor or a piece of the screen, with your microphone, the system's sound or both, into an MP4 in Videos\Kryakl. Nothing to download. Pick the microphone by the arrow beside it. After Stop, a strip gives Open, Folder, Delete and Copy.
 
-**Ctrl+C twice is a key like any other.** Put it on any action that works on a selection. A new install has no key on it. If you used it to listen, it moves to Translate and read aloud by itself, unless that action already had a key of its own: then set it again.
+**Clicks and zoom in a video (new, off by default).** Rings show your clicks, and the video moves in where you click or press a key of your own, following the pointer. Both go straight into the file.
 
-**Any key can be recorded.** Key fields now read the keyboard itself, so Ctrl+Esc, Shift+Caps Lock and Alt work.
+**Panels inside a window.** In programs with real panels, such as Total Commander, the frame lights one panel and a click takes it; the wheel goes wider. Programs drawn by a web engine (VS Code, Chrome) have none, so a click takes the window.
 
-**Text editing for voice typing (new, off by default).** Your local model puts a dictated phrase right before it is typed: Clean up, Business tone, Task for an AI, List, or My own instruction. Turn it on in Voice typing › Text editing. It uses the same model as Check my English. With no model, a busy graphics card, a slow answer or an answer that looks wrong, the phrase is typed as you said it, and the panel says why.
+**Text from the screen.** Ctrl+Alt+S and Ctrl+Alt+T now open Kryakl's own frame. Over a full-screen game they still open Windows' snipping tool.
 
-**The dictation panel.** Drag it by any part. The chevron folds it into the tray for this phrase, and the recording goes on. A setting in Voice typing turns the panel off; errors still show.
+**Smaller things.** The layout switch now asks the field you type in as well as the window.
 
-**The right language.** A phrase in your own language could come out in English when it started with a breath or a short word. Kryakl now decides from a whole piece of speech, and a close call goes to your own language. So a short English phrase with a strong accent may come out in your language.
-
-**Smaller things.** Kryakl's own lists replace Windows' dropdowns. Lists are more compact. The Chrome extension's steps now include the microphone. Talks from Krya that stayed in the old folder move over at the first start.
+Screenshots and recording are new, and not every setup has been tried yet: several monitors with different scaling, sleep, a full disk. If something breaks, use Report a problem in Kryakl.
 
 ## Install and update
 
