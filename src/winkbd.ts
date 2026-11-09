@@ -174,8 +174,38 @@ export function capsLockOf(front: Foreground): boolean {
   }
 }
 
-/** Asks a window to type in another layout, as Windows' own switch does. */
+/** The window with the keyboard among a thread's: a field inside a program's window, or the window itself; undefined when Windows does not say. */
+function focusOf(tid: number): bigint | undefined {
+  const info: Record<string, unknown> = { cbSize: koffi.sizeof(GUITHREADINFO) }
+  if (!GetGUIThreadInfo(tid, info)) return undefined
+  const hwnd = BigInt(info.hwndFocus as number | bigint)
+  return hwnd === 0n ? undefined : hwnd
+}
+
+/** The thread of the field with the keyboard, the one whose layout is typed in; a window's thread is not always it. */
+export function typingThread(tid: number): number {
+  const focus = focusOf(tid)
+  return focus === undefined ? tid : (GetWindowThreadProcessId(focus, [0]) as number) || tid
+}
+
+/** The kind of window the field with the keyboard is ("Edit"); empty when Windows does not say, as for a console window. */
+export function focusClass(tid: number): string {
+  const focus = focusOf(tid)
+  if (focus === undefined) return ''
+  const name = Buffer.alloc(512)
+  const length = GetClassNameW(focus, name, 256) as number
+  return name.toString('utf16le', 0, length * 2)
+}
+
+/**
+ * Asks a window to type in another layout. Windows' own switch asks the field
+ * with the keyboard; a request made of the field's window is passed on by most
+ * programs and lost by some, so both are asked, at once, as a layout asked for
+ * twice changes nothing the second time.
+ */
 export function switchLayout(hwnd: bigint, hkl: bigint): void {
+  const focus = focusOf(GetWindowThreadProcessId(hwnd, [0]) as number)
+  if (focus !== undefined && focus !== hwnd) PostMessageW(focus, WM_INPUTLANGCHANGEREQUEST, 0, hkl)
   PostMessageW(hwnd, WM_INPUTLANGCHANGEREQUEST, 0, hkl)
 }
 

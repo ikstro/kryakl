@@ -14,7 +14,7 @@ import koffi from 'koffi'
 
 import { lexiconOf, type KeyTable, type Lexicon } from './layoutfix'
 import { MASK_KEYS, Typist, type KbdConfig, type KbdIn, type KbdOut } from './typist'
-import { capsLockOf, caretOf, elevated, exeOf, foreground, fullScreenNow, installedLayouts, layoutId, layoutOf, layoutTable, MAIN_KEYS, OWN_KEYS, press, REPLAY_KEYS, switchLayout } from './winkbd'
+import { capsLockOf, caretOf, elevated, exeOf, focusClass, foreground, fullScreenNow, installedLayouts, layoutId, layoutOf, layoutTable, MAIN_KEYS, OWN_KEYS, press, REPLAY_KEYS, switchLayout, typingThread } from './winkbd'
 
 const port = (workerData as { port: MessagePort }).port
 const send = (message: KbdOut) => port.postMessage(message)
@@ -107,7 +107,8 @@ const typist = new Typist(
   {
     now: () => Date.now(),
     foreground,
-    layoutOf: thread => layoutId(layoutOf(thread)),
+    layoutOf: thread => layoutId(layoutOf(typingThread(thread))),
+    focusClass,
     layout,
     installed: () => {
       readLayouts()

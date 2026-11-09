@@ -54,6 +54,9 @@ class Desk {
   caps = false
   /** How many more times Windows names the layout the window had before its last switch (it answers late). */
   late = 0
+  /** The window takes no layout switch; the kind of field that has the keyboard, empty when Windows does not say. */
+  refuses = false
+  field = 'Edit'
   private before = 'en'
   sent: KbdOut[] = []
   /** The field typed in is a password; a program fills the screen. */
@@ -84,13 +87,14 @@ class Desk {
           }
           return this.layout
         },
+        focusClass: () => this.field,
         layout: id => (TABLES[id] ? { lang: id, table: TABLES[id] } : undefined),
         installed: () => ['en', 'ru', 'uk'],
         exeOf: () => this.exe,
         elevated: () => false,
         ownExe: 'kryakl.exe',
         switchLayout: (_hwnd, id) => {
-          this.layout = id
+          if (!this.refuses) this.layout = id
         },
         press: keys => this.pressed(keys),
         later: () => {
@@ -785,6 +789,54 @@ describe('the switch key', () => {
     expect(desk.layout).toBe('ru')
     desk.tap(VK_LCONTROL)
     expect(desk.layout).toBe('en')
+  })
+
+  test('a switch the window never took is said once, and the next press starts from the layout it really has', () => {
+    const desk = new Desk({ keys: { switch: 'Pause' } })
+    const missed = () => desk.sent.filter(m => m.type === 'switchMissed')
+    desk.refuses = true
+    desk.tap(VK_PAUSE)
+    desk.tick(150)
+    expect(missed()).toEqual([])
+    desk.tick(400)
+    expect(missed()).toEqual([{ type: 'switchMissed', exe: 'notepad.exe', field: 'Edit' }])
+    desk.tap(VK_PAUSE)
+    desk.tick(600)
+    expect(missed()).toHaveLength(1)
+    desk.refuses = false
+    desk.tap(VK_PAUSE)
+    expect(desk.layout).toBe('ru')
+  })
+
+  test('a window that names its new layout late did take the switch', () => {
+    const desk = new Desk({ keys: { switch: 'Pause' } })
+    desk.tap(VK_PAUSE)
+    desk.late = 2
+    desk.tick(150)
+    desk.tick(150)
+    desk.tick(150)
+    desk.tick(400)
+    expect(desk.sent.filter(m => m.type === 'switchMissed')).toEqual([])
+  })
+
+  test('nothing is concluded where the field is not named, as in a console, or once another window is in front', () => {
+    const consoleWindow = new Desk({ keys: { switch: 'Pause' } })
+    consoleWindow.refuses = true
+    consoleWindow.field = ''
+    consoleWindow.tap(VK_PAUSE)
+    consoleWindow.tick(600)
+    expect(consoleWindow.sent.filter(m => m.type === 'switchMissed')).toEqual([])
+    // Still believed to be Russian, so the next press goes back to English.
+    consoleWindow.refuses = false
+    consoleWindow.tap(VK_PAUSE)
+    expect(consoleWindow.layout).toBe('en')
+
+    const left = new Desk({ keys: { switch: 'Pause' } })
+    left.refuses = true
+    left.tap(VK_PAUSE)
+    left.hwnd = 2n
+    left.tick(600)
+    expect(left.sent.filter(m => m.type === 'switchMissed')).toEqual([])
   })
 
   test('a program with a layout of its own gets it when it comes in front; one left out of switching ignores the key', () => {

@@ -192,6 +192,8 @@ export type KbdOut =
   | { type: 'unlearn'; word: string }
   /** Something learned was dropped, for the log: `field`, the field said it is a password or would not say; `noWord`, the fix made no word of a word. */
   | { type: 'notLearned'; why: 'field' | 'noWord' }
+  /** A layout switch the window never took, for the log, once per program and kind of field: no text, only their names. */
+  | { type: 'switchMissed'; exe: string; field: string }
   /** The fix key with a selection: the main process copies it, converts it into the next layout and pastes it; `layout` is the window's now. */
   | { type: 'selection'; cycle: string[]; layout: string }
   /** The program in front, by its .exe name, when it changes; `elevated`: it runs as administrator, so its keys never reach the hooks. */
@@ -217,6 +219,8 @@ export type TypistEnv = {
   foreground(): Front
   /** The layout a thread types in, by id. */
   layoutOf(tid: number): string
+  /** The kind of window the field with the keyboard is; empty when Windows does not say, and then its layout cannot be believed either. */
+  focusClass(tid: number): string
   /** A layout Windows has: its language code and what its keys type. */
   layout(id: string): { lang: string; table: KeyTable } | undefined
   /** The layouts Windows has, in its order. */
@@ -280,6 +284,8 @@ export const MENU_MS = 120_000
 const CAPS_FRESH_MS = 1000
 /** After Kryakl switches a window's layout, Windows may go on naming the old one for a while: the new one is trusted until Windows agrees, or this long. */
 const SWITCH_TRUST_MS = 3000
+/** A window that still names its old layout this long after a switch did not take it: the trust ends and the next press starts from the layout it really has. */
+const SWITCH_MISSED_MS = 500
 
 /** A modifier tapped alone counts while held no longer than this. */
 const TAP_MS = 600
@@ -412,6 +418,10 @@ export class Typist {
   /** For the switch's sound: the layout last heard in front, and the last switch Kryakl made (silent, or sounded already). */
   private heard: { hwnd: bigint; layout: string } | undefined
   private made: { hwnd: bigint; layout: string } | undefined
+  /** The last switch asked of a window, until the clock sees it taken or not. */
+  private switching: { hwnd: bigint; layout: string; at: number } | undefined
+  /** The programs and kinds of field already named in the log for a switch not taken. */
+  private readonly missedSaid = new Set<string>()
   /** A key field waits for a key in this window, until then; the keys it took down, whose release it takes too. */
   private recording: { hwnd: bigint; until: number } | undefined
   private recordDown = new Set<number>()
@@ -1303,6 +1313,31 @@ export class Typist {
     this.env.switchLayout(hwnd, layout)
     this.made = { hwnd, layout }
     this.expected = { hwnd, layout, until: this.env.now() + SWITCH_TRUST_MS }
+    this.switching = { hwnd, layout, at: this.env.now() }
+  }
+
+  /**
+   * Whether the last switch was taken. Not taken, Kryakl stops believing it and
+   * says where, once. A window that does not say which field has the keyboard
+   * (a console) gives no true answer about its layout, so nothing is concluded.
+   */
+  private checkSwitch(front: Front, now: number): void {
+    const s = this.switching
+    if (!s) return
+    if (front.hwnd !== s.hwnd || this.env.layoutOf(front.tid) === s.layout) {
+      this.switching = undefined
+      return
+    }
+    if (now - s.at < SWITCH_MISSED_MS) return
+    this.switching = undefined
+    const field = this.env.focusClass(front.tid)
+    if (!field) return
+    if (this.expected?.hwnd === s.hwnd && this.expected.layout === s.layout) this.expected = undefined
+    const exe = this.env.exeOf(front.pid)
+    const said = `${exe}\n${field}`
+    if (this.missedSaid.has(said)) return
+    this.missedSaid.add(said)
+    this.env.send({ type: 'switchMissed', exe, field })
   }
 
   /** The layout the window in front types in: the one Kryakl just switched it to, until Windows agrees; else Windows' answer. */
@@ -1477,12 +1512,13 @@ export class Typist {
    * The thread's clock, a few times a second: the layout and Caps Lock in
    * front for the badge, the program in front (its own layout), a word left
    * standing a second (fixed then, when that is on), an answer about the
-   * field that never came.
+   * field that never came, a layout switch the window did not take.
    */
   tick(): void {
     const now = this.env.now()
     if (this.asking && now - this.asking.since > FIELD_WAIT_MS) this.fieldIs('unknown')
     const front = this.env.foreground()
+    this.checkSwitch(front, now)
     if (this.menuOpen && (now > this.menuOpen.until || (front.hwnd && front.hwnd !== this.menuOpen.hwnd))) this.closeMenu()
     if (front.hwnd && front.hwnd !== this.frontWindow) {
       this.frontWindow = front.hwnd

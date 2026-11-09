@@ -46,6 +46,8 @@ export type KeyboardEvents = {
   unlearn(word: string): void
   /** A fix by hand was not learned: the field said it is a password or would not say; or it made no word of a word. */
   notLearned(why: 'field' | 'noWord'): void
+  /** A layout switch a window never took: its program and the kind of field. */
+  switchMissed(exe: string, field: string): void
   /** The fix key with a selection: convert it into the next of `cycle`; `layout` is the window's now. */
   selection(cycle: string[], layout: string): void
   /** A key Electron's shortcuts cannot hold, for selecting, snipping or a snip's text, was pressed. */
@@ -295,6 +297,9 @@ export class KeyboardHelper {
         return
       case 'notLearned':
         this.events.notLearned(message.why)
+        return
+      case 'switchMissed':
+        this.events.switchMissed(message.exe, message.field)
         return
       case 'selection':
         this.events.selection(message.cycle, message.layout)

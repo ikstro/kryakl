@@ -3667,6 +3667,7 @@ function start(): void {
     },
     notLearned: why =>
       log(why === 'field' ? 'learn: a word fixed by hand, not learned: the field said it is a password, or would not say' : 'learn: a word fixed by hand, not learned: it made no word of a word'),
+    switchMissed: (exe, field) => log(`switch: did not take in ${exe} (${field})`),
     selection: (cycle, layout) => void convertSelection(cycle, layout).catch(error => console.warn('Kryakl: could not convert the selection', error)),
     hotkey: action => {
       if (action === 'pause') return togglePause()
