@@ -14,6 +14,8 @@ import type { TalkRecord, TalkSummary } from './talks'
 import type { TranslationEntry } from './translationlog'
 import type { TranslatorState } from './translator'
 import type { MistakeEntry } from './mistakes'
+import type { VideoEffects, VideoSound } from './recordmodel'
+import type { Box, ShotStyle, ShotTarget, Tool } from './shotmodel'
 import type { Learned } from './typist'
 import type { DiffPart } from './worddiff'
 import type { SavedWord } from './words'
@@ -272,6 +274,10 @@ export type AppView = {
   lastApp?: string
   /** Other layout switchers running now (EveryLang, Punto Switcher): they would fix words twice. */
   rivals: string[]
+  /** Other screenshot programs running now: one may hold the same key. */
+  shotApps: string[]
+  /** Where recordings of the screen go, the default when none was chosen. */
+  videoDir: string
   /** Other programs known to watch the keyboard, running now (AutoHotkey, WhisperTyping…): no harm, named so the person knows. */
   keyboardApps: string[]
   /** Some program pressed keys by itself since the keyboard helper started; Kryakl ignores those. */
@@ -324,7 +330,7 @@ export type OldFolder = { dir: string; why?: string; moving: boolean }
 /** What the tray's panel shows, sent whole whenever any of it changes. */
 export type TrayView = {
   /** The keys of its commands, hotkey.ts notation ("Control+C*2" for Ctrl+C twice); empty when there is none. */
-  keys: { listenCopied: string; typeToTranslate: string; checkEnglish: string; talk: string; snipListen: string; snipTranslate: string; switch: string }
+  keys: { shot: string; video: string; listenCopied: string; typeToTranslate: string; checkEnglish: string; talk: string; snipListen: string; snipTranslate: string; switch: string }
   /** The quick settings' switches: fixing as one types, the switch key, the badge, the layout in the tray's icon, Kryakl paused. */
   autoFix: boolean
   switchOn: boolean
@@ -344,7 +350,7 @@ export type TrayView = {
 }
 
 /** What the tray's panel can do; each puts the panel away first. */
-export type TrayCommand = 'listenCopied' | 'translateCopied' | 'typeToTranslate' | 'checkEnglish' | 'talk' | 'listenScreen' | 'translateScreen' | 'note' | 'transcripts' | 'vocabulary' | 'kept' | 'settings' | 'report' | 'open' | 'quit'
+export type TrayCommand = 'shot' | 'video' | 'listenCopied' | 'translateCopied' | 'typeToTranslate' | 'checkEnglish' | 'talk' | 'listenScreen' | 'translateScreen' | 'note' | 'transcripts' | 'vocabulary' | 'kept' | 'settings' | 'report' | 'open' | 'quit'
 
 /**
  * Why a word has no meanings: no dictionary exists for the person's language,
@@ -403,6 +409,26 @@ export type ToView =
   | { type: 'trayShown' }
   /** Kryakl's menu on one key: what it draws now. */
   | { type: 'menu'; view: MenuView }
+  /** A screenshot: this monitor as it was at the press, in its physical pixels (`rgba`, handed over to the page), how wide the window is in CSS pixels, and the windows on it, the top one first; `video`: opened to record; `quick`: only for the text in a frame. */
+  | { type: 'shotFrame'; width: number; height: number; cssWidth: number; rgba: Uint8Array; windows: ShotTarget[]; style: ShotStyle; tool: Tool | ''; video: boolean; quick: boolean; sound: VideoSound; effects: VideoEffects }
+  /** The screenshot is over: its pixels go. */
+  | { type: 'shotClear' }
+  /** A frame was begun on another monitor: this one only stays dim. */
+  | { type: 'shotOther' }
+  /** The picture stays on the screen after all (a save called off, or failed: `message` says why). */
+  | { type: 'shotResume'; message?: string }
+  /** A recording's strip: what to take (the source and the crop are main's, in the source's own pixels; no size for a window, which has its own). */
+  | { type: 'recordBegin'; source: string; size?: { width: number; height: number }; crop?: Box; sound: VideoSound; countdown: number; effects?: VideoEffects }
+  /** The pointer, in pixels of what is recorded, whose size is `width` × `height`; a button that went down there since the last look. */
+  | { type: 'recordCursor'; x: number; y: number; width: number; height: number; inside: boolean; left: boolean; right: boolean }
+  /** The zoom key was pressed. */
+  | { type: 'recordZoomKey' }
+  /** The recording ends now; `why` when it is not the person's doing. */
+  | { type: 'recordHalt'; why?: string }
+  /** The screen was locked or unlocked: the recording waits. */
+  | { type: 'recordHold'; on: boolean }
+  /** The file is ready: how long it runs, how big it is, its name, why it stopped when the person did not stop it, and whether the strip has the keyboard. */
+  | { type: 'recordDone'; seconds: number; bytes: number; name: string; note?: string; keyboard: boolean }
   | { type: 'natural'; state: NaturalState }
   /** One sentence of reading `id` in the natural voice: 24 kHz audio and when each of its words is spoken. */
   | { type: 'naturalAudio'; id: number; index: number; samples: Float32Array; words: WordTime[] }
@@ -410,6 +436,12 @@ export type ToView =
 
 /** What a dictated phrase becomes: typed where the cursor is, typed in English, a note in the knowledge base, or English checked in the card (practice). */
 export type DictationMode = 'type' | 'english' | 'note' | 'check'
+
+/** What is done with a finished screenshot: copied, saved to a file, or its text read. */
+export type ShotAction = 'copy' | 'save' | 'text'
+
+/** A button on a recording's strip: Stop, delete what is being recorded; on the finished file, open it, show its folder, copy it, delete it, or close the strip. */
+export type RecordAction = 'stop' | 'cancel' | 'open' | 'folder' | 'copy' | 'delete' | 'dismiss'
 
 /** The menu on one key: its groups of items by letter and name, the one lit, and the one just picked (-1 for none); both count through all the groups. */
 export type MenuView = { groups: { letter: string; label: string }[][]; lit: number; fired: number }
@@ -488,6 +520,28 @@ export type ToHost =
   | { type: 'menuHeight'; px: number }
   | { type: 'menuHover'; index: number }
   | { type: 'menuPick'; index: number }
+  // A screenshot (shotwindow.ts): its page is ready; it has drawn the frozen screen; a frame was begun on it; Esc; the look of what is drawn; the finished picture, as a PNG, and what to do with it.
+  | { type: 'shotReady' }
+  | { type: 'shotShown' }
+  | { type: 'shotBegan' }
+  | { type: 'shotCancel' }
+  | { type: 'shotStyle'; style: ShotStyle }
+  /** A tool was picked, to be in hand next time. */
+  | { type: 'shotTool'; tool: Tool }
+  | { type: 'shotDone'; action: ShotAction; png: ArrayBuffer }
+  /** Record this frame: `window`, the window the frame still is, by its place in the page's list; else a piece of the monitor or the whole of it. */
+  | { type: 'shotRecord'; frame: Box; window?: number; sound: VideoSound }
+  /** Rings or zooming were switched in the bar, to be remembered. */
+  | { type: 'shotEffects'; effects: VideoEffects }
+  /** The sound was switched in the bar, to be remembered. */
+  | { type: 'shotSound'; sound: VideoSound }
+  // A recording's strip (recordwindow.ts): its page is ready; how big it wants to be; the first picture is going out; a piece of the file, in order; everything is handed over; a button.
+  | { type: 'recordReady' }
+  | { type: 'recordSize'; width: number; height: number }
+  | { type: 'recordRolling' }
+  | { type: 'recordChunk'; seq: number; extension: 'mp4' | 'webm'; data: ArrayBuffer }
+  | { type: 'recordEnded'; seconds: number; trouble?: string }
+  | { type: 'recordAct'; action: RecordAction }
   // The tray's panel.
   | { type: 'trayReady' }
   /** The panel's content is this tall, in CSS pixels; the window follows. */
@@ -517,6 +571,8 @@ export type ToHost =
   | { type: 'restartSpeech' }
   | { type: 'showInFolder'; path: string }
   | { type: 'openPath'; path: string }
+  /** The folder recordings of the screen go to, made if it is not there yet. */
+  | { type: 'recordFolder' }
   /** Forget the phrases dictated lately; the texts translated lately. */
   | { type: 'clearDictation' }
   | { type: 'clearTranslations' }

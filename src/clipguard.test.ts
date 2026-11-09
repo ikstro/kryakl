@@ -32,6 +32,19 @@ describe('ClipboardGuard', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 
+  test('a screenshot copied stays, and what an earlier action kept never goes back over it', async () => {
+    const clip = fakeClipboard()
+    const guard = new ClipboardGuard(clip.backend, noWait)
+    guard.hold()
+    await guard.write('translation')
+    guard.release(500)
+    await guard.own(() => clip.change('picture'))
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(clip.state.text).toBe('picture')
+    expect(guard.holding).toBe(false)
+    expect(guard.isOurs()).toBe(true)
+  })
+
   test('a paste: Kryakl’s text goes in, what the person had comes back after', async () => {
     const clip = fakeClipboard()
     const guard = new ClipboardGuard(clip.backend, noWait)

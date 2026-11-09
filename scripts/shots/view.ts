@@ -157,6 +157,8 @@ function full(over: Partial<AppView['settings']>, plan: AppView['speech']['plan'
     ],
     lastApp: 'obsidian.exe',
     rivals: [],
+    shotApps: [],
+    videoDir: 'C:\\Users\\you\\Videos\\Kryakl',
     keyboardApps: ['AutoHotkey'],
     foreignKeys: false,
     speech: {
@@ -251,7 +253,7 @@ export function menuView(lang: UiLanguage, o: { lit?: number; fired?: number; sp
 
 export function trayView(over: Partial<TrayView> = {}): TrayView {
   return {
-    keys: { listenCopied: 'Control+C*2', typeToTranslate: '', checkEnglish: 'RightControl*2', snipListen: 'Control+Alt+S', snipTranslate: 'Control+Alt+T', switch: 'LeftControl', talk: '' },
+    keys: { shot: 'PrintScreen', video: 'Control+Shift+R', listenCopied: 'Control+C*2', typeToTranslate: '', checkEnglish: 'RightControl*2', snipListen: 'Control+Alt+S', snipTranslate: 'Control+Alt+T', switch: 'LeftControl', talk: '' },
     autoFix: true,
     switchOn: true,
     layoutBadge: true,

@@ -62,6 +62,14 @@ export class ClipboardGuard<S> {
     this.claim()
   }
 
+  /** The person's own copy, made by Kryakl (a screenshot): it stays, and nothing kept earlier goes back over it. */
+  async own(write: () => void): Promise<void> {
+    this.drop()
+    this.paste = undefined
+    await this.tried(write)
+    this.claim()
+  }
+
   /** Ctrl+V was pressed for the text written: the next read of it is the paste. */
   pasted(): void {
     if (this.paste) this.paste.pressed = true

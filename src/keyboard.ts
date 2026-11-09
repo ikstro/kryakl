@@ -111,13 +111,20 @@ export class KeyboardHelper {
     const keys: KbdConfig['keys'] = {}
     // Ctrl+C twice is the clipboard's (main.ts), never the thread's.
     const its = (key: string) => !!key && !isAccelerator(key) && !isCopyTwice(key)
+    // Nobody's outside a recording: during one, always the thread's, as a shortcut of Electron's would not reach through a full screen.
+    if (this.videoNow && s.videoZoomKey && !isCopyTwice(s.videoZoomKey)) keys.zoom = s.videoZoomKey
     if (s.paused) {
       if (its(s.pauseKey)) keys.pause = s.pauseKey
+      // Kryakl paused while the screen is being recorded: the key still stops the recording.
+      if (this.videoNow && s.videoKey && !isCopyTwice(s.videoKey)) keys.video = s.videoKey
     } else {
       if (s.switchKey && s.switchOn) keys.switch = s.switchKey
       if (s.fixKey && s.fixKeyOn) keys.fix = s.fixKey
       // Always the thread's, with a modifier too: Electron's shortcut would end what was typed before the menu's fix item could fix it.
       if (s.menuKey && !isCopyTwice(s.menuKey)) keys.menu = s.menuKey
+      // Always the thread's: the hook runs before Windows' own use of Print Screen, which a shortcut of Electron's may lose to.
+      if (s.shotKey && !isCopyTwice(s.shotKey)) keys.shot = s.shotKey
+      if (s.videoKey && !isCopyTwice(s.videoKey)) keys.video = s.videoKey
       for (const [action, key] of [
         ['select', s.selectKey],
         ['snip', s.snipKey],
@@ -175,7 +182,27 @@ export class KeyboardHelper {
     this.post({ type: 'config', config })
     // A thread started during a dictation learns of it at once.
     if (fresh && this.dictatingNow) this.post({ type: 'dictating', on: true })
+    if (fresh && this.shootingNow) this.post({ type: 'shooting', on: true })
+    if (fresh && this.videoNow) this.post({ type: 'videoRecording', on: true })
   }
+
+  /** The screenshot frame opened or closed: meanwhile nothing typed is fixed or learned, and no key of Kryakl's acts. */
+  shooting(on: boolean): void {
+    if (on === this.shootingNow) return
+    this.shootingNow = on
+    if (this.worker) this.post({ type: 'shooting', on })
+  }
+
+  private shootingNow = false
+
+  /** The screen is being recorded: its key stops it wherever the person is. */
+  videoRecording(on: boolean): void {
+    if (on === this.videoNow) return
+    this.videoNow = on
+    if (this.worker) this.post({ type: 'videoRecording', on })
+  }
+
+  private videoNow = false
 
   /** The main process is done with the selection: selected again, the fix key goes on with it. */
   converted(selected: boolean): void {

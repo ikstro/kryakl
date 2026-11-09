@@ -80,6 +80,7 @@ const TOKEN_QUERY = 0x0008
 const TOKEN_ELEVATION = 20
 /** SHQueryUserNotificationState: a program on the full screen, a Direct3D one, presentation mode. */
 const FULL_SCREEN_STATES = new Set([2, 3, 4])
+const QUNS_RUNNING_D3D_FULL_SCREEN = 3
 const INPUT_KEYBOARD = 1
 const KEYEVENTF_EXTENDEDKEY = 0x0001
 const KEYEVENTF_KEYUP = 0x0002
@@ -358,6 +359,12 @@ export function windowedApps(): string[] {
 export function fullScreenNow(): boolean {
   const state = [0]
   return (SHQueryUserNotificationState(state) as number) >= 0 && FULL_SCREEN_STATES.has(state[0] ?? 0)
+}
+
+/** Whether a Direct3D program has the whole screen: a game, which a window drawn over it would throw out. A browser or a video on the full screen is not one. */
+export function gameNow(): boolean {
+  const state = [0]
+  return (SHQueryUserNotificationState(state) as number) >= 0 && state[0] === QUNS_RUNNING_D3D_FULL_SCREEN
 }
 
 /**

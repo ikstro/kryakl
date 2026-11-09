@@ -1,0 +1,12 @@
+/* The red line round a recorded piece: the same red as the tray's record dot, on the screen and not on a page of Kryakl's. */
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: transparent;
+}
+
+body {
+  box-sizing: border-box;
+  border: 2px solid #e81123;
+}

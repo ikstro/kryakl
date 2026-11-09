@@ -26,6 +26,8 @@ export type Choice = {
   /** Where who spoke when runs: the graphics card (PyTorch for it, large) or the processor (small, slow). */
   speakersOn: 'cuda' | 'cpu'
   startWithWindows: boolean
+  /** Print Screen takes Kryakl's screenshot. */
+  printScreen: boolean
   /** Run the speed test once the models are here. */
   test: boolean
 }
@@ -33,7 +35,7 @@ export type Choice = {
 /** One piece of advice: whether to turn it on, and why, in a few words. */
 export type Advice = { on: boolean; why: string }
 
-export type Recommendation = Record<'voice' | 'autoFix' | 'gpu' | 'dictate' | 'transcribe' | 'speakers' | 'startWithWindows', Advice>
+export type Recommendation = Record<'voice' | 'autoFix' | 'gpu' | 'dictate' | 'transcribe' | 'speakers' | 'startWithWindows' | 'printScreen', Advice>
 
 /** A few cores cannot make the natural voice faster than it speaks: a Windows voice is instant. */
 const VOICE_CORES = 4
@@ -67,6 +69,7 @@ export function recommend(v: AppView): Recommendation {
         ? { on: true, why: t('setup.why.speakers', { time: minutes(plan.speakers.cuda) }) }
         : { on: false, why: t('setup.why.speakersSlow', { time: minutes(plan.speakers.cpu) }) },
     startWithWindows: { on: true, why: t('setup.why.startWithWindows') },
+    printScreen: { on: true, why: t('setup.why.printScreen') },
   }
 }
 
@@ -83,6 +86,7 @@ export function recommendedChoice(v: AppView): Choice {
     speakers: r.speakers.on && r.transcribe.on,
     speakersOn: v.speech.plan.speakers.advised,
     startWithWindows: true,
+    printScreen: r.printScreen.on,
     test: true,
   }
 }

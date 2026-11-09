@@ -1,0 +1,239 @@
+/* A screenshot: the frozen screen fills the window (the canvas), and over it
+   Kryakl's own bar, a size and a hint. The frame's edge and handles are drawn on
+   the canvas in the duck's yellow, whatever the theme, as they lie on the screen
+   and not on a page of Kryakl's. */
+
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: var(--font);
+  user-select: none;
+}
+
+#screen {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+.hint {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 48px);
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--t-small);
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+.size {
+  position: fixed;
+  left: 0;
+  top: 0;
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font: 500 11px var(--mono);
+  pointer-events: none;
+}
+
+.bar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.bar.inside { cursor: move; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.row.opts {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-soft);
+  width: 100%;
+}
+
+.b {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.b:hover { background: var(--hover); }
+.b:disabled { opacity: 0.35; background: transparent; }
+.b.on { background: var(--selected); color: var(--accent-text); box-shadow: inset 0 0 0 1px var(--mark); }
+
+.b.lab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 0 10px;
+  font-size: var(--t-small);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.b.copy { background: var(--accent); color: var(--on-accent); }
+.b.copy:hover { background: var(--accent-hover); }
+.b.copy:disabled { background: var(--accent); }
+.b.start svg { color: var(--rec); fill: currentColor; }
+
+/* Photo or Video: one control of two sides, the side in use filled. */
+.mode {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border-radius: var(--r-sm);
+  background: var(--hover);
+}
+
+.seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--t-small);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.seg:hover { color: var(--text); }
+.seg.on { background: var(--surface); color: var(--strong); box-shadow: 0 0 0 1px var(--border-soft); }
+
+.sep {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+.push { flex: 1; }
+
+/* The second row: a color, a size, dashed. */
+.sw {
+  width: 20px;
+  height: 20px;
+  margin: 0 3px;
+  padding: 0;
+  border: 1px solid rgba(128, 128, 128, 0.55);
+  border-radius: 50%;
+}
+
+.sw.on { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.dot {
+  display: block;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dot.s0 { width: 4px; height: 4px; }
+.dot.s1 { width: 8px; height: 8px; }
+.dot.s2 { width: 13px; height: 13px; }
+
+.dash {
+  display: block;
+  width: 18px;
+  border-top: 2px dashed currentColor;
+}
+
+.write {
+  position: fixed;
+  left: 0;
+  top: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 1px dashed #ffd60a;
+  outline-offset: 3px;
+  background: transparent;
+  font-family: var(--font);
+  font-weight: 600;
+  line-height: 1.25;
+  resize: none;
+  overflow: hidden;
+  white-space: pre;
+}
+
+/* The arrow beside Microphone, and the list it opens over the bar. */
+.b.chev { width: 18px; margin-left: -2px; }
+
+.pop {
+  position: fixed;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  max-width: 420px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.pi {
+  flex: none;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--t-small);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pi:hover { background: var(--hover); }
+.pi.on { background: var(--selected); color: var(--strong); font-weight: 500; }

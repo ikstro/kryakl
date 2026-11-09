@@ -12,4 +12,5 @@ contextBridge.exposeInMainWorld('tutorHost', {
   pathOf: (file: File) => webUtils.getPathForFile(file),
 })
 
-ipcRenderer.on('to-view', (_event, message: unknown) => window.postMessage(message, '*'))
+// A frozen screen is tens of megabytes: handed over to the page, not copied again.
+ipcRenderer.on('to-view', (_event, message: { type?: string; rgba?: Uint8Array }) => window.postMessage(message, '*', message.type === 'shotFrame' && message.rgba ? [message.rgba.buffer as ArrayBuffer] : []))

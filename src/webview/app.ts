@@ -24,7 +24,8 @@ import { translationAdvice, type LevelFit } from '../hardware'
 import { COPY_TWICE_KEYS, DEFAULTS, EDIT_OWN_MAX, EDIT_STYLES, keptForm, myLanguages, RATES, SWITCH_SOUNDS, TALK_ABOUT_MAX, TALK_LEVELS, type AppRule, type LlmModel, type TalkLevel, type ThemeMode, type TranslationLevel } from '../settings'
 import type { AppPart } from '../typist'
 // app.ts has a languageName of its own (a code's English name); the interface's is langName here.
-import { formatDate, languageName as langName, levelName, setUiLanguage, t, uiLanguage, type Key } from '../i18n'
+import { formatDate, languageName as langName, levelName, numberText, setUiLanguage, t, uiLanguage, type Key } from '../i18n'
+import { ZOOM_SCALES, type ZoomScale } from '../recordmodel'
 import { parseEntry } from '../vocabulary'
 import { changesOf, wordDiff } from '../worddiff'
 import { logo, tile } from './brand'
@@ -64,12 +65,12 @@ function phrases<K extends string>(keys: Record<K, Key>): Record<K, string> {
   return out
 }
 
-type Action = 'translate' | 'english' | 'voice' | 'recordings' | 'layout'
+type Action = 'translate' | 'english' | 'voice' | 'recordings' | 'shots' | 'layout'
 type Page = Action | 'words' | 'mistakes' | 'transcripts' | 'translations' | 'phrases' | 'vocabulary' | 'kept' | 'learned' | 'programs' | 'layouts' | 'settings' | 'models' | 'storage' | 'about' | 'report' | 'search'
 
-const ACTIONS: readonly Action[] = ['translate', 'english', 'voice', 'recordings', 'layout']
+const ACTIONS: readonly Action[] = ['translate', 'english', 'voice', 'recordings', 'shots', 'layout']
 /** Each action's icon, in the sidebar. */
-const ICONS: Record<Action, LucideName> = { translate: 'languages', english: 'graduation-cap', voice: 'mic', recordings: 'audio-lines', layout: 'keyboard' }
+const ICONS: Record<Action, LucideName> = { translate: 'languages', english: 'graduation-cap', voice: 'mic', recordings: 'audio-lines', shots: 'camera', layout: 'keyboard' }
 /** The action a list belongs to: the sidebar lights it, the bar names it first. */
 const PARENT: Partial<Record<Page, Action>> = {
   translations: 'translate',
@@ -88,6 +89,7 @@ const TITLES: Record<Page, string> = phrases({
   english: 'nav.english',
   voice: 'nav.voice',
   recordings: 'nav.recordings',
+  shots: 'nav.shots',
   layout: 'nav.layout',
   words: 'nav.words',
   mistakes: 'nav.mistakes',
@@ -342,6 +344,9 @@ const HOME_KEYS: readonly HomeKey[] = [
   { key: 'englishKey', title: 'dict.english', page: 'voice', speech: true },
   { key: 'againKey', title: 'dictate.againKey', page: 'voice', speech: true },
   { key: 'noteKey', title: 'dict.note', page: 'voice', speech: true },
+  { key: 'shotKey', title: 'shot.keyTitle', page: 'shots' },
+  { key: 'videoKey', title: 'video.keyTitle', page: 'shots' },
+  { key: 'videoZoomKey', title: 'video.zoomKey', page: 'shots' },
   { key: 'fixKey', title: 'kb.fixKey', page: 'layout', section: 'act.fixGroup', chain: 'fix' },
   { key: 'switchKey', title: 'kb.switchKey', page: 'layout', section: 'act.switchGroup' },
   { key: 'pauseKey', title: 'settings.pauseKey', page: 'settings', section: 'keys.group' },
@@ -1005,6 +1010,8 @@ function bodyOf(v: AppView): HTMLElement[] {
       return voicePage(v)
     case 'recordings':
       return recordingsPage(v)
+    case 'shots':
+      return shotsPage(v)
     case 'layout':
       return layoutPage(v)
     case 'words':
@@ -1217,6 +1224,9 @@ function tryIt(text: string, how: string): HTMLElement {
 
 type KeyName =
   | 'menuKey'
+  | 'shotKey'
+  | 'videoKey'
+  | 'videoZoomKey'
   | 'selectKey'
   | 'snipKey'
   | 'translateKey'
@@ -1238,6 +1248,9 @@ type KeyName =
 
 const KEY_USE: Record<KeyName, string> = phrases({
   menuKey: 'keys.useMenu',
+  shotKey: 'keys.useShot',
+  videoKey: 'keys.useVideo',
+  videoZoomKey: 'keys.useZoom',
   selectKey: 'keys.useSelect',
   snipKey: 'keys.useSnip',
   translateKey: 'keys.useTranslate',
@@ -2737,6 +2750,38 @@ function askRunningApps(): void {
     runningApps = Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : []
     if (open?.name === 'programs' && !open.sub) renderBody()
   }, fault)
+}
+
+/** Screenshots and recordings of the screen: the keys (Print Screen offered once, as Windows' own use of it is the person's to give up), and the folders. */
+function shotsPage(v: AppView): HTMLElement[] {
+  const s = v.settings
+  const pick = async () => {
+    const folder = (await window.tutorHost.call({ call: 'pickFolder', title: t('shot.pickFolder'), current: s.shotFolder })) as string | null
+    if (folder) save({ shotFolder: folder })
+  }
+  const pickVideo = async () => {
+    const folder = (await window.tutorHost.call({ call: 'pickFolder', title: t('video.pickFolder'), current: v.videoDir })) as string | null
+    if (folder) save({ videoFolder: folder })
+  }
+  const offer =
+    !s.shotKey && !keyTakenBy('PrintScreen', 'shotKey')
+      ? el('div', { class: 'offer' }, lucide('camera'), el('div', { class: 'ot' }, el('b', {}, t('shot.offerAsk')), el('small', {}, t('shot.offerNote')), el('span', { class: 'acts' }, btn(t('shot.offerUse'), () => save({ shotKey: 'PrintScreen' }), 'primary'))))
+      : null
+  return [
+    offer,
+    grp(t('shot.group')),
+    keyRow('shotKey', t('shot.keyTitle'), t('shot.keyNote')),
+    v.shotApps.length ? warn(t('shot.others', { names: v.shotApps.join(` ${t('common.and')} `) })) : null,
+    card('folder', t('shot.folder'), [s.shotFolder ? pathNote(s.shotFolder) : t('shot.folderNone')], linkBtn(s.shotFolder ? t('dictate.change') : t('dictate.choose'), () => void pick())),
+    el('p', { class: 'privacy' }, lucide('lock', 's'), t('shot.privacy')),
+    grp(t('video.group')),
+    keyRow('videoKey', t('video.keyTitle'), t('video.keyNote')),
+    keyRow('videoZoomKey', t('video.zoomKey'), t('video.zoomKeyNote')),
+    card('zoom-in', t('video.zoomScale'), [t('video.zoomScaleNote')], select(s.videoEffects.zoomScale, ZOOM_SCALES.map(scale => [scale, `${numberText(scale)}×`] as [ZoomScale, string]), zoomScale => save({ videoEffects: { ...s.videoEffects, zoomScale } }))),
+    toggleCard('circle', t('video.halo'), s.videoEffects.halo, halo => save({ videoEffects: { ...s.videoEffects, halo } }), t('video.haloNote')),
+    card('folder', t('video.folder'), [pathNote(v.videoDir)], el('span', { class: 'kchg' }, linkBtn(t('dictate.change'), () => void pickVideo()), linkBtn(t('video.openFolder'), () => post({ type: 'recordFolder' })))),
+    el('p', { class: 'privacy' }, lucide('lock', 's'), t('video.privacy')),
+  ].filter((n): n is HTMLElement => n !== null)
 }
 
 function layoutPage(v: AppView): HTMLElement[] {

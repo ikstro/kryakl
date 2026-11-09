@@ -318,6 +318,7 @@ async function appShots(theme: 'dark' | 'light', narrow = false): Promise<void> 
     await esc(w)
     await sleep(400)
     await page('recordings', ['transcripts', 'meet', 'speakers'])
+    await page('shots')
     await page('layout', ['kept', 'learned', 'programs', 'layouts', 'fixing'])
     await page('settings', ['languages'])
     // The page's end: Backup and Reset.
@@ -506,6 +507,196 @@ async function menuShots(theme: 'dark' | 'light'): Promise<void> {
   w.destroy()
 }
 
+// ---------------------------------------------------------------- a screenshot
+
+/** A made-up desktop in physical pixels: a light window with lines of "text" on a slate ground. */
+function fakeScreen(width: number, height: number, unit: number): Uint8Array {
+  const rgba = new Uint8Array(width * height * 4)
+  const paint = (x: number, y: number, w: number, h: number, r: number, g: number, b: number) => {
+    for (let py = y; py < Math.min(height, y + h); py++) {
+      for (let px = x; px < Math.min(width, x + w); px++) {
+        const at = (py * width + px) * 4
+        rgba[at] = r
+        rgba[at + 1] = g
+        rgba[at + 2] = b
+        rgba[at + 3] = 255
+      }
+    }
+  }
+  paint(0, 0, width, height, 70, 86, 110)
+  paint(180 * unit, 90 * unit, 900 * unit, 540 * unit, 248, 248, 248)
+  paint(180 * unit, 90 * unit, 900 * unit, 40 * unit, 224, 224, 224)
+  for (let line = 0; line < 14; line++) paint(220 * unit, (160 + line * 30) * unit, (520 + (line * 73) % 280) * unit, 10 * unit, 60, 60, 60)
+  return rgba
+}
+
+async function shotShots(theme: 'dark' | 'light'): Promise<void> {
+  nativeTheme.themeSource = theme
+  // 1 and 2: a screen at 100 % and one at 200 %, the same 1280×720 CSS pixels.
+  for (const unit of [1, 2]) {
+    const w = win('shot.html', 1280, 720, '#000000')
+    await new Promise<void>(r => w.webContents.once('did-finish-load', () => r()))
+    await sleep(300)
+    const tag = (n: string) => `shot-${theme}-${unit}x-${n}`
+    const mouse = (type: string, x: number, y: number) =>
+      js(w, `(document.elementFromPoint(${x}, ${y}) ?? window).dispatchEvent(new MouseEvent(${JSON.stringify(type)}, { clientX: ${x}, clientY: ${y}, button: 0, bubbles: true })), 'ok'`)
+    const dragIt = async (x1: number, y1: number, x2: number, y2: number) => {
+      await mouse('mousedown', x1, y1)
+      await mouse('mousemove', (x1 + x2) / 2, (y1 + y2) / 2)
+      await mouse('mousemove', x2, y2)
+      await mouse('mouseup', x2, y2)
+      await sleep(120)
+    }
+    const key = (code: string, ctrl = false) => js(w, `window.dispatchEvent(new KeyboardEvent('keydown', { code: ${JSON.stringify(code)}, key: ${JSON.stringify(code)}, ctrlKey: ${ctrl}, bubbles: true })), 'ok'`)
+    const frame = (video = false, quick = false, tool = '') => {
+      const rgba = fakeScreen(1280 * unit, 720 * unit, unit)
+      w.webContents.send('to-view', { type: 'shotFrame', width: 1280 * unit, height: 720 * unit, cssWidth: 1280, rgba, windows: [{ x: 200 * unit, y: 140 * unit, width: 420 * unit, height: 470 * unit, panel: true }, { x: 640 * unit, y: 140 * unit, width: 420 * unit, height: 470 * unit, panel: true }, { x: 180 * unit, y: 90 * unit, width: 900 * unit, height: 540 * unit }], style: { color: '#e5383b', size: 1, dashed: false }, tool, video, quick, sound: { mic: false, system: true, micName: '' }, effects: { clicks: true, zoom: false, halo: false, zoomScale: 2 } })
+    }
+    frame()
+    await sleep(500)
+    // Nothing framed yet: the hint, and the window under the pointer lit.
+    await shot(w, tag('hint'))
+    await mouse('mousemove', 500, 300)
+    await sleep(150)
+    await shot(w, tag('panel'))
+    await js(w, `document.querySelector('#screen').dispatchEvent(new WheelEvent('wheel', { clientX: 500, clientY: 300, deltaY: -100, bubbles: true })), 'ok'`)
+    await sleep(150)
+    await shot(w, tag('window'))
+    // A frame; the bar under it, then every tool used once.
+    await dragIt(300, 130, 980, 480)
+    await sleep(200)
+    await shot(w, tag('frame'))
+    await key('KeyR')
+    await dragIt(330, 170, 520, 260)
+    await key('KeyA')
+    await dragIt(700, 180, 560, 225)
+    await key('KeyL')
+    await click(w, '.row.opts .b:last-child')
+    await sleep(60)
+    await dragIt(330, 300, 620, 300)
+    await click(w, '.row.opts .b:last-child')
+    await sleep(60)
+    await key('KeyE')
+    await dragIt(660, 280, 800, 360)
+    await key('KeyH')
+    await dragIt(330, 335, 640, 335)
+    await key('KeyF')
+    await mouse('mousedown', 820, 180)
+    for (const [x, y] of [[840, 170], [860, 200], [880, 170], [900, 210], [930, 180]] as const) await mouse('mousemove', x, y)
+    await mouse('mouseup', 930, 180)
+    await key('KeyB')
+    await dragIt(340, 380, 520, 440)
+    await key('KeyP')
+    await dragIt(560, 380, 740, 440)
+    await key('KeyN')
+    for (const [x, y] of [[800, 400], [860, 400], [920, 400]] as const) {
+      await mouse('mousedown', x, y)
+      await mouse('mouseup', x, y)
+      await sleep(40)
+    }
+    await key('KeyT')
+    // A real click, not a made-up event: its default action is what could take the keyboard from the field.
+    if (!w.webContents.debugger.isAttached()) w.webContents.debugger.attach('1.3')
+    for (const type of ['mousePressed', 'mouseReleased']) await w.webContents.debugger.sendCommand('Input.dispatchMouseEvent', { type, x: 780, y: 300, button: 'left', buttons: 1, clickCount: 1 })
+    await sleep(100)
+    console.log('the label field has the keyboard:', await js(w, `document.activeElement?.id === 'write'`))
+    await js(w, `(() => { const f = document.querySelector('#write'); f.value = 'Подпись\\nв две строки'; f.dispatchEvent(new Event('input')); return 'ok' })()`)
+    await sleep(150)
+    await shot(w, tag('writing'))
+    await key('Escape')
+    await js(w, `(() => { const f = document.querySelector('#write'); return f.hidden })()`)
+    await js(w, `window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })), 'ok'`)
+    await sleep(200)
+    await key('KeyT')
+    await sleep(200)
+    await shot(w, tag('tools'))
+    // The bar above a frame that reaches the screen's bottom; inside a full-screen one.
+    frame()
+    await sleep(400)
+    await dragIt(240, 300, 1100, 716)
+    await sleep(200)
+    await shot(w, tag('above'))
+    await key('Space')
+    await sleep(250)
+    await key('KeyA')
+    await sleep(250)
+    await shot(w, tag('full'))
+    // The Video side: its hint, a frame with the two sounds, both on, and a frame too small to record.
+    frame(true)
+    await sleep(400)
+    await shot(w, tag('video-hint'))
+    await dragIt(300, 130, 980, 480)
+    await sleep(200)
+    await shot(w, tag('video-frame'))
+    await js(w, `navigator.mediaDevices.enumerateDevices = async () => [{ deviceId: 'default', kind: 'audioinput', label: 'Default - Microphone (Studio) (0c76:161e)' }, { deviceId: 'a', kind: 'audioinput', label: 'Microphone (Studio) (0c76:161e)' }, { deviceId: 'b', kind: 'audioinput', label: 'Headset Microphone (Wireless Headphones)' }], 'ok'`)
+    await click(w, '.b.chev')
+    await sleep(200)
+    await shot(w, tag('video-mics'))
+    await key('Escape')
+    await sleep(120)
+    await click(w, '.row .b.lab')
+    await sleep(120)
+    await shot(w, tag('video-both'))
+    await dragIt(980, 480, 330, 150)
+    await sleep(200)
+    await shot(w, tag('video-small'))
+    // The tool last used is in hand at once.
+    frame(false, false, 'rect')
+    await sleep(400)
+    await dragIt(300, 130, 980, 480)
+    await sleep(200)
+    await shot(w, tag('last-tool'))
+    // Only the text of a frame: no bar will come.
+    frame(false, true)
+    await sleep(400)
+    await shot(w, tag('quick-hint'))
+    w.webContents.send('to-view', { type: 'shotClear' })
+    await sleep(100)
+    log.push(`shot errors: ${await js(w, `document.querySelector('#screen').width`)}`)
+    w.destroy()
+  }
+}
+
+// ---------------------------------------------------------------- a recording's strip
+
+async function recordShots(theme: 'dark' | 'light'): Promise<void> {
+  nativeTheme.themeSource = theme
+  const w = win('record.html', 420, 44, colors().surface)
+  await new Promise<void>(r => w.webContents.once('did-finish-load', () => r()))
+  await sleep(300)
+  const tag = (n: string) => `record-${theme}-${n}`
+  const fit = async () => {
+    const box = (await w.webContents.executeJavaScript(`(() => { const r = document.getElementById('root').getBoundingClientRect(); return { w: Math.ceil(r.width) + 2, h: Math.ceil(r.height) + 2 } })()`)) as { w: number; h: number }
+    w.setSize(box.w, box.h)
+    await sleep(250)
+  }
+  send(w, { type: 'recordBegin', source: 'screen:0:0', size: { width: 1280, height: 720 }, sound: { mic: true, system: false, micName: '' }, countdown: 3 })
+  await sleep(300)
+  await fit()
+  await shot(w, tag('count'))
+  await sleep(3200)
+  await fit()
+  await shot(w, tag('rec'))
+  await click(w, '.b:nth-last-child(2)')
+  await sleep(150)
+  await fit()
+  await shot(w, tag('sure'))
+  await sleep(3200)
+  send(w, { type: 'recordHold', on: true })
+  await sleep(300)
+  await fit()
+  await shot(w, tag('paused'))
+  send(w, { type: 'recordDone', seconds: 42, bytes: 12.4 * 1048576, name: 'Kryakl.mp4', keyboard: true })
+  await sleep(300)
+  await fit()
+  await shot(w, tag('done'))
+  send(w, { type: 'recordDone', seconds: 754, bytes: 310 * 1048576, name: 'Kryakl.mp4', keyboard: false, note: 'The window was closed, so the recording stopped' })
+  await sleep(300)
+  await fit()
+  await shot(w, tag('done-note'))
+  w.destroy()
+}
+
 // ---------------------------------------------------------------- the talk window
 
 async function talkShots(theme: 'dark' | 'light'): Promise<void> {
@@ -613,10 +804,17 @@ async function badgeShots(theme: 'dark' | 'light'): Promise<void> {
 
 app.whenReady().then(async () => {
   try {
-    await cardShots('dark')
-    await cardShots('light')
-    // SHOTS=card: the card alone; SHOTS=tray: the tray panel; SHOTS=menu: the menu on one key; SHOTS=daily: the card, the tray panel, the menu, the badge, the talk window and the setup.
-    if (process.env.SHOTS === 'tray') {
+    if (process.env.SHOTS !== 'shot') {
+      await cardShots('dark')
+      await cardShots('light')
+    }
+    // SHOTS=card: the card alone; SHOTS=tray: the tray panel; SHOTS=menu: the menu on one key; SHOTS=shot: a screenshot's page alone; SHOTS=daily: the card, the tray panel, the menu, the badge, the talk window and the setup.
+    if (process.env.SHOTS === 'shot') {
+      await shotShots('dark')
+      await shotShots('light')
+      await recordShots('dark')
+      await recordShots('light')
+    } else if (process.env.SHOTS === 'tray') {
       await trayShots('dark')
       await trayShots('light')
     } else if (process.env.SHOTS === 'menu') {
@@ -631,6 +829,10 @@ app.whenReady().then(async () => {
       await talkShots('dark')
       await talkShots('light')
     } else if (process.env.SHOTS !== 'card') {
+      await shotShots('dark')
+      await shotShots('light')
+      await recordShots('dark')
+      await recordShots('light')
       await appShots('dark')
       await appShots('light')
       await appShots('dark', true)

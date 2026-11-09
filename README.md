@@ -11,6 +11,8 @@ Select any text, press your key, and hear it in English. A small Windows app for
 - **Translate.** A key of your own (Shift twice, say) for the selection, **Ctrl+Alt+T** for a piece of the screen: the text as it is and its translation, from the language it is in into yours, from yours into English. **Paste** (Enter; Shift+Enter is a new line) puts the translation over the selected text; change either language, swap them, copy either side. Your clipboard is left as it was.
 - **Keyboard layout** (off at first, in Settings). A key that switches the layout (a tap of Left Ctrl, Caps Lock, any key); a fix key (Pause) that types again, in the right layout, what you just typed in the wrong one, or the selected text; words typed in the wrong layout fixed as you type, for English, Russian and Ukrainian; a badge with the layout by the cursor.
 - **Voice typing** (a download, when you want it). Say a phrase and Kryakl types it where the cursor is, on your computer. Text editing, off at first, puts it right by the local model before it is typed: remove filler words, a business tone, a clear request for an AI, a list, or an instruction of your own.
+- **Screenshots.** Give it a key, Print Screen if you like. The screen freezes and you draw on it: a frame, an arrow, a number, a blur that cannot be read back. Ctrl+C copies the picture with your drawings. Text reads the words in it, to copy or translate.
+- **Screen recording.** The same frame, switched to Video: a window, a monitor or a piece of the screen, with your microphone, the system's sound or both, into an MP4 in `Videos\Kryakl`. Nothing to download. Clicks and a zoom that follows them can go into the video; both are off at first.
 - **Words.** Click an English word for its meanings, how it is said, and a star that keeps it in your word list. A dotted line marks the words outside the 3000 most common ones. Export the list for Anki.
 - **Voice.** A natural English voice (Kokoro, 170 MB, offline) or a Windows voice, at the speed you choose, with the spoken word highlighted.
 
@@ -30,6 +32,8 @@ The first translation downloads the translator for your language (about 85 MB fo
 | your keys | listen to, or translate, the selection (set them in the settings: a combination, Ctrl or Shift twice, Pause, a mouse side button…) |
 | **Ctrl+Alt+S** | listen to a piece of the screen (changeable in the settings) |
 | **Ctrl+Alt+T** | translate a piece of the screen |
+| your screenshot key | freeze the screen, draw, **Ctrl+C** to copy (Print Screen if you agree to it) |
+| your recording key | record the screen; the same key stops it |
 | your switch key | the next keyboard layout (set it in Settings → Hotkeys) |
 | your fix key | what you just typed, or the selection, in the next layout |
 | your fix key right after a fix | take the fix back; the word is kept as typed. Backspace only erases, so you can set the ending right |

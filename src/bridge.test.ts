@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { callAllowed, messageAllowed, openable, pageOf, patchAllowed } from './bridge'
+import { callAllowed, messageAllowed, openable, pageOf, patchAllowed, mediaAllowed } from './bridge'
 
 const at = (page: string) => `file:///C:/Users/you/AppData/Local/Programs/kryakl/resources/app.asar/media/${page}?frame=dwm`
 
@@ -57,6 +57,52 @@ describe('the menu on one key', () => {
   test('changes no setting and calls nothing', () => {
     expect(patchAllowed('menu', { paused: true })).toBe(false)
     expect(callAllowed('menu', { call: 'speech', method: 'POST', route: '/dictate' })).toBe(false)
+  })
+})
+
+describe('a screenshot', () => {
+  test('is a page of its own, sends its own messages and no other, and no other page sends them', () => {
+    expect(pageOf('file:///C:/app/media/shot.html?lang=ru')).toBe('shot')
+    for (const type of ['shotReady', 'shotShown', 'shotBegan', 'shotCancel', 'shotStyle', 'shotDone']) {
+      expect(messageAllowed('shot', type), type).toBe(true)
+      for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+    }
+    for (const type of ['saveSettings', 'copyText', 'speak', 'tray', 'lookup', 'openLink', 'menuPick']) expect(messageAllowed('shot', type), type).toBe(false)
+  })
+
+  test('changes no setting and calls nothing', () => {
+    expect(patchAllowed('shot', { shotFolder: 'C:\\' })).toBe(false)
+    expect(callAllowed('shot', { call: 'speech', method: 'POST', route: '/dictate' })).toBe(false)
+  })
+
+  test('its page alone asks to record a frame', () => {
+    for (const type of ['shotRecord', 'shotSound']) {
+      expect(messageAllowed('shot', type), type).toBe(true)
+      for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu', 'record'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+    }
+  })
+})
+
+describe('a recording', () => {
+  test('is a page of its own, sends its own messages and no other, and no other page sends them', () => {
+    expect(pageOf('file:///C:/app/media/record.html?lang=ru')).toBe('record')
+    for (const type of ['recordReady', 'recordSize', 'recordRolling', 'recordChunk', 'recordEnded', 'recordAct']) {
+      expect(messageAllowed('record', type), type).toBe(true)
+      for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu', 'shot'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+    }
+    for (const type of ['saveSettings', 'copyText', 'openPath', 'showInFolder', 'openLink', 'shotDone']) expect(messageAllowed('record', type), type).toBe(false)
+  })
+
+  test('changes no setting and calls nothing', () => {
+    expect(patchAllowed('record', { videoFolder: 'C:\\' })).toBe(false)
+    expect(callAllowed('record', { call: 'speech', method: 'POST', route: '/dictate' })).toBe(false)
+  })
+})
+
+describe('the microphone and the screen', () => {
+  test('only for the pages that record', () => {
+    for (const page of ['app', 'dictation', 'talk', 'record'] as const) expect(mediaAllowed(page), page).toBe(true)
+    for (const page of ['card', 'tray', 'menu', 'shot', 'other'] as const) expect(mediaAllowed(page), page).toBe(false)
   })
 })
 

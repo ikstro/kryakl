@@ -48,7 +48,7 @@ const TAPS: readonly { name: string; code: string; vk: number; mod: Mod }[] = [
 const BUTTONS: Record<string, 1 | 2> = { MouseBack: 1, MouseForward: 2 }
 
 /** Keys that may stand alone: pressing them types nothing. Electron's shortcuts take none of them alone. */
-const LONE: Record<string, number> = { Pause: 0x13, CapsLock: 0x14, ScrollLock: 0x91, Insert: 0x2d }
+const LONE: Record<string, number> = { Pause: 0x13, CapsLock: 0x14, ScrollLock: 0x91, Insert: 0x2d, PrintScreen: 0x2c }
 /** Keys that need a modifier: alone, they type. Named as Electron names them. */
 const NAMED: Record<string, number> = {
   Space: 0x20,
@@ -173,6 +173,7 @@ export function hotkeyLabel(hotkey: string): string {
       if (part === 'CapsLock') return 'Caps Lock'
       if (part === 'Escape') return 'Esc'
       if (part === 'ScrollLock') return 'Scroll Lock'
+      if (part === 'PrintScreen') return 'Print Screen'
       if (part === 'MouseBack') return 'Mouse Back'
       if (part === 'MouseForward') return 'Mouse Forward'
       if (part === 'CommandOrControl' || part === 'CmdOrCtrl') return 'Ctrl'

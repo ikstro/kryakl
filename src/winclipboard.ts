@@ -35,6 +35,9 @@ const CopyIn = kernel32.func('void __stdcall RtlMoveMemory(intptr_t to, const vo
 
 const GMEM_MOVEABLE = 0x0002
 const CF_UNICODETEXT = 13
+const CF_DIB = 8
+const CF_HDROP = 15
+const DROPEFFECT_COPY = 1
 /** Formats whose data is a GDI handle or an application's private one, not memory that can be copied: CF_BITMAP, CF_METAFILEPICT, CF_PALETTE, CF_ENHMETAFILE, the display formats; Windows makes the bitmap again from the DIB kept. */
 const HANDLE_FORMATS = new Set([2, 3, 9, 14, 0x80, 0x82, 0x83, 0x8e])
 const isPrivate = (format: number) => format >= 0x200 && format <= 0x3ff
@@ -149,6 +152,34 @@ export function writeText(owner: bigint, text: string, paste = false): void {
   const data = Buffer.from(text + '\0', 'utf16le')
   if (paste) replace(owner, [], data)
   else replace(owner, [{ format: CF_UNICODETEXT, data }])
+}
+
+/**
+ * A screenshot on the clipboard, for the person: as a PNG and a bitmap, so every
+ * program can paste it. It stays in Win+V like any copy; it only never goes to
+ * the cloud clipboard, Kryakl being a thing that sends nothing.
+ */
+export function writeImage(owner: bigint, png: Buffer, dib: Buffer): void {
+  if (owner === 0n) throw new Error('no window to own the clipboard')
+  promised = undefined
+  opened(owner, () => {
+    if (!EmptyClipboard()) throw new Error('the clipboard could not be emptied')
+    put(CF_DIB, dib)
+    put(RegisterClipboardFormatW('PNG') as number, png)
+    put(RegisterClipboardFormatW('CanUploadToCloudClipboard') as number, Buffer.alloc(4))
+  })
+}
+
+/** A finished recording on the clipboard, for the person, as files: a chat or Explorer pastes it. It is treated as a screenshot is. */
+export function writeFiles(owner: bigint, list: Buffer): void {
+  if (owner === 0n) throw new Error('no window to own the clipboard')
+  promised = undefined
+  opened(owner, () => {
+    if (!EmptyClipboard()) throw new Error('the clipboard could not be emptied')
+    put(CF_HDROP, list)
+    put(RegisterClipboardFormatW('Preferred DropEffect') as number, Buffer.from([DROPEFFECT_COPY, 0, 0, 0]))
+    put(RegisterClipboardFormatW('CanUploadToCloudClipboard') as number, Buffer.alloc(4))
+  })
 }
 
 function processOf(hwnd: bigint): number | undefined {

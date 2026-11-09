@@ -1,0 +1,154 @@
+/* A recording's strip: the same bar as the frame's, on its own small window. It
+   moves by any part of it that is not a button. */
+
+html {
+  box-sizing: border-box;
+  height: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+html.dwm { border-color: transparent; }
+
+body {
+  width: max-content;
+  margin: 0;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+.strip {
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  padding: 4px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+}
+
+.b {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  -webkit-app-region: no-drag;
+}
+
+.b:hover { background: var(--hover); }
+
+.b.lab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 0 10px;
+  font-size: var(--t-small);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.b.copy { background: var(--accent); color: var(--on-accent); }
+.b.copy:hover { background: var(--accent-hover); }
+
+.b.stop { color: var(--rec); }
+.b.stop svg { fill: currentColor; }
+
+.b.warn { color: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
+
+.sep {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+.dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin: 0 6px 0 8px;
+  border-radius: 50%;
+  background: var(--rec);
+  animation: blink 1s step-end infinite;
+}
+
+.dot.held { background: var(--paused); animation: none; }
+.dot.wait { background: transparent; box-shadow: inset 0 0 0 2px var(--rec); animation: none; }
+
+@keyframes blink { 50% { opacity: 0.25; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .dot { animation: none; }
+}
+
+.say {
+  padding-right: 6px;
+  font-size: var(--t-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.time {
+  min-width: 44px;
+  padding-right: 6px;
+  font: 500 var(--t-small) var(--mono);
+  color: var(--strong);
+}
+
+.info {
+  padding: 0 8px;
+  font-size: var(--t-small);
+  white-space: nowrap;
+}
+
+.info b { font: 600 var(--t-small) var(--mono); color: var(--strong); }
+
+/* How loud each sound is, going into the file. */
+.lv {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  color: var(--muted);
+}
+
+.lv.lost { color: var(--red); }
+
+.lb {
+  display: block;
+  width: 26px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--hover);
+}
+
+.lb i {
+  display: block;
+  height: 100%;
+  background: var(--mark);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.note {
+  max-width: 420px;
+  padding: 2px 8px 4px;
+  color: var(--muted);
+  font-size: var(--t-small);
+}

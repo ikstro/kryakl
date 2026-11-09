@@ -6,6 +6,8 @@ import { COPY_TWICE } from './hotkey'
 import { isUiLanguage, type UiLanguage } from './i18n'
 import { findLanguage, LANGUAGES } from './languages'
 import type { WordHintMode } from './protocol'
+import { VIDEO_EFFECTS, VIDEO_SOUND, videoEffectsOf, videoSoundOf, type VideoEffects, type VideoSound } from './recordmodel'
+import { SHOT_STYLE, shotStyleOf, shotToolOf, type ShotStyle, type Tool } from './shotmodel'
 import type { Prefer } from './speechplan'
 import type { AppPart } from './typist'
 
@@ -79,6 +81,24 @@ export type Settings = {
   cardHeight: number
   /** One key for every action: it opens Kryakl's menu by the text cursor, a letter picks (menu.ts); empty for none. */
   menuKey: string
+  /** A screenshot on the frozen screen, with its tools (shotwindow.ts); empty for none, offered once as Print Screen. */
+  shotKey: string
+  /** Where Save puts a screenshot; empty: asked the first time. */
+  shotFolder: string
+  /** The look the screenshot's tools last had. */
+  shotStyle: ShotStyle
+  /** The tool last picked, in hand again at the next screenshot; '' for none yet. */
+  shotTool: Tool | ''
+  /** A screen recording: opens the frame on Video, and stops a recording under way; empty for none. */
+  videoKey: string
+  /** Where recordings go; empty: Videos\Kryakl. */
+  videoFolder: string
+  /** What the last recording heard. */
+  videoSound: VideoSound
+  /** Pressed during a recording: zooms in at the pointer, and out again; nobody else's outside a recording; empty for none. */
+  videoZoomKey: string
+  /** What recordings add to the picture. */
+  videoEffects: VideoEffects
   /**
    * Keys (hotkey.ts; empty for none): listen to the selection (Kryakl copies it), or to a piece of the screen;
    * Ctrl+C twice ("Control+C*2") may be the key of one action on the selection: select, translate, inPlace or check.
@@ -231,6 +251,15 @@ export const DEFAULTS: Settings = {
   cardWidth: 440,
   cardHeight: 0,
   menuKey: '',
+  shotKey: '',
+  shotFolder: '',
+  shotStyle: SHOT_STYLE,
+  shotTool: '',
+  videoKey: '',
+  videoFolder: '',
+  videoSound: VIDEO_SOUND,
+  videoZoomKey: '',
+  videoEffects: VIDEO_EFFECTS,
   selectKey: '',
   snipKey: 'Control+Alt+S',
   translateKey: '',
@@ -431,6 +460,15 @@ export function normalize(raw: unknown, native = DEFAULTS.native): Settings {
     cardWidth: within(r.cardWidth, CARD_WIDTH, DEFAULTS.cardWidth),
     cardHeight: r.cardHeight === 0 ? 0 : within(r.cardHeight, CARD_HEIGHT, DEFAULTS.cardHeight),
     menuKey: key(r.menuKey, DEFAULTS.menuKey),
+    shotKey: key(r.shotKey, DEFAULTS.shotKey),
+    shotFolder: typeof r.shotFolder === 'string' ? r.shotFolder : DEFAULTS.shotFolder,
+    shotStyle: shotStyleOf(r.shotStyle),
+    shotTool: shotToolOf(r.shotTool),
+    videoKey: key(r.videoKey, DEFAULTS.videoKey),
+    videoFolder: typeof r.videoFolder === 'string' ? r.videoFolder : DEFAULTS.videoFolder,
+    videoSound: videoSoundOf(r.videoSound),
+    videoZoomKey: key(r.videoZoomKey, DEFAULTS.videoZoomKey),
+    videoEffects: videoEffectsOf(r.videoEffects),
     selectKey: movedSelectKey(raw, r, key(r.selectKey, DEFAULTS.selectKey)),
     snipKey: key(r.snipKey, DEFAULTS.snipKey),
     translateKey: key(r.translateKey, DEFAULTS.translateKey),

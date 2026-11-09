@@ -68,6 +68,8 @@ const translator = { ...node, entryPoints: ['src/mt-worker.ts'], outfile: 'dist/
 const keyboard = { ...node, entryPoints: ['src/kbd-worker.ts'], external: ['koffi'], outfile: 'dist/kbd-worker.js' }
 /** Its thread for asking whether the field typed in is a password (UI Automation). */
 const field = { ...keyboard, entryPoints: ['src/field-worker.ts'], outfile: 'dist/field-worker.js' }
+/** One look at the screens for a screenshot: GDI through koffi. */
+const shotWorker = { ...keyboard, entryPoints: ['src/shot-worker.ts'], outfile: 'dist/shot-worker.js' }
 
 /** @type {import('esbuild').BuildOptions} */
 const card = {
@@ -91,10 +93,14 @@ const dictation = { ...card, entryPoints: ['src/webview/dictation.ts'], outfile:
 const menuWindow = { ...card, entryPoints: ['src/webview/menu.ts'], outfile: 'media/menu.js' }
 /** The talk window: the talk with the duck. */
 const talkWindow = { ...card, entryPoints: ['src/webview/talk.ts'], outfile: 'media/talk.js' }
+/** A screenshot: the frozen screen, the frame and the tools. */
+const shotPage = { ...card, entryPoints: ['src/webview/shot.ts'], outfile: 'media/shot.js' }
+/** A recording's strip: the recorder and its buttons. */
+const recordPage = { ...card, entryPoints: ['src/webview/record.ts'], outfile: 'media/record.js' }
 /** The badge's audio thread: the microphone as 16 kHz samples for the engine (an AudioWorklet, loaded by URL). */
 const pcmWorklet = { ...card, entryPoints: ['src/webview/pcm-worklet.ts'], outfile: 'media/pcm-worklet.js' }
 
-const all = [main, preload, voice, translator, keyboard, field, card, appWindow, trayPanel, dictation, menuWindow, talkWindow, pcmWorklet]
+const all = [main, preload, voice, translator, keyboard, field, shotWorker, card, appWindow, trayPanel, dictation, menuWindow, talkWindow, shotPage, recordPage, pcmWorklet]
 if (watch) {
   const contexts = await Promise.all(all.map(o => context(o)))
   await Promise.all(contexts.map(c => c.watch()))

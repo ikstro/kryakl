@@ -94,6 +94,10 @@ describe('reading keys back', () => {
     expect(isAccelerator('F8')).toBe(true)
     expect(isAccelerator('LeftControl*2')).toBe(false)
     expect(isAccelerator('Pause')).toBe(false)
+    expect(isAccelerator('PrintScreen')).toBe(false)
+    expect(parseHotkey('PrintScreen')).toEqual({ kind: 'key', mods: [], vk: 0x2c })
+    expect(codeOfVk(0x2c)).toBe('PrintScreen')
+    expect(hotkeyLabel('PrintScreen')).toBe('Print Screen')
     expect(isAccelerator('Control+Pause')).toBe(false)
     expect(isAccelerator('MouseForward')).toBe(false)
     // Windows takes Ctrl+Esc for Start: the hook holds Esc's keys.

@@ -69,6 +69,12 @@ export function settingsSummary(settings: object): Record<string, unknown> {
   }
   // What they told the duck about themselves: only how long it is.
   if (typeof out.talkAbout === 'string') out.talkAbout = `${out.talkAbout.length} characters, not shown`
+  // A folder of theirs, with who knows what in its name.
+  if (typeof out.shotFolder === 'string' && out.shotFolder) out.shotFolder = 'set, not shown'
+  if (typeof out.videoFolder === 'string' && out.videoFolder) out.videoFolder = 'set, not shown'
+  // A microphone's name may carry the person's own.
+  const sound = out.videoSound as { micName?: unknown } | undefined
+  if (sound?.micName) out.videoSound = { ...sound, micName: 'set, not shown' }
   // Their own instruction for dictated text: the same.
   if (typeof out.dictateEditOwn === 'string') out.dictateEditOwn = `${out.dictateEditOwn.length} characters, not shown`
   return out

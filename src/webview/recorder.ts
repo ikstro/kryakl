@@ -7,12 +7,24 @@
 
 import { t } from '../i18n'
 import type { HostCall, SpeechResult } from '../protocol'
+import { micDevice } from '../recordmodel'
 
 export type Call = (request: HostCall) => Promise<unknown>
 
 /** The browser's own echo and noise handling suits speech close to the microphone; a room recording keeps everything. */
-async function microphone(close: boolean): Promise<MediaStream> {
+export async function microphone(close: boolean): Promise<MediaStream> {
   return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: close, noiseSuppression: close, autoGainControl: true, channelCount: 1 } })
+}
+
+/**
+ * A screen recording's microphone, by its name ('' for the one chosen in Windows; `missing` when the one named is not connected and that one is used instead).
+ * Only the noise is taken out: the level stays Windows' own, as with the browser's gain and echo handling a test voice at a normal level reached the limit and cracked (measured),
+ * and without it the pauses hiss, as Chromium opens the microphone past Windows' own voice processing.
+ */
+export async function recordingMicrophone(name: string): Promise<{ stream: MediaStream; missing: boolean }> {
+  const deviceId = name ? micDevice(await navigator.mediaDevices.enumerateDevices(), name) : undefined
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: false, channelCount: 1, ...(deviceId ? { deviceId: { exact: deviceId } } : {}) } })
+  return { stream, missing: !!name && !deviceId }
 }
 
 class Meter {

@@ -216,6 +216,8 @@ function render(v: TrayView): void {
     el('header', { class: 'head' }, brand, el('div', { class: 'side' }, status(v), open)),
     group(
       t('tray.actions'),
+      command('shot', 'camera', t('tray.shot'), 'shot', v.keys.shot),
+      command('video', 'video', t('tray.video'), 'video', v.keys.video),
       command('listenCopied', 'volume-2', t('tray.listenCopied'), 'listenCopied', v.keys.listenCopied),
       command('translateCopied', 'languages', t('tray.translateCopied'), 'translateCopied'),
       command('typeToTranslate', 'pencil-line', t('tray.typeToTranslate'), 'typeToTranslate', v.keys.typeToTranslate),

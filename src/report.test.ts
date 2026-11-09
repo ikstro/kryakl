@@ -26,6 +26,11 @@ describe('cleanText', () => {
 })
 
 describe('settingsSummary', () => {
+  it('a microphone is only said to be chosen', () => {
+    expect(settingsSummary({ videoSound: { mic: true, system: false, micName: 'Headset of Ann' } }).videoSound).toEqual({ mic: true, system: false, micName: 'set, not shown' })
+    expect(settingsSummary({ videoSound: { mic: true, system: false, micName: '' } }).videoSound).toEqual({ mic: true, system: false, micName: '' })
+  })
+
   it("counts the person's own lists and keeps the rest", () => {
     expect(settingsSummary({ theme: 'dark', keepWords: ['ghbdtn', 'hello'], vocabulary: [], apps: [{ exe: 'code.exe' }], languages: ['uk'] })).toEqual({
       theme: 'dark',

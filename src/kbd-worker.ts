@@ -14,7 +14,7 @@ import koffi from 'koffi'
 
 import { lexiconOf, type KeyTable, type Lexicon } from './layoutfix'
 import { MASK_KEYS, Typist, type KbdConfig, type KbdIn, type KbdOut } from './typist'
-import { capsLockOf, caretOf, elevated, exeOf, focusClass, foreground, fullScreenNow, installedLayouts, layoutId, layoutOf, layoutTable, MAIN_KEYS, OWN_KEYS, press, REPLAY_KEYS, switchLayout, typingThread } from './winkbd'
+import { capsLockOf, caretOf, elevated, exeOf, focusClass, foreground, fullScreenNow, gameNow, installedLayouts, layoutId, layoutOf, layoutTable, MAIN_KEYS, OWN_KEYS, press, REPLAY_KEYS, switchLayout, typingThread } from './winkbd'
 
 const port = (workerData as { port: MessagePort }).port
 const send = (message: KbdOut) => port.postMessage(message)
@@ -73,6 +73,7 @@ const tid = GetCurrentThreadId() as number
 
 let config: KbdConfig | undefined
 let fullScreen = false
+let game = false
 
 /**
  * The thread that asks whether the field typed in is a password: started with fixing or learning, so
@@ -126,6 +127,7 @@ const typist = new Typist(
     mask: vk => PostThreadMessageW(tid, WM_APP_MASK, vk, 0),
     askField,
     fullScreen: () => fullScreen,
+    game: () => game,
     click: () => {
       if (config?.clickFile) PlaySoundW(config.clickFile, 0, SND_FILENAME | SND_ASYNC | SND_NODEFAULT)
     },
@@ -157,6 +159,8 @@ function drainPort(): void {
     else if (message.type === 'switchTo') typist.switchTo(message.layout)
     else if (message.type === 'converted') typist.converted(message.selected)
     else if (message.type === 'dictating') typist.setDictating(message.on)
+    else if (message.type === 'shooting') typist.setShooting(message.on)
+    else if (message.type === 'videoRecording') typist.setVideoRecording(message.on)
     else if (message.type === 'record') typist.record(message.on, message.hwnd)
     else if (message.type === 'menu') typist.menu(message.on, message.codes, message.rect)
     else if (message.type === 'fix') typist.fixNow()
@@ -197,7 +201,10 @@ function drainField(): void {
 }
 
 function tick(): void {
-  fullScreen = !!config?.quietFullScreen && fullScreenNow()
+  // A game is a game whether or not Kryakl keeps quiet on the full screen: the frame never opens over one.
+  const whole = fullScreenNow()
+  fullScreen = !!config?.quietFullScreen && whole
+  game = whole && gameNow()
   typist.tick()
 }
 

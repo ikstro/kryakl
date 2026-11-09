@@ -9,9 +9,9 @@ import * as path from 'node:path'
 
 import type { HostCall, ToHost } from './protocol'
 
-export type Page = 'app' | 'card' | 'tray' | 'dictation' | 'talk' | 'menu' | 'other'
+export type Page = 'app' | 'card' | 'tray' | 'dictation' | 'talk' | 'menu' | 'shot' | 'record' | 'other'
 
-const PAGES: Record<string, Page> = { 'app.html': 'app', 'card.html': 'card', 'tray.html': 'tray', 'dictation.html': 'dictation', 'talk.html': 'talk', 'menu.html': 'menu' }
+const PAGES: Record<string, Page> = { 'app.html': 'app', 'card.html': 'card', 'tray.html': 'tray', 'dictation.html': 'dictation', 'talk.html': 'talk', 'menu.html': 'menu', 'shot.html': 'shot', 'record.html': 'record' }
 
 /** The page a window shows, by its file (media/<page>.html, with or without a query); 'other' for anything else. */
 export function pageOf(url: string): Page {
@@ -21,6 +21,13 @@ export function pageOf(url: string): Page {
   } catch {
     return 'other'
   }
+}
+
+/** Who may ask for the microphone or the screen: the pages that use them, and never one that shows text from outside without needing them. */
+const MEDIA_PAGES: ReadonlySet<Page> = new Set<Page>(['app', 'dictation', 'talk', 'record'])
+
+export function mediaAllowed(page: Page): boolean {
+  return MEDIA_PAGES.has(page)
 }
 
 /** Messages only the app window sends: they install, remove, reset, open or export. */
@@ -51,6 +58,7 @@ const APP_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>([
   'restartSpeech',
   'showInFolder',
   'openPath',
+  'recordFolder',
   'removeWord',
   'exportWords',
   'copyWords',
@@ -81,8 +89,18 @@ const TALK_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>([
 /** Messages only the menu on one key sends, and the only ones it may: it is drawn over any program, so it asks for nothing but its own items. */
 const MENU_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>(['menuReady', 'menuHeight', 'menuHover', 'menuPick'])
 
+/** Messages only a screenshot's page sends, and the only ones it may: it holds a picture of the whole screen, and asks for nothing but to hand over what the person made of it. */
+const SHOT_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>(['shotReady', 'shotShown', 'shotBegan', 'shotCancel', 'shotStyle', 'shotTool', 'shotEffects', 'shotDone', 'shotRecord', 'shotSound'])
+
+/** Messages only a recording's strip sends, and the only ones it may: it sees the whole screen, so it names no file and no source; main holds both. */
+const RECORD_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>(['recordReady', 'recordSize', 'recordRolling', 'recordChunk', 'recordEnded', 'recordAct'])
+
 export function messageAllowed(page: Page, type: string): boolean {
   if (page === 'other') return false
+  if (SHOT_ONLY.has(type as ToHost['type'])) return page === 'shot'
+  if (page === 'shot') return false
+  if (RECORD_ONLY.has(type as ToHost['type'])) return page === 'record'
+  if (page === 'record') return false
   if (MENU_ONLY.has(type as ToHost['type'])) return page === 'menu'
   if (page === 'menu') return false
   if (TALK_ONLY.has(type as ToHost['type'])) return page === 'talk'

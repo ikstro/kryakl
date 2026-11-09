@@ -9,7 +9,7 @@ const NAMES = [
   // actions and pages
   'volume-2', 'languages', 'graduation-cap', 'scan', 'mic', 'audio-lines', 'keyboard', 'file-text', 'notebook-pen', 'book-open', 'list-checks', 'house', 'info', 'settings', 'bird',
   // Talk's window: send a line, keep it on top, a new talk, its history
-  'send-horizontal', 'mic-off', 'pin', 'square-pen', 'history',
+  'send-horizontal', 'mic-off', 'mouse-pointer-click', 'zoom-in', 'pin', 'square-pen', 'history',
   // the sidebar
   'list-ordered', 'message-square-text', 'arrow-left', 'bug',
   // rows
@@ -18,6 +18,8 @@ const NAMES = [
   'whole-word', 'brain', 'app-window', 'arrow-up-right',
   // the tray panel (P1, 2026-10-30): an icon of its own on every row
   'pencil-line', 'monitor-speaker', 'scan-text', 'text-cursor', 'panel-bottom',
+  // a screenshot's tools and its place in the window
+  'camera', 'volume-x', 'circle', 'slash', 'pencil', 'highlighter', 'hash', 'droplets', 'grid-3x3', 'undo-2', 'redo-2', 'save',
   // controls
   'plus', 'x', 'minus', 'square', 'chevron-right', 'chevron-left', 'chevron-down', 'arrow-up', 'arrow-down',
 ]

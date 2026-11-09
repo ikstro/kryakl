@@ -39,7 +39,7 @@ import { execFile, execFileSync } from 'node:child_process'
 import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, screen, session, shell, Tray, type Rectangle } from 'electron'
 
 import { backupSummary, makeBackup, readBackup, type BackupRead } from './backup'
-import { callAllowed, messageAllowed, openable, pageOf, patchAllowed, type Page } from './bridge'
+import { callAllowed, messageAllowed, openable, pageOf, patchAllowed, type Page, mediaAllowed } from './bridge'
 import { createChecker, type Checker } from './checker'
 import { createEditor, type Editor } from './dictedit'
 import { openInChrome } from './chrome'
@@ -76,8 +76,13 @@ import { adoptLocalFolder, adoptOldFolders, freeFolder, hasToMove, healSpeech, l
 import { paragraphsOf } from './ocrtext'
 import { menuGroups, type MenuAction } from './menu'
 import { KryaklMenu } from './menuwindow'
+import { shotFileName } from './shotmodel'
+import { dibFromBgra } from './shotpixels'
+import { ScreenRecorder } from './recordwindow'
+import { dropFiles } from './recordmodel'
+import { ShotOverlay, type ShotOutcome } from './shotwindow'
 import { placeByTray, placeNear, resize, type Point } from './placement'
-import type { AppTab, AppView, BusyPart, CardKind, CardState, CheckResult, DictationMode, DictionaryStatus, GlossMissing, HostCall, HostVoice, Refused, StorageId, StoragePart, StorageView, TalkWindowView, TextResult, ToHost, ToView, TranslationState, TrayCommand, TrayView, ViewConfig } from './protocol'
+import type { AppTab, AppView, BusyPart, CardKind, CardState, CheckResult, DictationMode, DictionaryStatus, GlossMissing, HostCall, HostVoice, Refused, ShotAction, StorageId, StoragePart, StorageView, TalkWindowView, TextResult, ToHost, ToView, TranslationState, TrayCommand, TrayView, ViewConfig } from './protocol'
 import { draftsIn, englishHtml, textOutHtml, translationHtml } from './render'
 import { issueUrl, mailUrl, makeReport, namesHere, reportName, type ReportFacts } from './report'
 import { addKept, CARD_WIDTH, DEFAULTS, keptForm, LEVEL_NAMES, myLanguages, normalize, TARGET, type LlmModel, type Settings, type TranslationLevel } from './settings'
@@ -123,10 +128,12 @@ import {
   restore as restoreClipboardSnapshot,
   sequence as clipboardSequence,
   snapshot as clipboardSnapshot,
+  writeImage as writeClipboardImage,
+  writeFiles as writeClipboardFiles,
   writeText as writeClipboardText,
   type ClipboardSnapshot,
 } from './winclipboard'
-import { caretOf, exeOf, focusWindow, foreground, fullScreenNow, installedLayouts, layoutTable, press, windowedApps } from './winkbd'
+import { caretOf, exeOf, focusWindow, foreground, fullScreenNow, gameNow, installedLayouts, layoutTable, press, windowedApps } from './winkbd'
 import { ankiTsv, WordStore, wordsText } from './words'
 
 const CARD_MIN = 96
@@ -161,13 +168,21 @@ const KEYBOARD_APPS: Record<string, string> = {
   'qtranslate.exe': 'QTranslate',
   'logioptionsplus_agent.exe': 'Logitech Options+',
 }
+/** Other screenshot programs, by their process: one may hold the same key, which the Screenshots page says. */
+const SHOT_APPS: Record<string, string> = { 'sharex.exe': 'ShareX', 'lightshot.exe': 'Lightshot', 'greenshot.exe': 'Greenshot' }
+/** A screenshot asked for from Kryakl's own menu or panel waits for it to leave the screen. */
+const SHOT_AFTER_MS = 80
+/** "Copied" and "Saved" by the cursor, this long. */
+const SHOT_SAY_MS = 1400
+/** A recording's own word by the cursor may say why it stopped: long enough to read. */
+const RECORD_SAY_MS = 4000
 /** The tray's panel: its width; a click on the tray icon this soon after the panel hid on that click's blur only closes it. */
 const TRAY_WIDTH = 360
 const TRAY_REOPEN_MS = 300
 /** Ctrl+C pressed twice, a key of an action on the selection (settings.ts COPY_TWICE_KEYS), as a card's header draws it too. */
 const DOUBLE_COPY = COPY_TWICE
 /** The settings that are keys of actions. */
-const ACTION_KEYS: readonly (keyof Settings)[] = ['menuKey', 'selectKey', 'snipKey', 'translateKey', 'textKey', 'inPlaceKey', 'checkKey', 'typeKey', 'typeCheckKey', 'switchKey', 'fixKey', 'pauseKey', 'windowKey']
+const ACTION_KEYS: readonly (keyof Settings)[] = ['menuKey', 'shotKey', 'videoKey', 'videoZoomKey', 'selectKey', 'snipKey', 'translateKey', 'textKey', 'inPlaceKey', 'checkKey', 'typeKey', 'typeCheckKey', 'switchKey', 'fixKey', 'pauseKey', 'windowKey']
 /** The settings the keyboard thread is given (besides the keys). */
 const KEYBOARD_SETTINGS: readonly (keyof Settings)[] = [
   'layouts',
@@ -255,6 +270,7 @@ let seq = 0
 let shown: { id: number; kind: CardKind; state: CardState; via?: string } | undefined
 let last: { id: number; text: string; kind: CardKind; note?: string } | undefined
 let snipSince = 0
+let recordingClosed = false
 /** What the snip is for: the card to listen to, or the translator; the key that asked for it. */
 let snipFor: Purpose = 'listen'
 let snipVia: string | undefined
@@ -285,6 +301,10 @@ let dictation: Dictation
 /** What a click on the tray's balloon does, for the balloon shown last. */
 let balloonClick: (() => void) | undefined
 let keyboard: KeyboardHelper
+let shots: ShotOverlay | undefined
+let recorder: ScreenRecorder | undefined
+/** A frame opened for its text alone: what it is for, and the key that asked. */
+let quickShot: { purpose: 'listen' | 'translate'; via?: string } | undefined
 /** The menu on one key, by the text cursor. */
 let oneKeyMenu: KryaklMenu | undefined
 let keyboardTrouble: string | undefined
@@ -296,6 +316,7 @@ let frontLayout: { layout: string; caps: boolean } | undefined
 let learned: LearnStore
 let translationLog: TranslationLog
 let rivals: string[] = []
+let shotApps: string[] = []
 let keyboardApps: string[] = []
 let foreignKeys = false
 let trayPanel: BrowserWindow | undefined
@@ -534,6 +555,7 @@ function applyUiLanguage(): void {
   }
   dictation?.languageChanged()
   oneKeyMenu?.languageChanged()
+  shots?.languageChanged()
 }
 
 /** Light, dark or as Windows is: the pages follow `prefers-color-scheme`, which this sets. */
@@ -1285,6 +1307,8 @@ function appView(): AppView {
     learned: { alwaysFix: [...learned.alwaysFix], myWords: [...learned.myWords] },
     translations: translationLog.list(10),
     rivals,
+    shotApps,
+    videoDir: videoFolder(),
     keyboardApps,
     foreignKeys,
     speech: speech.view(speechKeysOk),
@@ -1611,6 +1635,12 @@ function onMessage(message: ToHost, page: Page): void {
       return
     case 'showInFolder':
       if (typeof message.path === 'string' && path.win32.isAbsolute(message.path)) shell.showItemInFolder(message.path)
+      return
+    case 'recordFolder':
+      void fs.promises
+        .mkdir(videoFolder(), { recursive: true })
+        .then(() => shell.openPath(videoFolder()))
+        .catch(error => log(`record: could not open the folder: ${(error as NodeJS.ErrnoException).code ?? messageOf(error)}`))
       return
     case 'openPath':
       // A folder, a note or a text file; never a program, a script or a shortcut. One of Kryakl's own
@@ -2499,10 +2529,23 @@ function logMistake(result: Extract<CheckResult, { status: 'ready' }>): void {
   if (mistakes.add({ text: result.text, corrected: result.corrected, note: result.note })) postApp()
 }
 
-/** Opens Windows' snipping overlay; the text of the picture it puts on the clipboard is shown to listen to, or translated. */
+/**
+ * A piece of the screen, read: Kryakl's own frame (2026-11-09, the owner), or
+ * Windows' snipping overlay over a game, where the frame does not open. The text
+ * is shown to listen to, or translated.
+ */
 function snip(purpose: Purpose = 'listen', via?: string): void {
   hideCard()
   warmModel(purpose)
+  if (shots && (purpose === 'listen' || purpose === 'translate') && !(fullScreenNow() && gameNow())) {
+    if (recorder?.active) {
+      keyboard.say(t('record.busy'), SHOT_SAY_MS)
+      return
+    }
+    quickShot = { purpose, ...(via ? { via } : {}) }
+    void shots.open('quick')
+    return
+  }
   snipFor = purpose
   snipVia = via
   snipSince = Date.now()
@@ -2543,6 +2586,8 @@ const FULL_SCREEN_REST_MS = 15_000
  * first, so texts translated over a full-screen reader are not reloaded each time.
  */
 function stopForFullScreen(): void {
+  // A screenshot on the screen is no game: the model stays for the text read from it.
+  if (shots?.isOpen) return
   const resting = llmFiles.server.restingFor
   if (resting === undefined || resting < FULL_SCREEN_REST_MS || !fullScreenNow()) return
   log(`model: stopped for a program on the full screen (${path.basename(llmFiles.server.model ?? '')})`)
@@ -2832,7 +2877,14 @@ function runMenu(action: MenuAction): void {
     case 'inPlace':
       return selection('inPlace', via, () => keyboard.say(t('menu.nothingToReplace'), NOTHING_SAY_MS))
     case 'screen':
-      return snip('translate', via)
+      setTimeout(() => snip('translate', via), SHOT_AFTER_MS)
+      return
+    case 'shot':
+      setTimeout(() => openShot(), SHOT_AFTER_MS)
+      return
+    case 'video':
+      setTimeout(() => videoPressed(), SHOT_AFTER_MS)
+      return
     case 'check':
       return selection('check', via, () => typeInto('check', via))
     case 'talk':
@@ -2954,6 +3006,98 @@ async function borrowClipboard<T>(work: () => Promise<T>, after: (result: T | un
   }
 }
 
+/** The frame, unless a recording is going: that one would be filmed, and it is said why nothing opens. */
+function openShot(mode: 'shot' | 'video' = 'shot'): void {
+  if (recorder?.active) {
+    keyboard.say(t('record.busy'), SHOT_SAY_MS)
+    return
+  }
+  quickShot = undefined
+  void shots?.open(mode)
+}
+
+/** The recording's key: stops what is being recorded, or opens the frame on its Video side. */
+function videoPressed(): void {
+  if (recorder?.active) recorder.stopByKey()
+  else openShot('video')
+}
+
+/** The folder recordings go to. Windows may not name a Videos folder at all (deleted, or moved to a drive that is gone), and asking must not break the window. */
+function videoFolder(): string {
+  if (settings.videoFolder) return settings.videoFolder
+  try {
+    return path.join(app.getPath('videos'), 'Kryakl')
+  } catch {
+    return path.join(app.getPath('home'), 'Videos', 'Kryakl')
+  }
+}
+
+/** What the keyboard thread and the tray follow, as a recording starts and ends. */
+function recordChanged(): void {
+  keyboard.videoRecording(!!recorder?.active)
+  // The zoom key exists only during a recording; the stop key, while paused, only then too.
+  if (settings.paused || settings.videoZoomKey) applyKeyboard()
+  refreshTray()
+}
+
+/** What would be in a screenshot and is not the person's: a card not pinned, the menu, the tray panel, a badge. True when one of them was on the screen. */
+function putAwayForShot(): boolean {
+  let any = false
+  if (shown && !pinned) {
+    hideCard()
+    any = true
+  }
+  if (oneKeyMenu?.isOpen) {
+    oneKeyMenu.close()
+    any = true
+  }
+  if (trayPanel && !trayPanel.isDestroyed() && trayPanel.isVisible()) {
+    trayPanel.hide()
+    any = true
+  }
+  keyboard.say('')
+  return any
+}
+
+/** A finished screenshot: on the clipboard for the person to paste (nothing of theirs comes back over it), in a file, or read in the Translate card. */
+async function finishShot(action: ShotAction, png: Buffer, win: BrowserWindow): Promise<ShotOutcome> {
+  if (action === 'text') {
+    const quick = quickShot
+    quickShot = undefined
+    return { close: true, after: () => void (quick?.purpose === 'listen' ? readScreenshot(png, quick.via) : readScreenText(png, quick ? quick.via : settings.shotKey || undefined)) }
+  }
+  if (action === 'copy') {
+    try {
+      const image = nativeImage.createFromBuffer(png)
+      const { width, height } = image.getSize()
+      const dib = dibFromBgra(image.toBitmap(), width, height)
+      await ownClipboard(() => clipGuard.own(() => writeClipboardImage(clipboardOwner(), png, dib)))
+    } catch (error) {
+      log(`shot: could not copy: ${messageOf(error)}`)
+      return { close: false, message: t('shot.copyFailed', { why: messageOf(error) }) }
+    }
+    return { close: true, after: () => keyboard.say(t('shot.copied'), SHOT_SAY_MS) }
+  }
+  let folder = settings.shotFolder
+  if (!folder) {
+    const picked = await dialog.showOpenDialog(win, { title: t('shot.pickFolder'), properties: ['openDirectory', 'createDirectory'] })
+    if (picked.canceled || !picked.filePaths[0]) return { close: false }
+    folder = picked.filePaths[0]
+    saveSettings({ shotFolder: folder })
+  }
+  try {
+    fs.mkdirSync(folder, { recursive: true })
+    const now = new Date()
+    let n = 1
+    while (fs.existsSync(path.join(folder, shotFileName(now, n)))) n++
+    fs.writeFileSync(path.join(folder, shotFileName(now, n)), png)
+  } catch (error) {
+    log(`shot: could not save: ${(error as NodeJS.ErrnoException).code ?? messageOf(error)}`)
+    return { close: false, message: t('shot.saveFailed', { why: messageOf(error) }) }
+  }
+  return { close: true, after: () => keyboard.say(t('shot.saved'), SHOT_SAY_MS) }
+}
+
 /** Runs Kryakl's own use of the clipboard; the changes it makes, until a moment after, are not taken for requests. */
 async function ownClipboard<T>(work: () => Promise<T>): Promise<T> {
   clipboardBusy = true
@@ -3062,8 +3206,10 @@ function findRivals(): void {
     ]
     const found = named(RIVALS)
     const apps = named(KEYBOARD_APPS)
-    if (found.join() === rivals.join() && apps.join() === keyboardApps.join()) return
+    const shooters = named(SHOT_APPS)
+    if (found.join() === rivals.join() && apps.join() === keyboardApps.join() && shooters.join() === shotApps.join()) return
     rivals = found
+    shotApps = shooters
     keyboardApps = apps
     postApp()
   })
@@ -3083,6 +3229,8 @@ function trayView(): TrayView {
       typeToTranslate: settings.typeKey,
       checkEnglish: settings.typeCheckKey,
       talk: settings.talkKey,
+      shot: settings.shotKey,
+      video: settings.videoKey,
       snipListen: settings.snipKey,
       snipTranslate: settings.textKey,
       switch: settings.switchKey,
@@ -3127,7 +3275,7 @@ function trayPoint(): { x: number; y: number } {
 }
 
 function recordingNow(): boolean {
-  return dictation?.state === 'recording' || micRecording || !!speech?.meeting
+  return dictation?.state === 'recording' || micRecording || !!speech?.meeting || !!recorder?.rolling
 }
 
 /** The taskbar's theme, which the tray's icon follows (not the app's theme setting). */
@@ -3330,11 +3478,17 @@ function runTrayCommand(command: TrayCommand): void {
     case 'talk':
       openTalk()
       return
+    case 'shot':
+      setTimeout(() => openShot(), SHOT_AFTER_MS)
+      return
+    case 'video':
+      setTimeout(() => videoPressed(), SHOT_AFTER_MS)
+      return
     case 'listenScreen':
-      snip('listen')
+      setTimeout(() => snip('listen'), SHOT_AFTER_MS)
       return
     case 'translateScreen':
-      snip('translate')
+      setTimeout(() => snip('translate'), SHOT_AFTER_MS)
       return
     case 'note':
       // A note, not typing: the panel took the focus, so there is no cursor to type at.
@@ -3480,6 +3634,8 @@ function setUpSpeechEngine(): void {
   })
   // The app window plays a transcript's sound from the engine in an <audio>, which sends no header of its own:
   // main adds the engine's key to that window's requests to the engine, and to no other window's.
+  // The microphone and the screen, for the pages that record; the card and the others show text from outside and never need them.
+  session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(permission !== 'media' || mediaAllowed(pageOf(contents.getURL()))))
   session.defaultSession.webRequest.onBeforeSendHeaders({ urls: [`http://127.0.0.1:${speechPort}/*`] }, (details, done) => {
     const fromApp = !!appWin && !appWin.isDestroyed() && details.webContentsId === appWin.webContents.id
     const key = fromApp ? speech.token : undefined
@@ -3671,6 +3827,8 @@ function start(): void {
     selection: (cycle, layout) => void convertSelection(cycle, layout).catch(error => console.warn('Kryakl: could not convert the selection', error)),
     hotkey: action => {
       if (action === 'pause') return togglePause()
+      if (action === 'video' && recorder?.active) return recorder.stopByKey()
+      if (action === 'zoom') return recorder?.zoomKey()
       // Paused, the thread keeps the pause key alone; a key on its way meanwhile does nothing.
       if (settings.paused) return
       if (action === 'dictate') dictation.press('type', settings.dictateKey)
@@ -3688,6 +3846,8 @@ function start(): void {
       else if (action === 'text') snip('translate', settings.textKey)
       else if (action === 'window') openApp()
       else if (action === 'menu') menuPressed()
+      else if (action === 'shot') openShot()
+      else if (action === 'video') videoPressed()
       else snip('listen', settings.snipKey)
     },
     app: (exe, elevated) => {
@@ -3732,13 +3892,54 @@ function start(): void {
     run: runMenu,
     log: win => logPageErrors(win, 'menu'),
   })
+  shots = new ShotOverlay({
+    page: path.join(app.getAppPath(), 'media', 'shot.html'),
+    preload: path.join(__dirname, 'preload.js'),
+    worker: unpacked('dist', 'shot-worker.js'),
+    query: pageQuery,
+    style: () => settings.shotStyle,
+    saveStyle: shotStyle => saveSettings({ shotStyle }),
+    tool: () => settings.shotTool,
+    saveTool: shotTool => saveSettings({ shotTool }),
+    sound: () => settings.videoSound,
+    saveSound: videoSound => saveSettings({ videoSound }),
+    effects: () => settings.videoEffects,
+    saveEffects: videoEffects => saveSettings({ videoEffects }),
+    record: request => void recorder?.start(request),
+    keys: on => keyboard.shooting(on),
+    putAway: putAwayForShot,
+    done: finishShot,
+    quitting: () => quitting,
+    log: win => logPageErrors(win, 'screenshot'),
+    say: log,
+  })
+  recorder = new ScreenRecorder({
+    page: path.join(app.getAppPath(), 'media', 'record.html'),
+    edge: path.join(app.getAppPath(), 'media', 'record-edge.html'),
+    preload: path.join(__dirname, 'preload.js'),
+    query: pageQuery,
+    folder: videoFolder,
+    effects: () => {
+      const { clicks, zoom, halo } = settings.videoEffects
+      return clicks || zoom || halo || settings.videoZoomKey ? settings.videoEffects : undefined
+    },
+    background: cardColor,
+    border: borderColor,
+    changed: recordChanged,
+    copy: file => ownClipboard(() => clipGuard.own(() => writeClipboardFiles(clipboardOwner(), dropFiles([file])))),
+    badge: text => keyboard.say(text, RECORD_SAY_MS),
+    log: win => logPageErrors(win, 'recording'),
+    say: log,
+  })
   applyKeyboard()
   card = createCard()
   // Each page only what it does (bridge.ts): a page that shows text from outside never opens, removes or exports.
   ipcMain.on('to-host', (event, message: ToHost) => {
     const page = pageOf(event.sender.getURL())
-    if (messageAllowed(page, message?.type) && (message.type !== 'saveSettings' || patchAllowed(page, message.patch))) onMessage(message, page)
-    else log(`bridge: ${page} may not send ${String(message?.type)}`)
+    if (!messageAllowed(page, message?.type) || (message.type === 'saveSettings' && !patchAllowed(page, message.patch))) log(`bridge: ${page} may not send ${String(message?.type)}`)
+    else if (page === 'shot') shots?.onMessage(message, event.sender)
+    else if (page === 'record') recorder?.onMessage(message, event.sender)
+    else onMessage(message, page)
   })
   ipcMain.handle('host-call', (event, request: HostCall) => {
     const page = pageOf(event.sender.getURL())
@@ -3781,10 +3982,16 @@ if (!theOnlyOne) {
   app.on('second-instance', (_event, argv) => {
     if (!runCommand(argv)) openApp()
   })
-  app.on('before-quit', () => {
+  app.on('before-quit', event => {
     quitting = true
     // Quitting within a paste's moment: what the person had goes back now, while the card's window can still own the clipboard.
     clipGuard.flush()
+    // A recording is finished first, for a few seconds at most; then Kryakl goes on quitting.
+    if (recorder?.active && !recordingClosed) {
+      event.preventDefault()
+      recordingClosed = true
+      void recorder.finishForQuit().finally(() => app.quit())
+    }
   })
   // The card is hidden, never closed: Kryakl keeps running in the tray.
   app.on('window-all-closed', () => undefined)

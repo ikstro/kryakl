@@ -62,6 +62,7 @@ class Desk {
   /** The field typed in is a password; a program fills the screen. */
   password = false
   fullScreen = false
+  gameOn = false
   clicks = 0
   /** The switch's sounds, by note. */
   chimes: number[] = []
@@ -105,6 +106,7 @@ class Desk {
           this.asked = true
         },
         fullScreen: () => this.fullScreen,
+        game: () => this.gameOn,
         click: () => {
           this.clicks++
         },
@@ -1227,6 +1229,95 @@ describe('the menu on one key', () => {
   })
 })
 
+describe('the screenshot key', () => {
+  const VK_SNAPSHOT = 0x2c
+  const shots = (desk: Desk) => desk.sent.filter(m => m.type === 'hotkey' && m.action === 'shot').length
+  /** Press and release, as the hook sees them: whether each was kept from Windows. */
+  const press = (desk: Desk) => [desk.typist.key(VK_SNAPSHOT, 0x37, true), desk.typist.key(VK_SNAPSHOT, 0x37, false)]
+
+  test('Print Screen is kept from Windows, its press and its release', () => {
+    const desk = new Desk({ keys: { shot: 'PrintScreen' } })
+    expect(press(desk)).toEqual([true, true])
+    expect(shots(desk)).toBe(1)
+  })
+
+  test('with no key set, Print Screen is left to Windows', () => {
+    const desk = new Desk({})
+    expect(press(desk)).toEqual([false, false])
+    expect(shots(desk)).toBe(0)
+  })
+
+  test('held down, it is one shot', () => {
+    const desk = new Desk({ keys: { shot: 'PrintScreen' } })
+    for (let i = 0; i < 4; i++) expect(desk.typist.key(VK_SNAPSHOT, 0x37, true)).toBe(true)
+    desk.typist.key(VK_SNAPSHOT, 0x37, false)
+    expect(shots(desk)).toBe(1)
+  })
+
+  test('over a video or a browser on the full screen it works; over a game it stays Windows’', () => {
+    const video = new Desk({ keys: { shot: 'PrintScreen' } })
+    video.fullScreen = true
+    expect(press(video)).toEqual([true, true])
+    expect(shots(video)).toBe(1)
+    const game = new Desk({ keys: { shot: 'PrintScreen' } })
+    game.fullScreen = true
+    game.gameOn = true
+    expect(press(game)).toEqual([false, false])
+    expect(shots(game)).toBe(0)
+  })
+
+  test('over a game it stays Windows’ even when Kryakl is told not to keep quiet on the full screen', () => {
+    const desk = new Desk({ quietFullScreen: false, keys: { shot: 'PrintScreen' } })
+    desk.fullScreen = true
+    desk.gameOn = true
+    expect(press(desk)).toEqual([false, false])
+    expect(shots(desk)).toBe(0)
+  })
+
+  test('while the frame is open the key does nothing and never reaches Windows, and typing is left as typed', () => {
+    const desk = new Desk({ autoFix: true, keys: { shot: 'PrintScreen' } })
+    desk.typist.setShooting(true)
+    expect(press(desk)).toEqual([true, true])
+    expect(shots(desk)).toBe(0)
+    desk.keys('ghbdtn ')
+    expect(desk.text).toBe('ghbdtn ')
+  })
+})
+
+describe('the recording key', () => {
+  const VK_F9 = 0x78
+  const videos = (desk: Desk) => desk.sent.filter(m => m.type === 'hotkey' && m.action === 'video').length
+  const press = (desk: Desk) => [desk.typist.key(VK_F9, 0x43, true), desk.typist.key(VK_F9, 0x43, false)]
+
+  test('over a game it stays the game’s, until a recording is running: then it stops it', () => {
+    const desk = new Desk({ keys: { video: 'F9' } })
+    desk.fullScreen = true
+    desk.gameOn = true
+    expect(press(desk)).toEqual([false, false])
+    expect(videos(desk)).toBe(0)
+    desk.typist.setVideoRecording(true)
+    expect(press(desk)).toEqual([true, true])
+    expect(videos(desk)).toBe(1)
+  })
+
+  test('while the frame is open it does nothing and never reaches a program', () => {
+    const desk = new Desk({ keys: { video: 'F9' } })
+    desk.typist.setShooting(true)
+    expect(press(desk)).toEqual([true, true])
+    expect(videos(desk)).toBe(0)
+  })
+
+  test('a recording stops from a program left out of the keys, as the key to start one is not there', () => {
+    const desk = new Desk({ keys: { video: 'F9' }, apps: { 'game.exe': { off: ['keys'], layout: '' } } })
+    desk.exe = 'game.exe'
+    press(desk)
+    expect(videos(desk)).toBe(0)
+    desk.typist.setVideoRecording(true)
+    expect(press(desk)).toEqual([true, true])
+    expect(videos(desk)).toBe(1)
+  })
+})
+
 describe('the layout and Caps Lock as Windows has them', () => {
   test('R3, Ctrl, нравится: typed right, nothing is touched, even while Windows names the old layout', () => {
     const desk = new Desk({ autoFix: true, keys: { switch: 'LeftControl' } })
@@ -1301,4 +1392,35 @@ test('a dictation started before a picture went full screen still stops with its
   typing.typist.setDictating(true)
   typing.keys('ghbdtn ')
   expect(typing.text).toBe('ghbdtn ')
+})
+
+describe('the zoom key', () => {
+  const VK_F8 = 0x77
+  const zooms = (desk: Desk) => desk.sent.filter(m => m.type === 'hotkey' && m.action === 'zoom').length
+  const press = (desk: Desk) => [desk.typist.key(VK_F8, 0x42, true), desk.typist.key(VK_F8, 0x42, false)]
+
+  test('over a game too, and kept from it', () => {
+    const desk = new Desk({ keys: { zoom: 'F8' } })
+    desk.typist.setVideoRecording(true)
+    desk.fullScreen = true
+    desk.gameOn = true
+    expect(press(desk)).toEqual([true, true])
+    expect(zooms(desk)).toBe(1)
+  })
+
+  test('in a program left out of the keys too', () => {
+    const desk = new Desk({ keys: { zoom: 'F8' }, apps: { 'notepad.exe': { off: ['keys'], layout: '' } } })
+    desk.exe = 'notepad.exe'
+    desk.typist.setVideoRecording(true)
+    expect(press(desk)).toEqual([true, true])
+    expect(zooms(desk)).toBe(1)
+  })
+
+  test('held down, it is one press', () => {
+    const desk = new Desk({ keys: { zoom: 'F8' } })
+    desk.typist.setVideoRecording(true)
+    for (let i = 0; i < 4; i++) desk.typist.key(VK_F8, 0x42, true)
+    desk.typist.key(VK_F8, 0x42, false)
+    expect(zooms(desk)).toBe(1)
+  })
 })

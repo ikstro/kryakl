@@ -70,6 +70,9 @@ export type KeyAction =
   | 'pause'
   | 'window'
   | 'menu'
+  | 'shot'
+  | 'video'
+  | 'zoom'
 
 /** The parts of the keyboard helper a program can be left out of: fixing as one types, the switch and layout keys, the badge, every key of Kryakl's. */
 export type AppPart = 'fix' | 'switch' | 'badge' | 'keys'
@@ -164,6 +167,10 @@ export type KbdIn =
   | { type: 'converted'; selected: boolean }
   /** A dictation started or ended: while it runs, its keys work on the full screen too, so it can always be stopped. */
   | { type: 'dictating'; on: boolean }
+  /** The screenshot frame opened or closed: while it is open nothing typed is fixed or learned, and no key of Kryakl's acts. */
+  | { type: 'shooting'; on: boolean }
+  /** The screen is being recorded: the recording's key stops it wherever the person is. */
+  | { type: 'videoRecording'; on: boolean }
   /** A key field of the app window (`hwnd`) waits for a key: the keys pressed there are reported and kept from Windows, `RECORD_MS` at most; `on: false` ends it. */
   | { type: 'record'; on: boolean; hwnd?: bigint }
   /**
@@ -240,6 +247,8 @@ export type TypistEnv = {
   askField(front: Front): void
   /** Whether a program fills the screen now (a game, a presentation). */
   fullScreen(): boolean
+  /** A Direct3D program has the whole screen: a game, which a window drawn over it would throw out. */
+  game(): boolean
   /** The quiet click of a word fixed by itself. */
   click(): void
   /** The sound of a layout switch, in a note: 0 English's, then lower. */
@@ -492,7 +501,21 @@ export class Typist {
   }
 
   private quiet(): boolean {
-    return this.config.quietFullScreen && this.env.fullScreen()
+    return this.shooting || (this.config.quietFullScreen && this.env.fullScreen())
+  }
+
+  /** The screenshot frame is open (the main process says): typing in its text tool is left as typed. */
+  private shooting = false
+
+  setShooting(on: boolean): void {
+    this.shooting = on
+  }
+
+  /** The screen is being recorded (the main process says): only its own key reaches through a full screen or a program left out of the keys, to stop it. */
+  private videoRecording = false
+
+  setVideoRecording(on: boolean): void {
+    this.videoRecording = on
   }
 
   /** A dictation is running (the main process says): its keys stay on in full screen. */
@@ -539,12 +562,25 @@ export class Typist {
     if (this.quiet()) {
       // A game or a presentation: no key of Kryakl's, no fixing; modifiers are still followed, so none seems held after.
       // But a dictation started before the full screen must still stop with its key: its taps and keys are read, and only they act (`allowed`); nothing typed is fixed.
-      if (this.dictating && mod) {
+      if ((this.dictating || this.videoRecording) && mod) {
         if (!repeat) this.onModifierDown(vk)
         return false
       }
       this.spoilTap()
-      const hotkey = this.dictating ? this.hotkeyOf(vk, this.heldMods()) : undefined
+      const heard = this.hotkeyOf(vk, this.heldMods())
+      // The screenshot key works over a video or a browser on the full screen, never over a game; while the frame is open it does nothing, and still never reaches Windows' own tool.
+      if ((heard?.action === 'shot' || heard?.action === 'video') && (this.shooting || (heard.action === 'video' && this.videoRecording) || (!this.env.game() && !this.offHere('keys')))) {
+        this.swallowed.add(vk)
+        if (!repeat && !this.shooting) this.env.send({ type: 'hotkey', action: heard.action })
+        return true
+      }
+      // Bound only while the screen is recorded, and it is the recording's: over a game or a full-screen video too.
+      if (heard?.action === 'zoom' && this.videoRecording) {
+        this.swallowed.add(vk)
+        if (!repeat) this.env.send({ type: 'hotkey', action: 'zoom' })
+        return true
+      }
+      const hotkey = this.dictating ? heard : undefined
       if (hotkey && this.allowed(hotkey)) {
         this.swallowed.add(vk)
         if (!repeat) this.act(hotkey)
@@ -709,7 +745,7 @@ export class Typist {
     if (event === 'x-down') {
       this.spoilTap()
       const mods = this.heldMods()
-      const hit = this.quiet() && !this.dictating ? undefined : this.keys.find(k => k.spec.kind === 'mouse' && k.spec.button === button && sameMods(mods, k.spec.mods))
+      const hit = this.quiet() && !this.dictating && !this.videoRecording ? undefined : this.keys.find(k => k.spec.kind === 'mouse' && k.spec.button === button && sameMods(mods, k.spec.mods))
       if (hit && this.allowed(hit)) {
         this.swallowedButtons.add(button)
         this.act(hit)
@@ -789,7 +825,8 @@ export class Typist {
 
   /** Whether a key works in the program in front: a program can be left out of Kryakl's keys, or of switching; the pause key works everywhere. */
   private allowed(key: Bound): boolean {
-    if (key.action === 'pause') return true
+    if (key.action === 'pause' || ((key.action === 'video' || key.action === 'zoom') && this.videoRecording)) return true
+    if ((key.action === 'shot' || key.action === 'video') && this.env.game()) return false
     if (this.quiet() && !DICTATION_ACTIONS.has(key.action)) return false
     const front = this.env.foreground()
     if (this.offHere('keys', front)) return false

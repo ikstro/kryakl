@@ -267,6 +267,7 @@ function needStep(v: AppView, h: SetupHooks, c: Choice, r: ReturnType<typeof rec
     c.transcribe && c.speakers ? speakersOnCard(v, h, c) : null,
     grp(t('app.name')),
     advised(toggleCard('power', t('setup.startWithWindows'), c.startWithWindows, flip('startWithWindows'), r.startWithWindows.why), r.startWithWindows),
+    advised(toggleCard('camera', t('setup.printScreen'), c.printScreen, flip('printScreen'), r.printScreen.why), r.printScreen),
     grp(t('setup.allOfIt')),
     total,
     aside('info', t('setup.keysLater')),
@@ -310,6 +311,7 @@ function start(v: AppView, h: SetupHooks, c: Choice): void {
     autoFix: c.autoFix,
     layoutBadge: c.layoutBadge,
     startWithWindows: c.startWithWindows,
+    shotKey: c.printScreen ? 'PrintScreen' : '',
     speechTestAgreed: c.test,
     // The advice stays "automatic", so it follows the computer; another choice is kept as made.
     speakersDevice: speakersWhere(c, v) === v.speech.plan.speakers.advised ? 'auto' : speakersWhere(c, v),

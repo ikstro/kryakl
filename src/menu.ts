@@ -8,7 +8,7 @@
 import type { UiLanguage } from './i18n'
 
 /** What an item of the menu does (main.ts runMenu). */
-export type MenuAction = 'translate' | 'listen' | 'inPlace' | 'screen' | 'check' | 'talk' | 'dictate' | 'english' | 'fix'
+export type MenuAction = 'translate' | 'listen' | 'inPlace' | 'screen' | 'shot' | 'video' | 'check' | 'talk' | 'dictate' | 'english' | 'fix'
 
 /** An item: what it does, the letter shown, and the key that picks it. */
 export type MenuItem = { id: MenuAction; letter: string; code: string }
@@ -23,6 +23,8 @@ const MENU: Readonly<Record<UiLanguage, readonly (readonly Row[])[]>> = {
       ['listen', 'Ч', 'KeyX'],
       ['inPlace', 'З', 'KeyP'],
       ['screen', 'Э', 'Quote'],
+      ['shot', 'С', 'KeyC'],
+      ['video', 'Т', 'KeyN'],
     ],
     [
       ['check', 'А', 'KeyF'],
@@ -40,6 +42,8 @@ const MENU: Readonly<Record<UiLanguage, readonly (readonly Row[])[]>> = {
       ['listen', 'Ч', 'KeyX'],
       ['inPlace', 'З', 'KeyP'],
       ['screen', 'Е', 'KeyT'],
+      ['shot', 'С', 'KeyC'],
+      ['video', 'Т', 'KeyN'],
     ],
     [
       ['check', 'А', 'KeyF'],
@@ -57,6 +61,8 @@ const MENU: Readonly<Record<UiLanguage, readonly (readonly Row[])[]>> = {
       ['listen', 'R', 'KeyR'],
       ['inPlace', 'P', 'KeyP'],
       ['screen', 'S', 'KeyS'],
+      ['shot', 'A', 'KeyA'],
+      ['video', 'O', 'KeyO'],
     ],
     [
       ['check', 'C', 'KeyC'],
