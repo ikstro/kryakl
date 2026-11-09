@@ -559,21 +559,30 @@ button.rec.set { border: 0; padding: 0; min-width: 0; height: auto; background: 
   html { scroll-behavior: auto; }
 }
 /* Screenshots: the frame over a frozen screen and Kryakl's bar, redrawn as media/shot.css draws them. */
-.wide .desk.shots > * { max-width: 860px; }
-.sh-scene { display: block; width: 100%; height: auto; border-radius: 10px; }
+.desk.shots { padding: clamp(14px, 2.2vw, 24px); }
+.desk.shots > * { max-width: none; }
+.desk.shots > .seg { justify-self: center; }
+/* The picture is of a dark screen whatever the site's theme, so the bar on it keeps its own dark values. */
+.sh-shot { --surface: #2b2b2b; --line: #3d3d3d; --text: #d6d6d6; --ink: #fff; --muted: #9a9a9a; --accent: #ffd60a; --on-accent: #1a1500; --mark: #ffd60a; --rec: #ff5a5f; --shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.7); position: relative; container-type: inline-size; overflow: hidden; border-radius: 10px; background: #101010; }
+.sh-scene { display: block; width: 100%; height: auto; }
+.sh-scene text { font-family: var(--mono); font-size: 12px; font-variant-ligatures: none; }
+.sh-scene text.sh-num { font-family: var(--font); font-weight: 700; }
 .shots[data-mode="video"] .sh-draw { display: none; }
-.sh-bar, .sh-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; width: fit-content !important; padding: 5px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); color: var(--text); font-size: 13px; }
+.sh-bar, .sh-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; padding: 5px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); color: var(--text); font-size: 12.5px; }
+.sh-bar { position: absolute; left: 50%; bottom: 2.4cqw; transform: translateX(-50%); width: max-content; max-width: calc(100% - 12px); }
+.sh-strip { position: absolute; top: 1cqw; right: 1.4cqw; width: max-content; }
 .sh-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; }
 .sh-row[hidden], .sh-strip[hidden] { display: none; }
-.sh-row i, .sh-strip i { width: 1px; height: 20px; margin: 0 4px; background: var(--line); }
-.sh-strip b { font: 600 13px/1 var(--mono); color: var(--ink); padding-left: 6px; }
+.sh-row i, .sh-strip i { width: 1px; height: 18px; margin: 0 3px; background: var(--line); }
+.sh-strip b { font: 600 12.5px/1 var(--mono); color: var(--ink); padding-left: 6px; }
 .sh-strip .muted { color: var(--muted); padding-right: 2px; }
-.sh-bar .b, .sh-strip .b { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 30px; height: 30px; border-radius: 6px; color: var(--text); }
-.sh-bar .b .lu, .sh-strip .b .lu { font-size: 16px; }
-.b.wide-b, .b.copy { padding: 0 9px; }
+.sh-bar .b, .sh-strip .b { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 26px; height: 26px; border-radius: 6px; color: var(--text); }
+.sh-bar .b .lu, .sh-strip .b .lu { font-size: 15px; }
+.b.wide-b, .b.copy { padding: 0 8px; }
 .b.on { background: color-mix(in srgb, var(--ink) 8%, var(--surface)); box-shadow: inset 0 0 0 1px var(--mark); color: var(--ink); }
 .b.copy { background: var(--accent); color: var(--on-accent) !important; font-weight: 600; }
 .b.start .lu { color: var(--rec); fill: currentColor; }
-.sh-mode { display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--sunk); }
-.sh-mode button { height: 26px; padding: 0 11px; border-radius: 5px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.sh-mode button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line-soft); }
+/* Too narrow to lie on the picture: under it. */
+@container (max-width: 530px) {
+  .sh-bar, .sh-strip { position: static; transform: none; width: auto; max-width: none; margin: 6px; box-shadow: none; }
+}
