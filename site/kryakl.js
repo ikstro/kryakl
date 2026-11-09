@@ -31,7 +31,7 @@ const T = merge({
   selectSentence: 'select a sentence first',
   onceMore: 'once more',
   fixed: 'fixed',
-  acts: { menu: "open Kryakl's menu", translate: 'translate the selected text', inplace: 'translate the selected text in place', check: 'check your English', dictate: 'start dictating', english: 'dictate and type English', note: 'dictate a note', talk: 'talk to the duck' },
+  acts: { menu: "open Kryakl's menu", translate: 'translate the selected text', inplace: 'translate the selected text in place', check: 'check your English', dictate: 'start dictating', english: 'dictate and type English', note: 'dictate a note', talk: 'talk to the duck', video: 'record the screen' },
   levels: { fast: 'About 85 MB for a language pair, quick on any processor.', accurate: '5.2 GB, 0.7 s a sentence on an RTX 2080 SUPER. Recommended for most computers.', most: '7 GB, the best wording. For graphics cards from about 12 GB.' },
   tkLevels: {
     A2: ['A2 · Elementary', 'short sentences of everyday words, simple tenses, no idioms. About 7 words a sentence.'],
@@ -639,6 +639,15 @@ function setLevel(l) {
 }
 $('#levels').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setLevel(b.dataset.l); });
 setLevel('accurate');
+
+/* ---------- Screenshots mock: Photo and Video, as the frame's own switch ---------- */
+function setShotMode(m) {
+  $('#shFig').dataset.mode = m;
+  $$('#shMode button').forEach((b) => b.setAttribute('aria-checked', b.dataset.m === m));
+  $$('#shFig .sh-row').forEach((r) => { r.hidden = r.dataset.for !== m; });
+  $('#shStrip').hidden = m !== 'video';
+}
+$('#shMode').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setShotMode(b.dataset.m); });
 
 /* ---------- Check mock ---------- */
 let checkMode = 'wrong';

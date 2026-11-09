@@ -369,8 +369,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .sec-lead { font-size: var(--t-lead); line-height: 1.55; color: var(--muted); max-width: 32em; }
 @media (max-width: 860px) { .sec-head { grid-template-columns: 1fr; } }
 
-/* The key map: every action in three groups. */
-.keymap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 clamp(24px, 3vw, 44px); }
+/* The key map: every action in four groups. */
+.keymap { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(36px, 4vw, 52px) clamp(24px, 4vw, 64px); }
 .kgroup h3 { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 2px solid var(--ink); font: 700 15px/1 var(--font); letter-spacing: -0.005em; color: var(--ink); }
 .kgroup h3 .lu { font-size: 18px; color: var(--muted); }
 .krow { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 58px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -558,3 +558,22 @@ button.rec.set { border: 0; padding: 0; min-width: 0; height: auto; background: 
   *, *::before, *::after { animation: none !important; transition: none !important; }
   html { scroll-behavior: auto; }
 }
+/* Screenshots: the frame over a frozen screen and Kryakl's bar, redrawn as media/shot.css draws them. */
+.wide .desk.shots > * { max-width: 860px; }
+.sh-scene { display: block; width: 100%; height: auto; border-radius: 10px; }
+.shots[data-mode="video"] .sh-draw { display: none; }
+.sh-bar, .sh-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; width: fit-content !important; padding: 5px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); color: var(--text); font-size: 13px; }
+.sh-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; }
+.sh-row[hidden], .sh-strip[hidden] { display: none; }
+.sh-row i, .sh-strip i { width: 1px; height: 20px; margin: 0 4px; background: var(--line); }
+.sh-strip b { font: 600 13px/1 var(--mono); color: var(--ink); padding-left: 6px; }
+.sh-strip .muted { color: var(--muted); padding-right: 2px; }
+.sh-bar .b, .sh-strip .b { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 30px; height: 30px; border-radius: 6px; color: var(--text); }
+.sh-bar .b .lu, .sh-strip .b .lu { font-size: 16px; }
+.b.wide-b, .b.copy { padding: 0 9px; }
+.b.on { background: color-mix(in srgb, var(--ink) 8%, var(--surface)); box-shadow: inset 0 0 0 1px var(--mark); color: var(--ink); }
+.b.copy { background: var(--accent); color: var(--on-accent) !important; font-weight: 600; }
+.b.start .lu { color: var(--rec); fill: currentColor; }
+.sh-mode { display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--sunk); }
+.sh-mode button { height: 26px; padding: 0 11px; border-radius: 5px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.sh-mode button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line-soft); }
