@@ -8,6 +8,7 @@
 
 import { formatDate, languageName, t } from '../i18n'
 import type { AppView } from '../protocol'
+import { MODELS } from '../speechplan'
 import { el, icon } from './dom'
 import { caps } from './keycaps'
 import { ChunkRecorder, micTrouble } from './recorder'
@@ -95,6 +96,8 @@ const tx = {
   exporting: false,
   /** "Transcribe again" was tapped once: it asks. */
   redoing: false,
+  /** The same, for a transcript a lighter model wrote. */
+  againing: false,
 }
 
 const DATE: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
@@ -365,7 +368,7 @@ function statusChip(r: Row): HTMLElement | null {
 export function openTranscript(id: string): void {
   if (id !== tx.openId) stopPlayer()
   tx.openId = id
-  tx.deleting = tx.exporting = tx.redoing = false
+  tx.deleting = tx.exporting = tx.redoing = tx.againing = false
   if (id && tx.row?.id !== id) {
     tx.row = undefined
     tx.transcript = undefined
@@ -470,6 +473,7 @@ function progressCard(r: Row): HTMLElement {
     el('span', { class: 'track' }, el('i')),
     el('small', { class: 'pstat' }),
     el('ol', { class: 'stages' }, ...STAGES.map(([, label]) => el('li', {}, label))),
+    el('small', { class: 'pbusy', hidden: true }),
     el('small', { class: 'pnote' }, t('tr.background')),
   )
   updateProgress(card, r)
@@ -487,7 +491,17 @@ function updateProgress(card: HTMLElement, r: Row): void {
   const line = card.querySelector('.pstat')
   if (line) line.textContent = progressLine(r)
   card.querySelectorAll('.stages li').forEach((li, i) => (li.className = i < at ? 'done' : i === at ? 'now' : ''))
+  // The card busy with other programs: said while it lasts, as Translate says Fast stood in.
+  const held = card.querySelector<HTMLElement>('.pbusy')
+  const why = r.status === 'working' ? r.ran?.why : undefined
+  if (held) {
+    held.hidden = why !== 'lighter' && why !== 'processor'
+    held.textContent = why === 'lighter' ? t('tr.busyLighter', { model: modelLabel(r.ran?.model) }) : why === 'processor' ? t('tr.busyProcessor') : ''
+  }
 }
+
+/** A speech model's name as the Models page writes it. */
+const modelLabel = (name = '') => MODELS.find(m => m.name === name)?.label ?? name
 
 /** "23 of 64 min · about 2 min left", "40%", or what it waits for. */
 function progressLine(r: Row): string {
@@ -497,7 +511,8 @@ function progressLine(r: Row): string {
   const parts: string[] = []
   if (r.stage === 'words' && part === 0) parts.push(t('tr.loadingModel'))
   else if (r.stage === 'words' && r.duration && r.source !== 'meet') parts.push(position(part * r.duration, r.duration))
-  else if (part > 0) parts.push(`${Math.round(part * 100)}%`)
+  // The whole job's share, as the bar above and the sidebar show it (the stage's own read as another number, 2026-11-10).
+  else if (part > 0) parts.push(`${Math.round(r.progress * 100)}%`)
   // Not said while a stage stands still (a model loading): any number then would be a guess.
   const left = part > 0 ? pace.left(r) : ''
   if (left) parts.push(left)
@@ -636,9 +651,42 @@ function notices(v: AppView, r: Row, tr: Transcript): HTMLElement[] {
   }
   if (tr.noteError) out.push(aside('info', tr.noteError, ' ', linkBtn(t('tr.chooseFolder'), () => void pickKb())))
   if (r.error) out.push(aside('circle-alert', r.error))
+  const lighter = lighterNotice(r, tr)
+  if (lighter) out.push(lighter)
   const speakers = speakersNotice(v, tr)
   if (speakers) out.push(speakers)
   return out
+}
+
+/** Written by a lighter model while the graphics card was busy: said, with Transcribe again where its sound allows it. */
+function lighterNotice(r: Row, tr: Transcript): HTMLElement | null {
+  if (r.ran?.why !== 'lighter') return null
+  const said = t('tr.lighterDone', { model: modelLabel(r.ran.model) })
+  // A meeting's two tracks are not kept apart, so it cannot be recognized again.
+  if (tr.source === 'meet') return aside('info', said)
+  if (tx.againing) {
+    return aside(
+      'info',
+      tr.edited ? t('tr.editsLost') : t('tr.goOn'),
+      ' ',
+      linkBtn(t('tr.again'), () => void transcribeAgain(tr.id)),
+      linkBtn(t('common.notNow'), () => ((tx.againing = false), redrawPage())),
+    )
+  }
+  return aside('info', `${said} ${t('tr.lighterAgain')}`, ' ', linkBtn(t('tr.again'), () => ((tx.againing = true), redrawPage())))
+}
+
+async function transcribeAgain(id: string): Promise<void> {
+  tx.againing = false
+  try {
+    await api('POST', `/transcripts/${id}/again`)
+    if (tx.openId === id && tx.row) {
+      tx.row = { ...tx.row, status: 'queued', progress: 0, stage: '' }
+      redrawPage()
+    }
+  } catch (error) {
+    fault(error)
+  }
 }
 
 /** Can this transcript be split by speaker now, and how: from its words, or only by recognizing it anew. */

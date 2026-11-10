@@ -2,11 +2,13 @@
 // the frame, what is drawn on it and the bar under it. Everything is kept in the
 // picture's own pixels (shotmodel.ts); the pointer's are turned into those here.
 // What leaves the page is one flat PNG, so what was blurred is gone from it.
+// The Screenshots window (shots.html) runs this page too, as its editor: one
+// screenshot at a time, its frame the crop, no Video side, its buttons its own.
 
 import { t } from '../i18n'
 import type { ShotAction, ToHost, ToView, TutorHost } from '../protocol'
 import { micNames, micTitle, MIN_VIDEO_FRAME, VIDEO_EFFECTS, VIDEO_SOUND, type VideoEffects, type VideoSound } from '../recordmodel'
-import { arrowHead, barPlace, boundsOf, boxOf, clampBox, commit, dragFrame, fontOf, handleAt, historyOf, inBox, MIN_FRAME, moved, onShape, optionsOf, redo, shapeAt, SHOT_COLORS, SHOT_STYLE, SHOT_TOOLS, stepNumber, stepOf, strokeOf, targetAt, targetsAt, toolOfCode, undo, worthKeeping, type Box, type Handle, type History, type Measure, type Point, type Shape, type ShotStyle, type ShotTarget, type Tool } from '../shotmodel'
+import { arrowHead, barPlace, boundsOf, boxOf, clampBox, commit, dragFrame, fontOf, handleAt, historyOf, inBox, MIN_FRAME, moved, nudge, onShape, optionsOf, redo, shapeAt, SHOT_COLORS, SHOT_STYLE, SHOT_TOOLS, snap45, squareOf, stepNumber, stepOf, strokeOf, targetAt, targetsAt, toolOfCode, undo, worthKeeping, type Box, type Handle, type History, type Measure, type Point, type Shape, type ShotStyle, type ShotTarget, type Tool } from '../shotmodel'
 import { blockOf, blurred, cut, pixelated } from '../shotpixels'
 import { el } from './dom'
 import { lucide, type LucideName } from './lucide'
@@ -24,6 +26,13 @@ const canvas = part<HTMLCanvasElement>('screen')
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
 const hint = part<HTMLDivElement>('hint')
 const sizeLabel = part<HTMLDivElement>('size')
+/** The pixels round the pointer, enlarged, while a frame or its edge is placed. */
+const loupe = el('div', { class: 'loupe' })
+const loupeCanvas = el('canvas')
+const loupeText = el('div', { class: 'at' })
+loupe.append(loupeCanvas, loupeText)
+loupe.hidden = true
+document.body.append(loupe)
 const bar = part<HTMLDivElement>('bar')
 const write = part<HTMLTextAreaElement>('write')
 /** The list of microphones, over the bar. */
@@ -37,6 +46,13 @@ const scratch = document.createElement('canvas')
 
 /** The frame's edge and handles lie on the screen, not on a page of Kryakl's: the duck's yellow in either theme. */
 const YELLOW = '#ffd60a'
+// The frame's line: one solid pixel (the owner, 2026-11-10: see-through at 60 % was lost on white).
+const FRAME_LINE = YELLOW
+// Loaded once, ready before the first screenshot.
+const shutterSound = new Audio('shutter.wav')
+shutterSound.volume = 0.6
+/** The shutter sounds once a frame is fixed, the first time on this screenshot (the owner, 2026-11-10: when the bar appears, not when the screen freezes). */
+let shutterArmed = false
 const DIM = 'rgba(0, 0, 0, 0.45)'
 const LINE = 1.25
 const BAR_GAP = 8
@@ -47,6 +63,11 @@ const RELEASE_MS = 250
 const MESSAGE_MS = 3500
 
 const TOOL_ICONS: Record<Tool, LucideName> = { rect: 'square', ellipse: 'circle', arrow: 'arrow-up-right', line: 'slash', pen: 'pencil', marker: 'highlighter', text: 'type', step: 'hash', blur: 'droplets', pixel: 'grid-3x3' }
+/** The loupe: this many of the screen's pixels across, each this many CSS pixels wide. */
+const LOUPE_PIXELS = 15
+const LOUPE_CELL = 8
+/** An edit in the Screenshots window reaches main this long after the last change. */
+const SYNC_MS = 400
 const RESIZE: Record<Handle, string> = { n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', ne: 'nesw-resize', sw: 'nesw-resize', nw: 'nwse-resize', se: 'nwse-resize', move: 'move' }
 
 type Picture = { width: number; height: number; rgba: Uint8ClampedArray; windows: ShotTarget[]; bounds: Box }
@@ -57,8 +78,28 @@ type Drag =
   | { kind: 'move'; id: number; from: Point; start: Shape; live: Shape }
 
 let picture: Picture | undefined
-/** The picture's pixels in one CSS pixel. */
-let scale = 1
+/** Opened in the Screenshots window, not over a monitor. */
+const editor = document.body.classList.contains('editor')
+/** The screen's pixels in one CSS pixel of the monitor the picture was taken on: how thick a line, how big a text, how coarse a blur. */
+let ink = 1
+/** The picture's pixels in one CSS pixel of this window: how near the pointer must come, how big the handles. Over the monitor the same as `ink`. */
+let view = 1
+/** Room round the picture on its canvas, in its pixels, for the handles at its edges (the Screenshots window). */
+let pad = 0
+/** Where the picture's corner is in the window, in CSS pixels. */
+let origin: Point = { x: 0, y: 0 }
+/** The pointer as it was on the screen, the screen behind it, drawn on the picture while the bar says so. */
+let pointerPatch: { canvas: HTMLCanvasElement; x: number; y: number } | undefined
+let cursorOn = false
+/** Shift held: a square or a circle, a line at a round angle. */
+let shiftHeld = false
+/** Where the loupe looks, in the picture's pixels. */
+let loupeAt: Point | undefined
+/** The Screenshots window: the screenshot shown, what main has of it, and each one's history for as long as the window is open. */
+let shownId: number | undefined
+let synced: History['now'] | undefined
+let syncTimer: number | undefined
+const histories = new Map<number, History>()
 let history: History | undefined
 let selected: number | undefined
 let tool: Tool | undefined
@@ -73,6 +114,14 @@ let hoverUp = 0
 let hoverDeepest: ShotTarget | undefined
 /** A frame was begun on another monitor: this one only stays dim. */
 let other = false
+/** The pointer is on this monitor (before a frame): the others were told to let go of what they lit. */
+let here = false
+/** The frame's dashes run while it is being chosen (the owner, 2026-11-10), unless the person asked for less motion. */
+const still = matchMedia('(prefers-reduced-motion: reduce)')
+/** Milliseconds for the dashes to travel one CSS pixel, and how often they are drawn again meanwhile. */
+const MARCH_MS = 45
+const MARCH_EVERY_MS = 33
+let marchTimer: number | undefined
 let busy = false
 let nextId = 1
 let writing: { at: Point } | undefined
@@ -87,22 +136,69 @@ let sound: VideoSound = VIDEO_SOUND
 let effects: VideoEffects = VIDEO_EFFECTS
 /** The window a click took, by its place in the page's list; it is recorded as a window while the frame is still exactly that window. */
 let takenWindow: number | undefined
+/** The parts a window with no child windows names under the pointer (Chrome, VS Code), as panels of the window at that place of the list. */
+let parts: { window: number; boxes: ShotTarget[] } | undefined
+/** Asked at most this often while the pointer moves; the last place is always asked. */
+const PROBE_MS = 60
+let probedAt = 0
+let probeLater: number | undefined
+let pointer: Point | undefined
+
+/** What a click can take: the windows and their panels, and the parts named under the pointer before their window. */
+function targetList(): ShotTarget[] {
+  if (!picture) return []
+  if (!parts) return picture.windows
+  const list = picture.windows.slice()
+  list.splice(parts.window, 0, ...parts.boxes)
+  return list
+}
+
+/** The window under the pointer is asked for its parts, unless Windows lists its panels already. */
+function probe(p: Point): void {
+  if (!picture) return
+  const chain = targetsAt(picture.windows, p)
+  const win = chain[chain.length - 1]
+  if (!win || win.panel) return
+  const index = picture.windows.indexOf(win)
+  if (picture.windows[index - 1]?.panel) return
+  if (probeLater !== undefined) clearTimeout(probeLater)
+  const wait = probedAt + PROBE_MS - Date.now()
+  const send = () => {
+    probeLater = undefined
+    probedAt = Date.now()
+    post({ type: 'shotProbe', window: index, x: Math.round(p.x), y: Math.round(p.y) })
+  }
+  if (wait <= 0) send()
+  else probeLater = window.setTimeout(send, wait)
+}
+
+/** The narrowest at the pointer may have changed: the wheel starts again from it. */
+function rehover(p: Point): void {
+  const deepest = targetAt(targetList(), p, 0)
+  if (deepest !== hoverDeepest) {
+    hoverDeepest = deepest
+    hoverUp = 0
+  }
+  lightTarget(p)
+}
 let messageTimer: ReturnType<typeof setTimeout> | undefined
 const bakes = new Map<string, HTMLCanvasElement>()
 
-const point = (event: MouseEvent): Point => ({ x: Math.round(event.clientX * scale), y: Math.round(event.clientY * scale) })
-const reach = () => 6 * scale
-const shapeReach = () => 7 * scale
+const point = (event: MouseEvent): Point => ({ x: Math.round((event.clientX - origin.x) * view), y: Math.round((event.clientY - origin.y) * view) })
+/** A place in the picture, in the window's CSS pixels. */
+const cssOf = (p: Point): Point => ({ x: origin.x + p.x / view, y: origin.y + p.y / view })
+const reach = () => 6 * view
+const shapeReach = () => 7 * view
 const fontText = (size: number) => `600 ${size}px Inter, system-ui, sans-serif`
 /** Ink that stands out on a color: for a number in its circle, and the thin edge round a text. */
 const inkOn = (color: string) => (color === '#ffffff' || color === '#ffd60a' ? '#111111' : '#ffffff')
 
 const measure: Measure = shape => {
   if (shape.kind === 'step') {
-    const across = stepOf(shape.style, scale)
+    const across = stepOf(shape.style, ink)
     return { x: shape.at.x - across / 2, y: shape.at.y - across / 2, width: across, height: across }
   }
-  const size = fontOf(shape.style, scale)
+  const size = fontOf(shape.style, ink)
   const lines = shape.text.split('\n')
   ctx.save()
   ctx.font = fontText(size)
@@ -121,7 +217,7 @@ function bakeOf(kind: 'blur' | 'pixel', box: Box): HTMLCanvasElement {
   const { rgba, width } = picture as Picture
   const source = cut(rgba, width, box)
   const make = kind === 'blur' ? blurred : pixelated
-  const pixels = make(source, box.width, box.height, blockOf(scale), Math.random)
+  const pixels = make(source, box.width, box.height, blockOf(ink), Math.random)
   const made = document.createElement('canvas')
   made.width = box.width
   made.height = box.height
@@ -134,7 +230,7 @@ function bakeOf(kind: 'blur' | 'pixel', box: Box): HTMLCanvasElement {
 /** While a covered part is dragged: one sample of each block, never in the result. */
 function drawQuick(c: CanvasRenderingContext2D, box: Box, smooth: boolean): void {
   const { rgba, width, height } = picture as Picture
-  const block = blockOf(scale)
+  const block = blockOf(ink)
   const across = Math.max(1, Math.ceil(box.width / block))
   const down = Math.max(1, Math.ceil(box.height / block))
   const small = new ImageData(across, down)
@@ -163,7 +259,7 @@ function drawQuick(c: CanvasRenderingContext2D, box: Box, smooth: boolean): void
 }
 
 function drawShape(c: CanvasRenderingContext2D, shape: Shape, shapes: readonly Shape[], quick: boolean): void {
-  const stroke = strokeOf(shape.style, scale)
+  const stroke = strokeOf(shape.style, ink)
   c.save()
   c.strokeStyle = shape.style.color
   c.fillStyle = shape.style.color
@@ -225,7 +321,7 @@ function drawShape(c: CanvasRenderingContext2D, shape: Shape, shapes: readonly S
       break
     }
     case 'text': {
-      const size = fontOf(shape.style, scale)
+      const size = fontOf(shape.style, ink)
       c.font = fontText(size)
       c.textBaseline = 'top'
       c.strokeStyle = inkOn(shape.style.color)
@@ -239,7 +335,7 @@ function drawShape(c: CanvasRenderingContext2D, shape: Shape, shapes: readonly S
       break
     }
     case 'step': {
-      const across = stepOf(shape.style, scale)
+      const across = stepOf(shape.style, ink)
       c.beginPath()
       c.arc(shape.at.x, shape.at.y, across / 2, 0, Math.PI * 2)
       c.fill()
@@ -268,17 +364,17 @@ function shapesNow(): readonly Shape[] {
 }
 
 function frameNow(): Box | undefined {
-  if (drag?.kind === 'new') return clampBox(boxOf(drag.from, drag.now), (picture as Picture).bounds)
+  if (drag?.kind === 'new') return clampBox((shiftHeld ? squareOf : boxOf)(drag.from, drag.now), (picture as Picture).bounds)
   if (drag?.kind === 'frame') return drag.live
   return history?.now.frame ?? hovered
 }
 
 function drawHandles(c: CanvasRenderingContext2D, frame: Box): void {
-  const half = Math.round(3.5 * scale)
+  const half = Math.round(3.5 * view)
   const { x, y, width, height } = frame
   c.fillStyle = YELLOW
   c.strokeStyle = 'rgba(0, 0, 0, 0.55)'
-  c.lineWidth = Math.max(1, Math.round(scale * 0.75))
+  c.lineWidth = Math.max(1, Math.round(view * 0.75))
   for (const [px, py] of [[x, y], [x + width / 2, y], [x + width, y], [x, y + height / 2], [x + width, y + height / 2], [x, y + height], [x + width / 2, y + height], [x + width, y + height]] as const) {
     c.fillRect(Math.round(px) - half, Math.round(py) - half, half * 2, half * 2)
     c.strokeRect(Math.round(px) - half, Math.round(py) - half, half * 2, half * 2)
@@ -290,7 +386,13 @@ function paint(): void {
   const c = ctx
   const { width, height } = picture
   const frame = other ? undefined : frameNow()
+  c.setTransform(1, 0, 0, 1, 0, 0)
+  if (pad) {
+    c.clearRect(0, 0, canvas.width, canvas.height)
+    c.translate(pad, pad)
+  }
   c.drawImage(base, 0, 0)
+  drawPointer(c)
   c.fillStyle = DIM
   c.beginPath()
   c.rect(0, 0, width, height)
@@ -307,20 +409,83 @@ function paint(): void {
     const chosen = shapes.find(s => s.id === selected)
     if (chosen && drag?.kind !== 'draw') {
       const box = boundsOf(chosen, measure)
-      const pad = 4 * scale
+      const room = 4 * view
       c.strokeStyle = YELLOW
-      c.lineWidth = Math.max(1, Math.round(scale))
-      c.setLineDash([5 * scale, 4 * scale])
-      c.strokeRect(box.x - pad, box.y - pad, box.width + pad * 2, box.height + pad * 2)
+      c.lineWidth = Math.max(1, Math.round(view))
+      c.setLineDash([5 * view, 4 * view])
+      c.strokeRect(box.x - room, box.y - room, box.width + room * 2, box.height + room * 2)
     }
     c.restore()
     // One pixel of the screen, on a pixel: a line along the border of two pixels comes out two wide and half as bright. Just inside the frame, or a maximized window's would fall off the screen.
-    c.strokeStyle = YELLOW
+    c.strokeStyle = FRAME_LINE
     c.lineWidth = 1
+    // Dashed while it is only being chosen (a window lit, a frame being drawn), solid once it is fixed (the owner, 2026-11-10);
+    // the dashes run round it meanwhile, a frame drawn again every MARCH_EVERY_MS.
+    const choosing = !history || drag?.kind === 'new'
+    c.setLineDash(choosing ? [Math.round(6 * view), Math.round(4 * view)] : [])
+    c.lineDashOffset = choosing && !still.matches ? -Math.round((performance.now() / MARCH_MS) * view) : 0
     c.strokeRect(Math.round(frame.x) + 0.5, Math.round(frame.y) + 0.5, Math.round(frame.width) - 1, Math.round(frame.height) - 1)
+    c.setLineDash([])
+    c.lineDashOffset = 0
+    if (choosing && !still.matches && marchTimer === undefined) {
+      marchTimer = window.setTimeout(() => {
+        marchTimer = undefined
+        repaint()
+      }, MARCH_EVERY_MS)
+    }
     if (history && drag?.kind !== 'new') drawHandles(c, frame)
   }
   placeSize(frame)
+  drawLoupe()
+  if (editor && history && history.now !== synced) scheduleSync()
+}
+
+function drawPointer(c: CanvasRenderingContext2D): void {
+  if (cursorOn && pointerPatch) c.drawImage(pointerPatch.canvas, pointerPatch.x, pointerPatch.y)
+}
+
+/** Enlarged pixels round the pointer and a cross on the one under it, while the frame or its edge is placed: over the monitor before a frame, and while either is dragged. */
+function drawLoupe(): void {
+  const placing = drag?.kind === 'new' || drag?.kind === 'frame' || (!editor && !history && !other && !busy)
+  if (!picture || !loupeAt || !placing || quick) {
+    loupe.hidden = true
+    return
+  }
+  const dpr = window.devicePixelRatio || 1
+  const cell = Math.max(1, Math.round(LOUPE_CELL * dpr))
+  const side = LOUPE_PIXELS * cell
+  if (loupeCanvas.width !== side) loupeCanvas.width = loupeCanvas.height = side
+  const c = loupeCanvas.getContext('2d') as CanvasRenderingContext2D
+  const half = Math.floor(LOUPE_PIXELS / 2)
+  const x = Math.min(picture.width - 1, Math.max(0, Math.round(loupeAt.x)))
+  const y = Math.min(picture.height - 1, Math.max(0, Math.round(loupeAt.y)))
+  c.imageSmoothingEnabled = false
+  c.fillStyle = '#000'
+  c.fillRect(0, 0, side, side)
+  c.drawImage(base, x - half, y - half, LOUPE_PIXELS, LOUPE_PIXELS, 0, 0, side, side)
+  c.strokeStyle = 'rgba(255, 214, 10, 0.55)'
+  c.lineWidth = 1
+  c.beginPath()
+  c.moveTo(half * cell + cell / 2, 0)
+  c.lineTo(half * cell + cell / 2, half * cell)
+  c.moveTo(half * cell + cell / 2, (half + 1) * cell)
+  c.lineTo(half * cell + cell / 2, side)
+  c.moveTo(0, half * cell + cell / 2)
+  c.lineTo(half * cell, half * cell + cell / 2)
+  c.moveTo((half + 1) * cell, half * cell + cell / 2)
+  c.lineTo(side, half * cell + cell / 2)
+  c.stroke()
+  c.strokeStyle = YELLOW
+  c.strokeRect(half * cell + 0.5, half * cell + 0.5, cell - 1, cell - 1)
+  loupeText.textContent = `${x}, ${y}`
+  loupe.hidden = false
+  const size = LOUPE_PIXELS * LOUPE_CELL
+  loupeCanvas.style.width = loupeCanvas.style.height = `${size}px`
+  const at = cssOf({ x, y })
+  const gap = 24
+  const right = at.x + gap + size + 4 <= innerWidth
+  const below = at.y + gap + size + 24 <= innerHeight
+  loupe.style.transform = `translate(${Math.round(right ? at.x + gap : at.x - gap - size)}px, ${Math.round(below ? at.y + gap : at.y - gap - size - 20)}px)`
 }
 
 let paintAsked = false
@@ -340,9 +505,9 @@ function placeSize(frame: Box | undefined): void {
   }
   sizeLabel.hidden = false
   sizeLabel.textContent = `${frame.width} × ${frame.height}`
-  const x = frame.x / scale
-  const above = frame.y / scale - 24
-  sizeLabel.style.transform = `translate(${Math.round(Math.max(4, x))}px, ${Math.round(above >= 4 ? above : frame.y / scale + 6)}px)`
+  const at = cssOf(frame)
+  const above = at.y - 24
+  sizeLabel.style.transform = `translate(${Math.round(Math.max(4, at.x))}px, ${Math.round(above >= 4 ? above : at.y + 6)}px)`
 }
 
 // ---------------------------------------------------------------- the bar
@@ -401,17 +566,23 @@ function drawBar(): void {
   const row = el(
     'div',
     { class: 'row' },
-    modeSwitch(),
-    separator(),
+    ...(editor ? [] : [modeSwitch(), separator()]),
     ...tools,
+    ...(pointerPatch && !editor ? [separator(), button('mouse-pointer-2', t('shot.cursor'), toggleCursor, { on: cursorOn })] : []),
     separator(),
     button('undo-2', `${t('shot.undo')} · Ctrl+Z`, stepBack, { off: history.past.length === 0 }),
     button('redo-2', `${t('shot.redo')} · Ctrl+Y`, stepForward, { off: history.future.length === 0 }),
-    separator(),
-    button('scan-text', t('shot.textTip'), () => void finish('text'), { label: t('shot.text') }),
-    button('save', `${t('shot.save')} · Ctrl+S`, () => void finish('save')),
-    button('x', `${t('shot.close')} · Esc`, () => post({ type: 'shotCancel' })),
-    button('copy', 'Ctrl+C', () => void finish('copy'), { label: t('shot.copy'), cls: 'copy' }),
+    // The Screenshots window has its own Copy, Save, Text and Delete, for the ones picked in its list.
+    ...(editor
+      ? []
+      : [
+          separator(),
+          button('images', t('shot.keepTip'), () => void keep(), { label: t('shot.keep') }),
+          button('scan-text', t('shot.textTip'), () => void finish('text'), { label: t('shot.text') }),
+          button('save', `${t('shot.save')} · Ctrl+S`, () => void finish('save')),
+          button('x', `${t('shot.close')} · Esc`, () => post({ type: 'shotCancel' })),
+          button('copy', 'Ctrl+C', () => void finish('copy'), { label: t('shot.copy'), cls: 'copy' }),
+        ]),
   )
   bar.replaceChildren(row, ...optionsRow())
   placeBar()
@@ -441,10 +612,11 @@ function optionsRow(): HTMLElement[] {
 }
 
 function placeBar(): void {
-  if (!history || bar.hidden || !picture) return
+  // In the Screenshots window the bar stands still above the picture.
+  if (!history || bar.hidden || !picture || editor) return
   const { frame } = history.now
-  const css = { x: frame.x / scale, y: frame.y / scale, width: frame.width / scale, height: frame.height / scale }
-  const screen = { width: picture.width / scale, height: picture.height / scale }
+  const css = { x: frame.x / view, y: frame.y / view, width: frame.width / view, height: frame.height / view }
+  const screen = { width: picture.width / view, height: picture.height / view }
   const spot = barPlace(css, screen, { width: bar.offsetWidth, height: bar.offsetHeight }, BAR_GAP)
   barInside = spot.inside
   bar.classList.toggle('inside', spot.inside)
@@ -526,6 +698,30 @@ function startRecording(): void {
   post({ type: 'shotRecord', frame, sound, ...(taken && sameBox(taken, frame) ? { window: takenWindow } : {}) })
 }
 
+function toggleCursor(): void {
+  cursorOn = !cursorOn
+  post({ type: 'shotCursor', on: cursorOn })
+  drawBar()
+  repaint()
+}
+
+/** The arrows: the selected shape, else the frame, a pixel at a time (ten with Shift); with Ctrl the frame's right and bottom edges. */
+function nudgeBy(code: string, step: number, edge: boolean): void {
+  if (!history || !picture || drag || writing) return
+  const dx = code === 'ArrowLeft' ? -step : code === 'ArrowRight' ? step : 0
+  const dy = code === 'ArrowUp' ? -step : code === 'ArrowDown' ? step : 0
+  const shape = selected === undefined || video ? undefined : history.now.shapes.find(s => s.id === selected)
+  if (shape) {
+    const next = moved(shape, dx, dy)
+    history = commit(history, { ...history.now, shapes: history.now.shapes.map(s => (s.id === shape.id ? next : s)) })
+    drawBar()
+    repaint()
+    return
+  }
+  const frame = nudge(history.now.frame, dx, dy, picture.bounds, edge)
+  if (!sameBox(frame, history.now.frame)) setFrame(frame)
+}
+
 function pickTool(next: Tool): void {
   if (writing) finishWriting()
   tool = tool === next ? undefined : next
@@ -577,8 +773,14 @@ function afterStep(): void {
 function begin(frame: Box): void {
   history = historyOf({ frame, shapes: [] })
   hovered = undefined
+  loupe.hidden = true
   hint.hidden = true
   post({ type: 'shotBegan' })
+  if (shutterArmed && !video) {
+    shutterSound.currentTime = 0
+    void shutterSound.play().catch(() => undefined)
+  }
+  shutterArmed = false
   if (quick) {
     repaint()
     void finish('text')
@@ -603,13 +805,14 @@ function add(shape: Shape): void {
   repaint()
 }
 
-function removeSelected(): void {
-  if (!history || selected === undefined) return
+function removeSelected(): boolean {
+  if (!history || selected === undefined) return false
   const id = selected
   history = commit(history, { ...history.now, shapes: history.now.shapes.filter(s => s.id !== id) })
   selected = undefined
   drawBar()
   repaint()
+  return true
 }
 
 function select(id: number | undefined): void {
@@ -643,16 +846,17 @@ function startDraw(chosen: Tool, p: Point): void {
   }
 }
 
-function stretched(shape: Shape, from: Point, p: Point): Shape {
+/** `even`: Shift held, a square or a circle, a line at a round angle. */
+function stretched(shape: Shape, from: Point, p: Point, even: boolean): Shape {
   switch (shape.kind) {
     case 'rect':
     case 'ellipse':
     case 'blur':
     case 'pixel':
-      return { ...shape, box: boxOf(from, p) }
+      return { ...shape, box: (even ? squareOf : boxOf)(from, p) }
     case 'arrow':
     case 'line':
-      return { ...shape, to: p }
+      return { ...shape, to: even ? snap45(from, p) : p }
     case 'pen':
     case 'marker': {
       const last = shape.points[shape.points.length - 1] as Point
@@ -667,7 +871,7 @@ function stretched(shape: Shape, from: Point, p: Point): Shape {
 
 function styleWriting(): void {
   if (!writing) return
-  const size = fontOf(style, scale) / scale
+  const size = fontOf(style, ink) / view
   write.style.fontSize = `${size}px`
   write.style.color = style.color
   fitWriting()
@@ -675,21 +879,22 @@ function styleWriting(): void {
 
 function fitWriting(): void {
   if (!writing) return
-  const size = fontOf(style, scale)
+  const size = fontOf(style, ink)
   const lines = write.value.split('\n')
   ctx.save()
   ctx.font = fontText(size)
   const width = Math.max(...lines.map(line => ctx.measureText(line).width), size * 6)
   ctx.restore()
-  write.style.width = `${Math.ceil(width / scale) + size / scale}px`
-  write.style.height = `${Math.ceil((lines.length * size * LINE) / scale)}px`
+  write.style.width = `${Math.ceil(width / view) + size / view}px`
+  write.style.height = `${Math.ceil((lines.length * size * LINE) / view)}px`
 }
 
 function openWriting(p: Point): void {
   writing = { at: p }
   write.value = ''
   write.hidden = false
-  write.style.transform = `translate(${p.x / scale}px, ${p.y / scale}px)`
+  const at = cssOf(p)
+  write.style.transform = `translate(${at.x}px, ${at.y}px)`
   styleWriting()
   write.focus()
 }
@@ -774,15 +979,20 @@ window.addEventListener('mousemove', event => {
   }
   if (!picture || other) return
   const p = point(event)
+  shiftHeld = event.shiftKey
+  loupeAt = p
   if (!drag) {
     canvas.style.cursor = pointerCursor(p)
     if (!history) {
-      const deepest = targetAt(picture.windows, p, 0)
-      if (deepest !== hoverDeepest) {
-        hoverDeepest = deepest
-        hoverUp = 0
+      if (!here) {
+        here = true
+        post({ type: 'shotHover' })
       }
-      lightTarget(p)
+      pointer = p
+      rehover(p)
+      probe(p)
+      // Moved over a window already lit: only the loupe follows.
+      drawLoupe()
     }
     return
   }
@@ -795,7 +1005,7 @@ window.addEventListener('mousemove', event => {
       d.live = dragFrame(d.start, d.handle, p.x - d.from.x, p.y - d.from.y, picture.bounds)
       break
     case 'draw':
-      d.shape = stretched(d.shape, d.from, p)
+      d.shape = stretched(d.shape, d.from, p, event.shiftKey)
       break
     case 'move':
       d.live = moved(d.start, p.x - d.from.x, p.y - d.from.y)
@@ -812,11 +1022,11 @@ window.addEventListener('mouseup', event => {
   drag = undefined
   switch (d.kind) {
     case 'new': {
-      const box = clampBox(boxOf(d.from, d.now), picture.bounds)
+      const box = clampBox((event.shiftKey ? squareOf : boxOf)(d.from, d.now), picture.bounds)
       const big = box.width >= MIN_FRAME && box.height >= MIN_FRAME
       if (history) big ? setFrame(box) : repaint()
       else {
-        const under = big ? undefined : targetAt(picture.windows, d.now, hoverUp)
+        const under = big ? undefined : targetAt(targetList(), d.now, hoverUp)
         takenWindow = under && !under.panel ? picture.windows.indexOf(under) : undefined
         begin(big ? box : (under ?? picture.bounds))
       }
@@ -840,9 +1050,25 @@ window.addEventListener('mouseup', event => {
   }
 })
 
+/** The pointer went to another monitor before a frame: nothing stays lit here, and the loupe goes. */
+function letGo(): void {
+  here = false
+  if (!picture || history || drag) return
+  hovered = hoverDeepest = undefined
+  hoverUp = 0
+  pointer = loupeAt = undefined
+  repaint()
+  drawLoupe()
+}
+
+// Off the window altogether (another monitor's, before main's word comes): the same.
+document.documentElement.addEventListener('mouseleave', () => {
+  if (!editor) letGo()
+})
+
 function lightTarget(p: Point): void {
   if (!picture) return
-  const under = targetAt(picture.windows, p, hoverUp)
+  const under = targetAt(targetList(), p, hoverUp)
   if (under === hovered) return
   hovered = under
   repaint()
@@ -852,9 +1078,9 @@ function lightTarget(p: Point): void {
 canvas.addEventListener(
   'wheel',
   event => {
-    if (!picture || history || drag || other || busy) return
+    if (!picture || history || drag || other || busy || editor) return
     const p = point(event)
-    const most = targetsAt(picture.windows, p).length - 1
+    const most = targetsAt(targetList(), p).length - 1
     hoverUp = Math.max(0, Math.min(most, hoverUp + (event.deltaY < 0 ? 1 : -1)))
     lightTarget(p)
   },
@@ -907,25 +1133,31 @@ window.addEventListener(
     }
     const code = event.code
     const ctrl = event.ctrlKey
+    // The Screenshots window's list takes its own keys (Ctrl+A, the arrows, Delete) while it has the keyboard.
+    if (editor && (event.target as Element | null)?.closest?.('#list')) return
     let handled = true
     if (code === 'Escape') {
       if (drag) {
         drag = undefined
         repaint()
-      } else post({ type: 'shotCancel' })
+      } else if (editor) select(undefined)
+      else post({ type: 'shotCancel' })
     } else if (code === 'Space') {
       takenWindow = undefined
       if (history) setFrame(picture.bounds)
       else begin(picture.bounds)
-    } else if (code === 'KeyV' && !ctrl && !event.altKey && !event.metaKey && !quick) setVideo(!video)
+    } else if (code === 'KeyV' && !ctrl && !event.altKey && !event.metaKey && !quick && !editor) setVideo(!video)
+    else if (code.startsWith('Arrow') && history && !event.altKey) nudgeBy(code, event.shiftKey ? 10 : 1, ctrl)
     else if (video) {
       if (code === 'Enter' || code === 'NumpadEnter') startRecording()
       else handled = false
-    } else if (ctrl && code === 'KeyC') void finish('copy', 'KeyC')
+    } else if (editor && ctrl && (code === 'KeyC' || code === 'KeyS' || code === 'KeyA')) handled = false
+    else if (ctrl && code === 'KeyC') void finish('copy', 'KeyC')
     else if (ctrl && code === 'KeyS') void finish('save')
+    else if (ctrl && code === 'KeyE' && !editor) void keep()
     else if (ctrl && code === 'KeyZ') (event.shiftKey ? stepForward : stepBack)()
     else if (ctrl && code === 'KeyY') stepForward()
-    else if (code === 'Delete' || code === 'Backspace') removeSelected()
+    else if (code === 'Delete' || code === 'Backspace') handled = removeSelected() || !editor
     else if (!ctrl && !event.altKey && !event.metaKey && history && toolOfCode(code)) pickTool(toolOfCode(code) as Tool)
     else handled = false
     if (handled) {
@@ -953,17 +1185,38 @@ function released(code: string): Promise<void> {
 }
 
 /** The frame with what is drawn on it, flat: the covered parts always worked out in full. */
-async function flatten(): Promise<ArrayBuffer> {
+function flatten(): Promise<ArrayBuffer> {
   const { frame, shapes } = (history as History).now
+  return render(frame, shapes)
+}
+
+/** A part of the picture with these drawn on it, as a PNG. Drawn at once, encoded after: the picture may change meanwhile. */
+async function render(frame: Box, shapes: readonly Shape[]): Promise<ArrayBuffer> {
   const out = document.createElement('canvas')
   out.width = frame.width
   out.height = frame.height
   const c = out.getContext('2d') as CanvasRenderingContext2D
-  c.drawImage(base, -frame.x, -frame.y)
   c.translate(-frame.x, -frame.y)
+  c.drawImage(base, 0, 0)
+  drawPointer(c)
   for (const shape of shapes) drawShape(c, shape, shapes, false)
   const blob = await new Promise<Blob>((resolve, reject) => out.toBlob(made => (made ? resolve(made) : reject(new Error('no picture'))), 'image/png'))
   return blob.arrayBuffer()
+}
+
+/** Into the Screenshots window: the frame as taken (the pointer in it when it is on), the same flat with what is drawn, and the drawings moved into its own pixels, so they stay drawings there. */
+async function keep(): Promise<void> {
+  if (writing) finishWriting()
+  if (busy || !history || video || quick) return
+  busy = true
+  try {
+    const { frame, shapes } = history.now
+    const [png, flat] = await Promise.all([render(frame, []), flatten()])
+    post({ type: 'shotKeep', png, flat, shapes: shapes.map(shape => moved(shape, -frame.x, -frame.y)), ink })
+  } catch (error) {
+    busy = false
+    say(error instanceof Error ? error.message : String(error))
+  }
 }
 
 /** `held`: the key that asked for it, down right now. */
@@ -997,7 +1250,13 @@ function receive(frame: Extract<ToView, { type: 'shotFrame' }>): void {
   const rgba = new Uint8ClampedArray(frame.rgba.buffer as ArrayBuffer, frame.rgba.byteOffset, frame.rgba.length)
   const bounds = { x: 0, y: 0, width: frame.width, height: frame.height }
   picture = { width: frame.width, height: frame.height, rgba, windows: frame.windows, bounds }
-  scale = frame.width / frame.cssWidth
+  ink = view = frame.width / frame.cssWidth
+  pad = 0
+  origin = { x: 0, y: 0 }
+  pointerPatch = frame.cursor ? patchOf(frame.cursor) : undefined
+  cursorOn = frame.cursorOn
+  loupeAt = undefined
+  here = false
   canvas.width = base.width = frame.width
   canvas.height = base.height = frame.height
   ;(base.getContext('2d') as CanvasRenderingContext2D).putImageData(new ImageData(rgba, frame.width, frame.height), 0, 0)
@@ -1008,6 +1267,7 @@ function receive(frame: Extract<ToView, { type: 'shotFrame' }>): void {
   sound = frame.sound
   effects = frame.effects
   takenWindow = undefined
+  shutterArmed = frame.shutter
   history = undefined
   selected = undefined
   tool = frame.video || frame.quick ? undefined : lastTool
@@ -1015,6 +1275,8 @@ function receive(frame: Extract<ToView, { type: 'shotFrame' }>): void {
   hovered = undefined
   hoverUp = 0
   hoverDeepest = undefined
+  parts = undefined
+  pointer = undefined
   micList.hidden = true
   other = false
   busy = false
@@ -1024,11 +1286,127 @@ function receive(frame: Extract<ToView, { type: 'shotFrame' }>): void {
   hint.hidden = false
   bar.hidden = true
   paint()
-  requestAnimationFrame(() => requestAnimationFrame(() => post({ type: 'shotShown' })))
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      post({ type: 'shotShown' })
+    }),
+  )
+}
+
+/** The pointer's pixels, the screen behind it, as a small picture of its own. */
+function patchOf(cursor: NonNullable<Extract<ToView, { type: 'shotFrame' }>['cursor']>): typeof pointerPatch {
+  if (!(cursor.width > 0 && cursor.height > 0) || cursor.rgba.length !== cursor.width * cursor.height * 4) return undefined
+  const made = document.createElement('canvas')
+  made.width = cursor.width
+  made.height = cursor.height
+  const pixels = new Uint8ClampedArray(cursor.rgba.buffer as ArrayBuffer, cursor.rgba.byteOffset, cursor.rgba.length)
+  ;(made.getContext('2d') as CanvasRenderingContext2D).putImageData(new ImageData(pixels, cursor.width, cursor.height), 0, 0)
+  return { canvas: made, x: cursor.x, y: cursor.y }
+}
+
+// ---------------------------------------------------------------- the Screenshots window
+
+/** One screenshot from main: its picture as taken, its frame and its drawings, the history it had here when it comes back unchanged. */
+async function receivePicture(message: Extract<ToView, { type: 'shotsPicture' }>): Promise<void> {
+  // What was being changed on the one before reaches main first; drawn now, before its picture goes.
+  void flushEdit()
+  if (history && shownId !== undefined) histories.set(shownId, history)
+  const bitmap = await createImageBitmap(new Blob([message.png as Uint8Array<ArrayBuffer>], { type: 'image/png' }))
+  const { width, height } = bitmap
+  base.width = width
+  base.height = height
+  const b = base.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D
+  b.drawImage(bitmap, 0, 0)
+  bitmap.close()
+  const rgba = b.getImageData(0, 0, width, height).data
+  const bounds = { x: 0, y: 0, width, height }
+  picture = { width, height, rgba, windows: [], bounds }
+  ink = message.ink
+  pointerPatch = undefined
+  cursorOn = false
+  shownId = message.id
+  const now = { frame: clampBox(message.frame, bounds), shapes: message.shapes }
+  const kept = histories.get(message.id)
+  history = kept && JSON.stringify(kept.now) === JSON.stringify(now) ? kept : historyOf(now)
+  synced = history.now
+  nextId = Math.max(nextId, ...history.now.shapes.map(shape => shape.id + 1))
+  style = message.style
+  lastTool = message.tool || undefined
+  tool = lastTool
+  selected = undefined
+  drag = undefined
+  writing = undefined
+  write.hidden = true
+  loupeAt = undefined
+  bakes.clear()
+  hint.hidden = true
+  layout()
+  drawBar()
+  paint()
+}
+
+/** The picture as large as the window lets it be, never past one of its pixels a pixel of this screen, in the middle of its place. */
+function layout(): void {
+  if (!picture) return
+  const stage = part<HTMLDivElement>('stage').getBoundingClientRect()
+  const margin = 20
+  const dpr = window.devicePixelRatio || 1
+  const fit = Math.min((stage.width - margin * 2) / picture.width, (stage.height - margin * 2) / picture.height, 1 / dpr)
+  const cssWidth = Math.max(1, picture.width * fit)
+  view = picture.width / cssWidth
+  pad = Math.ceil(10 * view)
+  canvas.width = picture.width + pad * 2
+  canvas.height = picture.height + pad * 2
+  const outer = { width: canvas.width / view, height: canvas.height / view }
+  const left = stage.left + (stage.width - outer.width) / 2
+  const top = stage.top + (stage.height - outer.height) / 2
+  canvas.style.left = `${left}px`
+  canvas.style.top = `${top}px`
+  canvas.style.width = `${outer.width}px`
+  canvas.style.height = `${outer.height}px`
+  origin = { x: left + pad / view, y: top + pad / view }
+}
+
+function scheduleSync(): void {
+  if (syncTimer !== undefined) clearTimeout(syncTimer)
+  syncTimer = window.setTimeout(() => void flushEdit(), SYNC_MS)
+}
+
+/** What was changed reaches main now: before an action on it, another screenshot, or the list being dragged from. */
+export function flushEdit(): Promise<void> {
+  if (syncTimer !== undefined) clearTimeout(syncTimer)
+  syncTimer = undefined
+  if (writing) finishWriting()
+  if (!editor || !history || shownId === undefined || history.now === synced) return Promise.resolve()
+  const id = shownId
+  const now = history.now
+  synced = now
+  const flat = render(now.frame, now.shapes)
+  return flat.then(
+    png => post({ type: 'shotsEdit', id, frame: now.frame, shapes: [...now.shapes], flat: png }),
+    error => say(error instanceof Error ? error.message : String(error)),
+  )
+}
+
+/** Nothing left to show. */
+export function clearPicture(): void {
+  shownId = undefined
+  synced = undefined
+  clear()
+}
+
+if (editor) {
+  new ResizeObserver(() => {
+    layout()
+    paint()
+  }).observe(part<HTMLDivElement>('stage'))
 }
 
 function clear(): void {
   picture = undefined
+  parts = undefined
+  if (probeLater !== undefined) clearTimeout(probeLater)
+  probeLater = undefined
   history = undefined
   writing = undefined
   drag = undefined
@@ -1037,6 +1415,8 @@ function clear(): void {
   bar.hidden = true
   micList.hidden = true
   sizeLabel.hidden = true
+  loupe.hidden = true
+  pointerPatch = undefined
   bakes.clear()
   // The screen's pixels go at once, not when the window does.
   canvas.width = canvas.height = base.width = base.height = 0
@@ -1052,19 +1432,30 @@ window.addEventListener('message', (event: MessageEvent<ToView>) => {
     case 'shotClear':
       clear()
       break
+    case 'shotElements':
+      if (!picture || history || other) break
+      parts = { window: message.window, boxes: message.boxes }
+      if (pointer) rehover(pointer)
+      break
     case 'shotOther':
       other = true
       hovered = undefined
       hint.hidden = true
       repaint()
       break
+    case 'shotAway':
+      letGo()
+      break
     case 'shotResume':
       busy = false
       if (message.message) say(message.message)
+      break
+    case 'shotsPicture':
+      if (editor) void receivePicture(message)
       break
   }
 })
 
 // Text on the canvas needs its font in memory first.
 void document.fonts.load(fontText(26), 'Aя')
-post({ type: 'shotReady' })
+if (!editor) post({ type: 'shotReady' })

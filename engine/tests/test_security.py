@@ -237,3 +237,25 @@ def test_the_key_is_made_once_and_kept(tmp_path, monkeypatch):
     assert auth.load_token(file) == first
     monkeypatch.setenv("KRYA_SPEECH_TOKEN", "given")
     assert auth.load_token(file) == "given"
+
+
+def test_a_transcript_a_lighter_model_wrote_can_be_written_again_but_not_a_meeting(client, monkeypatch):
+    store = engine.state.get_store()
+    submitted = []
+    monkeypatch.setattr(engine.worker, "submit", submitted.append)
+    ran = {"model": "large-v3-turbo", "why": "lighter"}
+    for source in ("file", "meet"):
+        id = store.create("Call", source, "done", {"kind": source, "ran": ran})
+        store.save(id, {"id": id, "title": "Call", "utterances": [], "speakers": {}})
+        (store.folder(id) / "audio.ogg").write_bytes(b"ogg")
+        # The page sees what wrote it; nothing else of the job.
+        row = client.get(f"/transcripts/{id}", headers=KEY).json()["row"]
+        assert row["ran"] == ran and "job" not in row
+        # Only Kryakl asks it again.
+        assert client.post(f"/transcripts/{id}/again", headers=OURS).status_code == 403
+        answer = client.post(f"/transcripts/{id}/again", headers=KEY)
+        if source == "meet":
+            assert answer.status_code == 409
+        else:
+            assert answer.status_code == 200 and submitted == [id]
+            assert store.row(id)["job"]["task"] == "redo" and store.row(id)["status"] == "queued"

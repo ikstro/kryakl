@@ -290,6 +290,14 @@ export function putOnTop(hwnd: bigint): boolean {
   return !!SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE)
 }
 
+const ShowWindow = user32.func('bool __stdcall ShowWindow(intptr hwnd, int cmd)')
+const SW_SHOWMINNOACTIVE = 7
+
+/** A window shown in the taskbar only, minimized, the window in front left in front (Electron's minimize hands the front to another window). */
+export function showMinimized(hwnd: bigint): boolean {
+  return !!ShowWindow(hwnd, SW_SHOWMINNOACTIVE)
+}
+
 const exes = new Map<number, string>()
 
 /** A process's program, as its .exe name in lower case; empty when Windows does not say. */

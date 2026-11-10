@@ -15,7 +15,7 @@ import type { TranslationEntry } from './translationlog'
 import type { TranslatorState } from './translator'
 import type { MistakeEntry } from './mistakes'
 import type { VideoEffects, VideoSound } from './recordmodel'
-import type { Box, ShotStyle, ShotTarget, Tool } from './shotmodel'
+import type { Box, Shape, ShotStyle, ShotTarget, Tool } from './shotmodel'
 import type { Learned } from './typist'
 import type { DiffPart } from './worddiff'
 import type { SavedWord } from './words'
@@ -276,6 +276,8 @@ export type AppView = {
   rivals: string[]
   /** Other screenshot programs running now: one may hold the same key. */
   shotApps: string[]
+  /** How many screenshots the Screenshots window holds now. */
+  shotsHeld: number
   /** Where recordings of the screen go, the default when none was chosen. */
   videoDir: string
   /** Other programs known to watch the keyboard, running now (AutoHotkey, WhisperTyping…): no harm, named so the person knows. */
@@ -343,6 +345,8 @@ export type TrayView = {
   speech: { installed: boolean; recording: boolean; noteKey: string }
   /** The translator between English and the person's language (as `AppView.translator`). */
   translator: AppView['translator']
+  /** How many screenshots the Screenshots window holds: its row shows while there are any. */
+  shots: number
   native: string
   version: string
   build: string
@@ -350,7 +354,7 @@ export type TrayView = {
 }
 
 /** What the tray's panel can do; each puts the panel away first. */
-export type TrayCommand = 'shot' | 'video' | 'listenCopied' | 'translateCopied' | 'typeToTranslate' | 'checkEnglish' | 'talk' | 'listenScreen' | 'translateScreen' | 'note' | 'transcripts' | 'vocabulary' | 'kept' | 'settings' | 'report' | 'open' | 'quit'
+export type TrayCommand = 'shot' | 'shots' | 'video' | 'listenCopied' | 'translateCopied' | 'typeToTranslate' | 'checkEnglish' | 'talk' | 'listenScreen' | 'translateScreen' | 'note' | 'transcripts' | 'vocabulary' | 'kept' | 'settings' | 'report' | 'open' | 'quit'
 
 /**
  * Why a word has no meanings: no dictionary exists for the person's language,
@@ -410,13 +414,21 @@ export type ToView =
   /** Kryakl's menu on one key: what it draws now. */
   | { type: 'menu'; view: MenuView }
   /** A screenshot: this monitor as it was at the press, in its physical pixels (`rgba`, handed over to the page), how wide the window is in CSS pixels, and the windows on it, the top one first; `video`: opened to record; `quick`: only for the text in a frame. */
-  | { type: 'shotFrame'; width: number; height: number; cssWidth: number; rgba: Uint8Array; windows: ShotTarget[]; style: ShotStyle; tool: Tool | ''; video: boolean; quick: boolean; sound: VideoSound; effects: VideoEffects }
+  | { type: 'shotFrame'; width: number; height: number; cssWidth: number; rgba: Uint8Array; windows: ShotTarget[]; style: ShotStyle; tool: Tool | ''; video: boolean; quick: boolean; sound: VideoSound; effects: VideoEffects; shutter: boolean; cursor?: ShotPointer; cursorOn: boolean }
+  /** The parts the program names there, the narrowest first, as panels of that window. */
+  | { type: 'shotElements'; window: number; boxes: ShotTarget[] }
   /** The screenshot is over: its pixels go. */
   | { type: 'shotClear' }
   /** A frame was begun on another monitor: this one only stays dim. */
   | { type: 'shotOther' }
+  /** The pointer is on another monitor now: nothing lit here, no loupe. */
+  | { type: 'shotAway' }
   /** The picture stays on the screen after all (a save called off, or failed: `message` says why). */
   | { type: 'shotResume'; message?: string }
+  /** The Screenshots window (shotseditor.ts): what it holds, newest first, and whether the window fills the screen. */
+  | { type: 'shotsList'; items: ShotsItem[]; maximized: boolean }
+  /** One of them to work on: its picture as taken (no drawings), the pixels of the screen in one CSS pixel there (`ink`), its frame and what is drawn on it. */
+  | { type: 'shotsPicture'; id: number; png: Uint8Array; ink: number; frame: Box; shapes: Shape[]; style: ShotStyle; tool: Tool | '' }
   /** A recording's strip: what to take (the source and the crop are main's, in the source's own pixels; no size for a window, which has its own). */
   | { type: 'recordBegin'; source: string; size?: { width: number; height: number }; crop?: Box; sound: VideoSound; countdown: number; effects?: VideoEffects }
   /** The pointer, in pixels of what is recorded, whose size is `width` × `height`; a button that went down there since the last look. */
@@ -439,6 +451,15 @@ export type DictationMode = 'type' | 'english' | 'note' | 'check'
 
 /** What is done with a finished screenshot: copied, saved to a file, or its text read. */
 export type ShotAction = 'copy' | 'save' | 'text'
+
+/** The pointer as it was at the press: a patch of the monitor with it drawn in, at the patch's place in the monitor's own pixels. */
+export type ShotPointer = Box & { rgba: Uint8Array }
+
+/** A screenshot in the Screenshots window: its size, when it was taken, whether it was saved or copied since it changed, and a small picture of it. */
+export type ShotsItem = { id: number; width: number; height: number; at: number; handled: boolean; thumb: string }
+
+/** What the Screenshots window does with the screenshots ticked (or the one open). */
+export type ShotsAction = 'copy' | 'save' | 'text' | 'delete'
 
 /** A button on a recording's strip: Stop, delete what is being recorded; on the finished file, open it, show its folder, copy it, delete it, or close the strip. */
 export type RecordAction = 'stop' | 'cancel' | 'open' | 'folder' | 'copy' | 'delete' | 'dismiss'
@@ -524,6 +545,8 @@ export type ToHost =
   | { type: 'shotReady' }
   | { type: 'shotShown' }
   | { type: 'shotBegan' }
+  /** The pointer came onto this monitor before a frame: the others let go of what they lit. */
+  | { type: 'shotHover' }
   | { type: 'shotCancel' }
   | { type: 'shotStyle'; style: ShotStyle }
   /** A tool was picked, to be in hand next time. */
@@ -531,10 +554,23 @@ export type ToHost =
   | { type: 'shotDone'; action: ShotAction; png: ArrayBuffer }
   /** Record this frame: `window`, the window the frame still is, by its place in the page's list; else a piece of the monitor or the whole of it. */
   | { type: 'shotRecord'; frame: Box; window?: number; sound: VideoSound }
+  /** The parts of the window at this place of the page's list under the pointer (picture pixels). */
+  | { type: 'shotProbe'; window: number; x: number; y: number }
   /** Rings or zooming were switched in the bar, to be remembered. */
   | { type: 'shotEffects'; effects: VideoEffects }
   /** The sound was switched in the bar, to be remembered. */
   | { type: 'shotSound'; sound: VideoSound }
+  /** The pointer was put on the picture or taken off, to be remembered. */
+  | { type: 'shotCursor'; on: boolean }
+  /** Into the Screenshots window: the frame's picture as taken (`png`, with the pointer when it is on), the same with what is drawn (`flat`), what is drawn in the picture's own pixels, and the screen's pixels in one CSS pixel. */
+  | { type: 'shotKeep'; png: ArrayBuffer; flat: ArrayBuffer; shapes: Shape[]; ink: number }
+  // The Screenshots window (shotseditor.ts): its page is ready; it wants a screenshot's picture; one was changed (its frame, its drawings and the flat result); do this with these; they are being dragged out; its bar's buttons.
+  | { type: 'shotsReady' }
+  | { type: 'shotsWant'; id: number }
+  | { type: 'shotsEdit'; id: number; frame: Box; shapes: Shape[]; flat: ArrayBuffer }
+  | { type: 'shotsAction'; action: ShotsAction; ids: number[] }
+  | { type: 'shotsDrag'; ids: number[] }
+  | { type: 'shotsWindow'; command: 'minimize' | 'maximize' | 'close' }
   // A recording's strip (recordwindow.ts): its page is ready; how big it wants to be; the first picture is going out; a piece of the file, in order; everything is handed over; a button.
   | { type: 'recordReady' }
   | { type: 'recordSize'; width: number; height: number }
@@ -573,6 +609,8 @@ export type ToHost =
   | { type: 'openPath'; path: string }
   /** The folder recordings of the screen go to, made if it is not there yet. */
   | { type: 'recordFolder' }
+  /** The Screenshots window in front, from the Screenshots page. */
+  | { type: 'openShots' }
   /** Forget the phrases dictated lately; the texts translated lately. */
   | { type: 'clearDictation' }
   | { type: 'clearTranslations' }

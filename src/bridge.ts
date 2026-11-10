@@ -9,9 +9,9 @@ import * as path from 'node:path'
 
 import type { HostCall, ToHost } from './protocol'
 
-export type Page = 'app' | 'card' | 'tray' | 'dictation' | 'talk' | 'menu' | 'shot' | 'record' | 'other'
+export type Page = 'app' | 'card' | 'tray' | 'dictation' | 'talk' | 'menu' | 'shot' | 'shots' | 'record' | 'other'
 
-const PAGES: Record<string, Page> = { 'app.html': 'app', 'card.html': 'card', 'tray.html': 'tray', 'dictation.html': 'dictation', 'talk.html': 'talk', 'menu.html': 'menu', 'shot.html': 'shot', 'record.html': 'record' }
+const PAGES: Record<string, Page> = { 'app.html': 'app', 'card.html': 'card', 'tray.html': 'tray', 'dictation.html': 'dictation', 'talk.html': 'talk', 'menu.html': 'menu', 'shot.html': 'shot', 'shots.html': 'shots', 'record.html': 'record' }
 
 /** The page a window shows, by its file (media/<page>.html, with or without a query); 'other' for anything else. */
 export function pageOf(url: string): Page {
@@ -59,6 +59,7 @@ const APP_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>([
   'showInFolder',
   'openPath',
   'recordFolder',
+  'openShots',
   'removeWord',
   'exportWords',
   'copyWords',
@@ -90,15 +91,22 @@ const TALK_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>([
 const MENU_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>(['menuReady', 'menuHeight', 'menuHover', 'menuPick'])
 
 /** Messages only a screenshot's page sends, and the only ones it may: it holds a picture of the whole screen, and asks for nothing but to hand over what the person made of it. */
-const SHOT_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>(['shotReady', 'shotShown', 'shotBegan', 'shotCancel', 'shotStyle', 'shotTool', 'shotEffects', 'shotDone', 'shotRecord', 'shotSound'])
+const SHOT_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>(['shotReady', 'shotShown', 'shotBegan', 'shotHover', 'shotCancel', 'shotEffects', 'shotDone', 'shotRecord', 'shotSound', 'shotProbe', 'shotCursor', 'shotKeep'])
+
+/** Messages only the Screenshots window sends, and the only ones it may, with the look of what is drawn, which it shares with a screenshot's page: it holds screenshots, and hands over what the person made of them. */
+const SHOTS_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>(['shotsReady', 'shotsWant', 'shotsEdit', 'shotsAction', 'shotsDrag', 'shotsWindow'])
+const SHOT_LOOK: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>(['shotStyle', 'shotTool'])
 
 /** Messages only a recording's strip sends, and the only ones it may: it sees the whole screen, so it names no file and no source; main holds both. */
 const RECORD_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>(['recordReady', 'recordSize', 'recordRolling', 'recordChunk', 'recordEnded', 'recordAct'])
 
 export function messageAllowed(page: Page, type: string): boolean {
   if (page === 'other') return false
+  if (SHOT_LOOK.has(type as ToHost['type'])) return page === 'shot' || page === 'shots'
   if (SHOT_ONLY.has(type as ToHost['type'])) return page === 'shot'
   if (page === 'shot') return false
+  if (SHOTS_ONLY.has(type as ToHost['type'])) return page === 'shots'
+  if (page === 'shots') return false
   if (RECORD_ONLY.has(type as ToHost['type'])) return page === 'record'
   if (page === 'record') return false
   if (MENU_ONLY.has(type as ToHost['type'])) return page === 'menu'

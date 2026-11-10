@@ -2939,6 +2939,28 @@ li + li > .ti::before {
   font-variant-numeric: tabular-nums;
 }
 
+/* The graphics card busy with other programs: an amber dot, as the card's notice when Fast stands in. */
+.card small.pbusy {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--text);
+}
+
+.card small.pbusy[hidden] {
+  display: none;
+}
+
+.card small.pbusy::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+  transform: translateY(-1px);
+}
+
 .stages {
   display: flex;
   flex-wrap: wrap;

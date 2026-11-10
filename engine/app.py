@@ -542,7 +542,10 @@ def get_transcript(id: str):
     row = store.row(id)
     if row is None:
         raise HTTPException(404, "No such transcript")
-    row.pop("job", None)
+    job = row.pop("job", None) or {}
+    # What recognized it when the card was busy (jobs.py gave_way): the page says so.
+    if isinstance(job.get("ran"), dict):
+        row["ran"] = job["ran"]
     t = store.transcript(id)
     return {"row": row, "transcript": public(t, id) if t is not None else None}
 
@@ -602,6 +605,28 @@ def split_speakers(id: str, body: dict = Body(default={})):
     store.update(id, status="queued", stage="", progress=0, error="", job=job)
     worker.submit(id)
     return {"id": id, "task": job["task"]}
+
+
+@app.post("/transcripts/{id}/again")
+def transcribe_again(id: str):
+    """A finished transcript recognized anew from its kept sound, with the plan as it is now (a lighter model wrote it
+    while the card was busy). A meeting's two tracks are not kept apart, so a meeting cannot be."""
+    store = state.get_store()
+    row = store.row(id)
+    t = transcript_or_404(id)
+    if row is None or row["status"] != "done":
+        raise HTTPException(409, "This recording is still being transcribed")
+    if row["source"] == "meet":
+        raise HTTPException(409, "A meeting cannot be transcribed again: its two tracks were not kept")
+    audio_path = store.folder(id) / t.get("audio", "audio.ogg")
+    if not audio_path.exists():
+        raise HTTPException(410, "The sound of this recording was not kept")
+    job = {"kind": row["source"], "task": "redo", "keepAudio": True, "speakers": None,
+           "language": t.get("language") or None,
+           "inputs": [{"path": str(audio_path), "track": "main", "offset": 0, "temp": False}]}
+    store.update(id, status="queued", stage="", progress=0, error="", job=job)
+    worker.submit(id)
+    return {"id": id, "task": "redo"}
 
 
 @app.delete("/transcripts/{id}")

@@ -153,6 +153,7 @@
     "tray.translateScreen": "Translate from the screen",
     "tray.shot": "Take a screenshot",
     "tray.video": "Record the screen",
+    "tray.shots": "Open Screenshots ({n})",
     "tray.saveNote": "Save the note",
     "tray.newNote": "Voice note",
     "tray.transcripts": "All transcripts",
@@ -736,6 +737,10 @@
     "tr.delete": "Delete",
     "tr.afterStop": "The text comes once the recording stops.",
     "tr.background": "The window can be closed: it goes on in the background.",
+    "tr.busyLighter": "The graphics card is busy with other programs, so a lighter model ({model}) recognizes this.",
+    "tr.busyProcessor": "The graphics card is busy with other programs, so the processor recognizes this: it takes longer.",
+    "tr.lighterDone": "The graphics card was busy, so a lighter model ({model}) wrote this.",
+    "tr.lighterAgain": "Once the card is free, it can be transcribed again with the accurate model.",
     "tr.startsAfter": "Starts once the one before it is done.",
     "tr.loadingModel": "loading the model, finding speech",
     "tr.posMin": "{at} of {total} min",
@@ -875,6 +880,8 @@
     "shot.offerAsk": "Take screenshots with Print Screen?",
     "shot.offerNote": "Windows gives this key to its Snipping Tool. You can always set another one here.",
     "shot.offerUse": "Use Print Screen",
+    "shot.shutter": "Shutter sound",
+    "shot.shutterNote": "A click when the frame is set.",
     "shot.folder": "Folder for saved screenshots",
     "shot.folderNone": "Asked the first time you save",
     "shot.others": "{names} is running and may hold the same key",
@@ -893,6 +900,34 @@
     "shot.hintQuick": "Drag over the text \xB7 A click takes a window or a panel \xB7 The wheel goes wider or narrower \xB7 Space takes the whole screen \xB7 Esc cancels",
     "shot.tooSmall": "Too small to record: at least {n} pixels a side",
     "shot.group": "Screenshots",
+    "shot.keep": "To Screenshots",
+    "shot.keepTip": "Into the Screenshots window, so you can take the next one and choose later \xB7 Ctrl+E",
+    "shot.cursor": "Pointer on the picture",
+    "shot.cursorNote": "The mouse pointer stays on the screenshot. The same button is on the bar.",
+    "shots.title": "Screenshots",
+    "shots.added": "Added to Screenshots ({n})",
+    "shots.full": "Screenshots holds {n} already: save or delete some first",
+    "shots.askLost": { one: "{n} screenshot is not saved or copied", other: "{n} screenshots are not saved or copied" },
+    "shots.askDetail": "Screenshots are kept only while Kryakl runs. Closed now, they are gone.",
+    "shots.askClose": "Close and delete them",
+    "shots.askQuit": "Quit and delete them",
+    "shots.askCancel": "Cancel",
+    "shots.copiedMany": { one: "{n} screenshot copied", other: "{n} screenshots copied" },
+    "shots.savedMany": { one: "{n} screenshot saved", other: "{n} screenshots saved" },
+    "shots.empty": "No screenshots here yet",
+    "shots.emptyNote": "On a screenshot\u2019s bar, press To Screenshots (Ctrl+E): it comes here, and you can take the next one.",
+    "shots.selected": { one: "{n} selected", other: "{n} selected" },
+    "shots.pick": "Pick",
+    "shots.all": "Select all",
+    "shots.copyTip": "Copy \xB7 Ctrl+C. Several are copied as files",
+    "shots.saveTip": "Save to files \xB7 Ctrl+S",
+    "shots.textTip": "Read the text on the picture, to copy or translate it",
+    "shots.delete": "Delete",
+    "shots.deleteTip": "Delete from this window",
+    "shots.notSaved": "Not saved or copied",
+    "shots.dragTip": "Drag into a chat or a folder",
+    "shots.open": "Open Screenshots",
+    "shots.openNote": "The screenshots kept for later, while Kryakl runs",
     "record.in": "Recording in {n}",
     "record.pause": "Pause",
     "record.resume": "Go on",
@@ -1648,6 +1683,7 @@
     "tray.translateScreen": "\u041F\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438 \u0441 \u044D\u043A\u0440\u0430\u043D\u0430",
     "tray.shot": "\u0421\u0434\u0435\u043B\u0430\u0442\u044C \u0441\u043D\u0438\u043C\u043E\u043A \u044D\u043A\u0440\u0430\u043D\u0430",
     "tray.video": "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u044D\u043A\u0440\u0430\u043D",
+    "tray.shots": "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u0421\u043D\u0438\u043C\u043A\u0438 ({n})",
     "tray.saveNote": "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0443",
     "tray.newNote": "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u0433\u043E\u043B\u043E\u0441\u043E\u043C",
     "tray.transcripts": "\u0412\u0441\u0435 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0438",
@@ -2231,6 +2267,10 @@
     "tr.delete": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C",
     "tr.afterStop": "\u0422\u0435\u043A\u0441\u0442 \u043F\u043E\u044F\u0432\u0438\u0442\u0441\u044F, \u043A\u043E\u0433\u0434\u0430 \u0437\u0430\u043F\u0438\u0441\u044C \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F.",
     "tr.background": "\u041E\u043A\u043D\u043E \u043C\u043E\u0436\u043D\u043E \u0437\u0430\u043A\u0440\u044B\u0442\u044C: \u0440\u0430\u0431\u043E\u0442\u0430 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u0441\u044F \u0432 \u0444\u043E\u043D\u0435.",
+    "tr.busyLighter": "\u0412\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u043D\u044F\u0442\u0430 \u0434\u0440\u0443\u0433\u0438\u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430\u043C\u0438, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0451\u0442 \u043E\u0431\u043B\u0435\u0433\u0447\u0451\u043D\u043D\u0430\u044F \u043C\u043E\u0434\u0435\u043B\u044C ({model}).",
+    "tr.busyProcessor": "\u0412\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u043D\u044F\u0442\u0430 \u0434\u0440\u0443\u0433\u0438\u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430\u043C\u0438, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0451\u0442 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440: \u044D\u0442\u043E \u0434\u043E\u043B\u044C\u0448\u0435.",
+    "tr.lighterDone": "\u0412\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0431\u044B\u043B\u0430 \u0437\u0430\u043D\u044F\u0442\u0430, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u044D\u0442\u043E \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043E\u0431\u043B\u0435\u0433\u0447\u0451\u043D\u043D\u0430\u044F \u043C\u043E\u0434\u0435\u043B\u044C ({model}).",
+    "tr.lighterAgain": "\u041A\u043E\u0433\u0434\u0430 \u043A\u0430\u0440\u0442\u0430 \u043E\u0441\u0432\u043E\u0431\u043E\u0434\u0438\u0442\u0441\u044F, \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0443 \u043C\u043E\u0436\u043D\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C \u0442\u043E\u0447\u043D\u043E\u0439 \u043C\u043E\u0434\u0435\u043B\u044C\u044E.",
     "tr.startsAfter": "\u041D\u0430\u0447\u043D\u0451\u0442\u0441\u044F, \u043A\u043E\u0433\u0434\u0430 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0430\u044F.",
     "tr.loadingModel": "\u0437\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043C\u043E\u0434\u0435\u043B\u0438, \u043F\u043E\u0438\u0441\u043A \u0440\u0435\u0447\u0438",
     "tr.posMin": "{at} \u0438\u0437 {total} \u043C\u0438\u043D",
@@ -2370,6 +2410,8 @@
     "shot.offerAsk": "\u0414\u0435\u043B\u0430\u0442\u044C \u0441\u043D\u0438\u043C\u043A\u0438 \u043A\u043B\u0430\u0432\u0438\u0448\u0435\u0439 Print Screen?",
     "shot.offerNote": "Windows \u043E\u0442\u0434\u0430\u0451\u0442 \u044D\u0442\u0443 \u043A\u043B\u0430\u0432\u0438\u0448\u0443 \u0441\u0432\u043E\u0438\u043C \u041D\u043E\u0436\u043D\u0438\u0446\u0430\u043C. \u0417\u0434\u0435\u0441\u044C \u0435\u0451 \u0432\u0441\u0435\u0433\u0434\u0430 \u043C\u043E\u0436\u043D\u043E \u0441\u043C\u0435\u043D\u0438\u0442\u044C.",
     "shot.offerUse": "\u0412\u0437\u044F\u0442\u044C Print Screen",
+    "shot.shutter": "\u0417\u0432\u0443\u043A \u0437\u0430\u0442\u0432\u043E\u0440\u0430",
+    "shot.shutterNote": "\u0429\u0435\u043B\u0447\u043E\u043A, \u043A\u043E\u0433\u0434\u0430 \u0440\u0430\u043C\u043A\u0430 \u0432\u044B\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u0430.",
     "shot.folder": "\u041F\u0430\u043F\u043A\u0430 \u0434\u043B\u044F \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u044B\u0445 \u0441\u043D\u0438\u043C\u043A\u043E\u0432",
     "shot.folderNone": "\u0421\u043F\u0440\u043E\u0441\u0438\u043C \u043F\u0440\u0438 \u043F\u0435\u0440\u0432\u043E\u043C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0438",
     "shot.others": "{names}: \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u043E, \u043C\u043E\u0436\u0435\u0442 \u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0442\u0443 \u0436\u0435 \u043A\u043B\u0430\u0432\u0438\u0448\u0443",
@@ -2388,6 +2430,34 @@
     "shot.hintQuick": "\u041E\u0431\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043A\u0441\u0442 \xB7 \u041A\u043B\u0438\u043A \u0431\u0435\u0440\u0451\u0442 \u043E\u043A\u043D\u043E \u0438\u043B\u0438 \u043F\u0430\u043D\u0435\u043B\u044C \xB7 \u041A\u043E\u043B\u0435\u0441\u043E: \u0448\u0438\u0440\u0435 \u0438\u043B\u0438 \u0443\u0436\u0435 \xB7 \u041F\u0440\u043E\u0431\u0435\u043B \u0431\u0435\u0440\u0451\u0442 \u0432\u0435\u0441\u044C \u044D\u043A\u0440\u0430\u043D \xB7 Esc \u043E\u0442\u043C\u0435\u043D\u044F\u0435\u0442",
     "shot.tooSmall": "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u0430\u043B\u043E \u0434\u043B\u044F \u0437\u0430\u043F\u0438\u0441\u0438: \u043D\u0443\u0436\u043D\u043E \u043E\u0442 {n} \u0442\u043E\u0447\u0435\u043A \u043F\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0435",
     "shot.group": "\u0421\u043D\u0438\u043C\u043A\u0438",
+    "shot.keep": "\u0412 \u0421\u043D\u0438\u043C\u043A\u0438",
+    "shot.keepTip": "\u0412 \u043E\u043A\u043D\u043E \xAB\u0421\u043D\u0438\u043C\u043A\u0438\xBB, \u0447\u0442\u043E\u0431\u044B \u0441\u043D\u044F\u0442\u044C \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0438 \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u043F\u043E\u0442\u043E\u043C \xB7 Ctrl+E",
+    "shot.cursor": "\u041A\u0443\u0440\u0441\u043E\u0440 \u043D\u0430 \u0441\u043D\u0438\u043C\u043A\u0435",
+    "shot.cursorNote": "\u0423\u043A\u0430\u0437\u0430\u0442\u0435\u043B\u044C \u043C\u044B\u0448\u0438 \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043D\u0430 \u0441\u043D\u0438\u043C\u043A\u0435. \u0422\u0430\u043A\u0430\u044F \u0436\u0435 \u043A\u043D\u043E\u043F\u043A\u0430 \u0435\u0441\u0442\u044C \u043D\u0430 \u043F\u0430\u043D\u0435\u043B\u0438.",
+    "shots.title": "\u0421\u043D\u0438\u043C\u043A\u0438",
+    "shots.added": "\u0414\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043E \u0432 \u0421\u043D\u0438\u043C\u043A\u0438 ({n})",
+    "shots.full": "\u0412 \u0421\u043D\u0438\u043C\u043A\u0430\u0445 \u0443\u0436\u0435 {n}: \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u0435 \u0438\u043B\u0438 \u0443\u0434\u0430\u043B\u0438\u0442\u0435 \u0447\u0430\u0441\u0442\u044C",
+    "shots.askLost": { one: "{n} \u0441\u043D\u0438\u043C\u043E\u043A \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D \u0438 \u043D\u0435 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D", few: "{n} \u0441\u043D\u0438\u043C\u043A\u0430 \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u044B \u0438 \u043D\u0435 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u044B", many: "{n} \u0441\u043D\u0438\u043C\u043A\u043E\u0432 \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u044B \u0438 \u043D\u0435 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u044B", other: "{n} \u0441\u043D\u0438\u043C\u043A\u0430 \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u044B \u0438 \u043D\u0435 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u044B" },
+    "shots.askDetail": "\u0421\u043D\u0438\u043C\u043A\u0438 \u0445\u0440\u0430\u043D\u044F\u0442\u0441\u044F, \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u043A\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u041A\u0440\u044F\u043A\u043B. \u0415\u0441\u043B\u0438 \u0437\u0430\u043A\u0440\u044B\u0442\u044C \u0441\u0435\u0439\u0447\u0430\u0441, \u043E\u043D\u0438 \u043F\u0440\u043E\u043F\u0430\u0434\u0443\u0442.",
+    "shots.askClose": "\u0417\u0430\u043A\u0440\u044B\u0442\u044C \u0438 \u0443\u0434\u0430\u043B\u0438\u0442\u044C",
+    "shots.askQuit": "\u0412\u044B\u0439\u0442\u0438 \u0438 \u0443\u0434\u0430\u043B\u0438\u0442\u044C",
+    "shots.askCancel": "\u041E\u0442\u043C\u0435\u043D\u0430",
+    "shots.copiedMany": { one: "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D {n} \u0441\u043D\u0438\u043C\u043E\u043A", few: "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E {n} \u0441\u043D\u0438\u043C\u043A\u0430", many: "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E {n} \u0441\u043D\u0438\u043C\u043A\u043E\u0432", other: "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E {n} \u0441\u043D\u0438\u043C\u043A\u0430" },
+    "shots.savedMany": { one: "\u0421\u043E\u0445\u0440\u0430\u043D\u0451\u043D {n} \u0441\u043D\u0438\u043C\u043E\u043A", few: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E {n} \u0441\u043D\u0438\u043C\u043A\u0430", many: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E {n} \u0441\u043D\u0438\u043C\u043A\u043E\u0432", other: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E {n} \u0441\u043D\u0438\u043C\u043A\u0430" },
+    "shots.empty": "\u0417\u0434\u0435\u0441\u044C \u043F\u043E\u043A\u0430 \u043D\u0435\u0442 \u0441\u043D\u0438\u043C\u043A\u043E\u0432",
+    "shots.emptyNote": "\u041D\u0430 \u043F\u0430\u043D\u0435\u043B\u0438 \u0441\u043D\u0438\u043C\u043A\u0430 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 \xAB\u0412 \u0421\u043D\u0438\u043C\u043A\u0438\xBB (Ctrl+E): \u043E\u043D \u043F\u043E\u044F\u0432\u0438\u0442\u0441\u044F \u0437\u0434\u0435\u0441\u044C, \u0430 \u0432\u044B \u0441\u043C\u043E\u0436\u0435\u0442\u0435 \u0441\u043D\u044F\u0442\u044C \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439.",
+    "shots.selected": { one: "\u0412\u044B\u0431\u0440\u0430\u043D {n}", few: "\u0412\u044B\u0431\u0440\u0430\u043D\u043E {n}", many: "\u0412\u044B\u0431\u0440\u0430\u043D\u043E {n}", other: "\u0412\u044B\u0431\u0440\u0430\u043D\u043E {n}" },
+    "shots.pick": "\u0412\u044B\u0431\u0440\u0430\u0442\u044C",
+    "shots.all": "\u0412\u044B\u0431\u0440\u0430\u0442\u044C \u0432\u0441\u0435",
+    "shots.copyTip": "\u041A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u0442\u044C \xB7 Ctrl+C. \u041D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u043E\u043F\u0438\u0440\u0443\u044E\u0442\u0441\u044F \u043A\u0430\u043A \u0444\u0430\u0439\u043B\u044B",
+    "shots.saveTip": "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0432 \u0444\u0430\u0439\u043B\u044B \xB7 Ctrl+S",
+    "shots.textTip": "\u0420\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u043D\u0430 \u0441\u043D\u0438\u043C\u043A\u0435, \u0447\u0442\u043E\u0431\u044B \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0438\u043B\u0438 \u043F\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438",
+    "shots.delete": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C",
+    "shots.deleteTip": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0438\u0437 \u044D\u0442\u043E\u0433\u043E \u043E\u043A\u043D\u0430",
+    "shots.notSaved": "\u041D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D \u0438 \u043D\u0435 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D",
+    "shots.dragTip": "\u041F\u0435\u0440\u0435\u0442\u0430\u0449\u0438\u0442\u0435 \u0432 \u0447\u0430\u0442 \u0438\u043B\u0438 \u043F\u0430\u043F\u043A\u0443",
+    "shots.open": "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u0421\u043D\u0438\u043C\u043A\u0438",
+    "shots.openNote": "\u0421\u043D\u0438\u043C\u043A\u0438, \u043E\u0442\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0435 \u043D\u0430 \u043F\u043E\u0442\u043E\u043C, \u043F\u043E\u043A\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u041A\u0440\u044F\u043A\u043B",
     "record.in": "\u0417\u0430\u043F\u0438\u0441\u044C \u0447\u0435\u0440\u0435\u0437 {n}",
     "record.pause": "\u041F\u0430\u0443\u0437\u0430",
     "record.resume": "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C",
@@ -3143,6 +3213,7 @@
     "tray.translateScreen": "\u041F\u0435\u0440\u0435\u043A\u043B\u0430\u0441\u0442\u0438 \u0437 \u0435\u043A\u0440\u0430\u043D\u0430",
     "tray.shot": "\u0417\u0440\u043E\u0431\u0438\u0442\u0438 \u0437\u043D\u0456\u043C\u043E\u043A \u0435\u043A\u0440\u0430\u043D\u0430",
     "tray.video": "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0435\u043A\u0440\u0430\u043D",
+    "tray.shots": "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0417\u043D\u0456\u043C\u043A\u0438 ({n})",
     "tray.saveNote": "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443",
     "tray.newNote": "\u041D\u043E\u0442\u0430\u0442\u043A\u0430 \u0433\u043E\u043B\u043E\u0441\u043E\u043C",
     "tray.transcripts": "\u0423\u0441\u0456 \u0440\u043E\u0437\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0438",
@@ -3726,6 +3797,10 @@
     "tr.delete": "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438",
     "tr.afterStop": "\u0422\u0435\u043A\u0441\u0442 \u0437\u2019\u044F\u0432\u0438\u0442\u044C\u0441\u044F, \u043A\u043E\u043B\u0438 \u0437\u0430\u043F\u0438\u0441 \u0437\u0443\u043F\u0438\u043D\u0438\u0442\u044C\u0441\u044F.",
     "tr.background": "\u0412\u0456\u043A\u043D\u043E \u043C\u043E\u0436\u043D\u0430 \u0437\u0430\u043A\u0440\u0438\u0442\u0438: \u0440\u043E\u0431\u043E\u0442\u0430 \u0442\u0440\u0438\u0432\u0430\u0442\u0438\u043C\u0435 \u0443 \u0444\u043E\u043D\u0456.",
+    "tr.busyLighter": "\u0412\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u0439\u043D\u044F\u0442\u0430 \u0456\u043D\u0448\u0438\u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430\u043C\u0438, \u0442\u043E\u043C\u0443 \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0454 \u043F\u043E\u043B\u0435\u0433\u0448\u0435\u043D\u0430 \u043C\u043E\u0434\u0435\u043B\u044C ({model}).",
+    "tr.busyProcessor": "\u0412\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u0439\u043D\u044F\u0442\u0430 \u0456\u043D\u0448\u0438\u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430\u043C\u0438, \u0442\u043E\u043C\u0443 \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0454 \u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440: \u0446\u0435 \u0434\u043E\u0432\u0448\u0435.",
+    "tr.lighterDone": "\u0412\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0431\u0443\u043B\u0430 \u0437\u0430\u0439\u043D\u044F\u0442\u0430, \u0442\u043E\u043C\u0443 \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043F\u043E\u043B\u0435\u0433\u0448\u0435\u043D\u0430 \u043C\u043E\u0434\u0435\u043B\u044C ({model}).",
+    "tr.lighterAgain": "\u041A\u043E\u043B\u0438 \u043A\u0430\u0440\u0442\u0430 \u0437\u0432\u0456\u043B\u044C\u043D\u0438\u0442\u044C\u0441\u044F, \u0440\u043E\u0437\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0443 \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0438 \u0442\u043E\u0447\u043D\u043E\u044E \u043C\u043E\u0434\u0435\u043B\u043B\u044E.",
     "tr.startsAfter": "\u041F\u043E\u0447\u043D\u0435\u0442\u044C\u0441\u044F, \u043A\u043E\u043B\u0438 \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C\u0441\u044F \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044F.",
     "tr.loadingModel": "\u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u043C\u043E\u0434\u0435\u043B\u0456, \u043F\u043E\u0448\u0443\u043A \u043C\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
     "tr.posMin": "{at} \u0437 {total} \u0445\u0432",
@@ -3865,6 +3940,8 @@
     "shot.offerAsk": "\u0420\u043E\u0431\u0438\u0442\u0438 \u0437\u043D\u0456\u043C\u043A\u0438 \u043A\u043B\u0430\u0432\u0456\u0448\u0435\u044E Print Screen?",
     "shot.offerNote": "Windows \u0432\u0456\u0434\u0434\u0430\u0454 \u0446\u044E \u043A\u043B\u0430\u0432\u0456\u0448\u0443 \u0441\u0432\u043E\u0457\u043C \u041D\u043E\u0436\u0438\u0446\u044F\u043C. \u0422\u0443\u0442 \u0457\u0457 \u0437\u0430\u0432\u0436\u0434\u0438 \u043C\u043E\u0436\u043D\u0430 \u0437\u043C\u0456\u043D\u0438\u0442\u0438.",
     "shot.offerUse": "\u0423\u0437\u044F\u0442\u0438 Print Screen",
+    "shot.shutter": "\u0417\u0432\u0443\u043A \u0437\u0430\u0442\u0432\u043E\u0440\u0430",
+    "shot.shutterNote": "\u041A\u043B\u0430\u0446\u0430\u043D\u043D\u044F, \u043A\u043E\u043B\u0438 \u0440\u0430\u043C\u043A\u0443 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E.",
     "shot.folder": "\u041F\u0430\u043F\u043A\u0430 \u0434\u043B\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u0437\u043D\u0456\u043C\u043A\u0456\u0432",
     "shot.folderNone": "\u0417\u0430\u043F\u0438\u0442\u0430\u0454\u043C\u043E \u043F\u0456\u0434 \u0447\u0430\u0441 \u043F\u0435\u0440\u0448\u043E\u0433\u043E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F",
     "shot.others": "{names}: \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u043E, \u043C\u043E\u0436\u0435 \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0442\u0443 \u0441\u0430\u043C\u0443 \u043A\u043B\u0430\u0432\u0456\u0448\u0443",
@@ -3883,6 +3960,34 @@
     "shot.hintQuick": "\u041E\u0431\u0432\u0435\u0434\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \xB7 \u041A\u043B\u0456\u043A \u0431\u0435\u0440\u0435 \u0432\u0456\u043A\u043D\u043E \u0430\u0431\u043E \u043F\u0430\u043D\u0435\u043B\u044C \xB7 \u041A\u043E\u043B\u0456\u0449\u0430\u0442\u043A\u043E: \u0448\u0438\u0440\u0448\u0435 \u0447\u0438 \u0432\u0443\u0436\u0447\u0435 \xB7 \u041F\u0440\u043E\u0431\u0456\u043B \u0431\u0435\u0440\u0435 \u0432\u0435\u0441\u044C \u0435\u043A\u0440\u0430\u043D \xB7 Esc \u0441\u043A\u0430\u0441\u043E\u0432\u0443\u0454",
     "shot.tooSmall": "\u0417\u0430\u043C\u0430\u043B\u043E \u0434\u043B\u044F \u0437\u0430\u043F\u0438\u0441\u0443: \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u0432\u0456\u0434 {n} \u0442\u043E\u0447\u043E\u043A \u043D\u0430 \u0441\u0442\u043E\u0440\u043E\u043D\u0443",
     "shot.group": "\u0417\u043D\u0456\u043C\u043A\u0438",
+    "shot.keep": "\u0414\u043E \u0417\u043D\u0456\u043C\u043A\u0456\u0432",
+    "shot.keepTip": "\u0423 \u0432\u0456\u043A\u043D\u043E \xAB\u0417\u043D\u0456\u043C\u043A\u0438\xBB, \u0449\u043E\u0431 \u0437\u043D\u044F\u0442\u0438 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0456 \u0432\u0438\u0431\u0440\u0430\u0442\u0438 \u043F\u043E\u0442\u0456\u043C \xB7 Ctrl+E",
+    "shot.cursor": "\u041A\u0443\u0440\u0441\u043E\u0440 \u043D\u0430 \u0437\u043D\u0456\u043C\u043A\u0443",
+    "shot.cursorNote": "\u0412\u043A\u0430\u0437\u0456\u0432\u043D\u0438\u043A \u043C\u0438\u0448\u0456 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u0437\u043D\u0456\u043C\u043A\u0443. \u0422\u0430\u043A\u0430 \u0441\u0430\u043C\u0430 \u043A\u043D\u043E\u043F\u043A\u0430 \u0454 \u043D\u0430 \u043F\u0430\u043D\u0435\u043B\u0456.",
+    "shots.title": "\u0417\u043D\u0456\u043C\u043A\u0438",
+    "shots.added": "\u0414\u043E\u0434\u0430\u043D\u043E \u0434\u043E \u0417\u043D\u0456\u043C\u043A\u0456\u0432 ({n})",
+    "shots.full": "\u0423 \u0417\u043D\u0456\u043C\u043A\u0430\u0445 \u0443\u0436\u0435 {n}: \u0437\u0431\u0435\u0440\u0435\u0436\u0456\u0442\u044C \u0430\u0431\u043E \u0432\u0438\u0434\u0430\u043B\u0456\u0442\u044C \u0447\u0430\u0441\u0442\u0438\u043D\u0443",
+    "shots.askLost": { one: "{n} \u0437\u043D\u0456\u043C\u043E\u043A \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0439 \u043D\u0435 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E", few: "{n} \u0437\u043D\u0456\u043C\u043A\u0438 \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0439 \u043D\u0435 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E", many: "{n} \u0437\u043D\u0456\u043C\u043A\u0456\u0432 \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0439 \u043D\u0435 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E", other: "{n} \u0437\u043D\u0456\u043C\u043A\u0430 \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0439 \u043D\u0435 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E" },
+    "shots.askDetail": "\u0417\u043D\u0456\u043C\u043A\u0438 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F, \u043B\u0438\u0448\u0435 \u043F\u043E\u043A\u0438 \u043F\u0440\u0430\u0446\u044E\u0454 \u041A\u0440\u044F\u043A\u043B. \u042F\u043A\u0449\u043E \u0437\u0430\u043A\u0440\u0438\u0442\u0438 \u0437\u0430\u0440\u0430\u0437, \u0432\u043E\u043D\u0438 \u0437\u043D\u0438\u043A\u043D\u0443\u0442\u044C.",
+    "shots.askClose": "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 \u0439 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438",
+    "shots.askQuit": "\u0412\u0438\u0439\u0442\u0438 \u0439 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438",
+    "shots.askCancel": "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438",
+    "shots.copiedMany": { one: "\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E {n} \u0437\u043D\u0456\u043C\u043E\u043A", few: "\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E {n} \u0437\u043D\u0456\u043C\u043A\u0438", many: "\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E {n} \u0437\u043D\u0456\u043C\u043A\u0456\u0432", other: "\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E {n} \u0437\u043D\u0456\u043C\u043A\u0430" },
+    "shots.savedMany": { one: "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E {n} \u0437\u043D\u0456\u043C\u043E\u043A", few: "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E {n} \u0437\u043D\u0456\u043C\u043A\u0438", many: "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E {n} \u0437\u043D\u0456\u043C\u043A\u0456\u0432", other: "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E {n} \u0437\u043D\u0456\u043C\u043A\u0430" },
+    "shots.empty": "\u0422\u0443\u0442 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u043D\u0456\u043C\u043A\u0456\u0432",
+    "shots.emptyNote": "\u041D\u0430 \u043F\u0430\u043D\u0435\u043B\u0456 \u0437\u043D\u0456\u043C\u043A\u0430 \u043D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \xAB\u0414\u043E \u0417\u043D\u0456\u043C\u043A\u0456\u0432\xBB (Ctrl+E): \u0432\u0456\u043D \u0437\u2019\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442, \u0430 \u0432\u0438 \u0437\u043C\u043E\u0436\u0435\u0442\u0435 \u0437\u043D\u044F\u0442\u0438 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439.",
+    "shots.selected": { one: "\u0412\u0438\u0431\u0440\u0430\u043D\u043E {n}", few: "\u0412\u0438\u0431\u0440\u0430\u043D\u043E {n}", many: "\u0412\u0438\u0431\u0440\u0430\u043D\u043E {n}", other: "\u0412\u0438\u0431\u0440\u0430\u043D\u043E {n}" },
+    "shots.pick": "\u0412\u0438\u0431\u0440\u0430\u0442\u0438",
+    "shots.all": "\u0412\u0438\u0431\u0440\u0430\u0442\u0438 \u0432\u0441\u0456",
+    "shots.copyTip": "\u041A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \xB7 Ctrl+C. \u041A\u0456\u043B\u044C\u043A\u0430 \u043A\u043E\u043F\u0456\u044E\u044E\u0442\u044C\u0441\u044F \u044F\u043A \u0444\u0430\u0439\u043B\u0438",
+    "shots.saveTip": "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u0444\u0430\u0439\u043B\u0438 \xB7 Ctrl+S",
+    "shots.textTip": "\u0420\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0442\u0438 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430 \u0437\u043D\u0456\u043C\u043A\u0443, \u0449\u043E\u0431 \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u0447\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0441\u0442\u0438",
+    "shots.delete": "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438",
+    "shots.deleteTip": "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437 \u0446\u044C\u043E\u0433\u043E \u0432\u0456\u043A\u043D\u0430",
+    "shots.notSaved": "\u041D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0439 \u043D\u0435 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E",
+    "shots.dragTip": "\u041F\u0435\u0440\u0435\u0442\u044F\u0433\u043D\u0456\u0442\u044C \u0443 \u0447\u0430\u0442 \u0447\u0438 \u043F\u0430\u043F\u043A\u0443",
+    "shots.open": "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0417\u043D\u0456\u043C\u043A\u0438",
+    "shots.openNote": "\u0417\u043D\u0456\u043C\u043A\u0438, \u0432\u0456\u0434\u043A\u043B\u0430\u0434\u0435\u043D\u0456 \u043D\u0430 \u043F\u043E\u0442\u0456\u043C, \u043F\u043E\u043A\u0438 \u043F\u0440\u0430\u0446\u044E\u0454 \u041A\u0440\u044F\u043A\u043B",
     "record.in": "\u0417\u0430\u043F\u0438\u0441 \u0437\u0430 {n}",
     "record.pause": "\u041F\u0430\u0443\u0437\u0430",
     "record.resume": "\u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438",
@@ -4892,6 +4997,9 @@
     shotFolder: "",
     shotStyle: SHOT_STYLE,
     shotTool: "",
+    shotShutter: true,
+    shotCursor: false,
+    shotsBounds: null,
     videoKey: "",
     videoFolder: "",
     videoSound: VIDEO_SOUND,
@@ -5255,6 +5363,11 @@
     "undo-2": '<path d="M9 14 4 9l5-5" /> <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />',
     "redo-2": '<path d="m15 14 5-5-5-5" /> <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13" />',
     "save": '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /> <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /> <path d="M7 3v4a1 1 0 0 0 1 1h7" />',
+    "mouse-pointer-2": '<path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z" />',
+    "images": '<path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16" /> <path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2" /> <circle cx="13" cy="7" r="1" fill="currentColor" /> <rect x="8" y="2" width="14" height="14" rx="2" />',
+    "copy-check": '<path d="m12 15 2 2 4-4" /> <rect width="14" height="14" x="8" y="8" rx="2" ry="2" /> <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />',
+    "maximize-2": '<path d="M15 3h6v6" /> <path d="m21 3-7 7" /> <path d="m3 21 7-7" /> <path d="M9 21H3v-6" />',
+    "minimize-2": '<path d="m14 10 7-7" /> <path d="M20 10h-6V4" /> <path d="m3 21 7-7" /> <path d="M4 14h6v6" />',
     "plus": '<path d="M5 12h14" /> <path d="M12 5v14" />',
     "x": '<path d="M18 6 6 18" /> <path d="m6 6 12 12" />',
     "minus": '<path d="M5 12h14" />',
@@ -5961,6 +6074,8 @@
   // src/speechplan.ts
   var MODELS = models_default.models;
   var SPEAKERS = models_default.speakers;
+  var rankOf = (model) => MODELS.find((m) => m.name === model)?.rank ?? 0;
+  var LIGHTEST_RANK = rankOf("small");
   function seconds(s) {
     return t("speech.sec", { n: s < 10 ? numberText(Math.round(s * 10) / 10, 1) : Math.round(s) });
   }
@@ -7197,7 +7312,9 @@
     /** The export menu is open. */
     exporting: false,
     /** "Transcribe again" was tapped once: it asks. */
-    redoing: false
+    redoing: false,
+    /** The same, for a transcript a lighter model wrote. */
+    againing: false
   };
   var DATE = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
   var DAY = { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" };
@@ -7431,7 +7548,7 @@
   function openTranscript(id) {
     if (id !== tx.openId) stopPlayer();
     tx.openId = id;
-    tx.deleting = tx.exporting = tx.redoing = false;
+    tx.deleting = tx.exporting = tx.redoing = tx.againing = false;
     if (id && tx.row?.id !== id) {
       tx.row = void 0;
       tx.transcript = void 0;
@@ -7527,6 +7644,7 @@
       el("span", { class: "track" }, el("i")),
       el("small", { class: "pstat" }),
       el("ol", { class: "stages" }, ...STAGES.map(([, label]) => el("li", {}, label))),
+      el("small", { class: "pbusy", hidden: true }),
       el("small", { class: "pnote" }, t("tr.background"))
     );
     updateProgress(card2, r);
@@ -7543,7 +7661,14 @@
     const line = card2.querySelector(".pstat");
     if (line) line.textContent = progressLine(r);
     card2.querySelectorAll(".stages li").forEach((li, i) => li.className = i < at ? "done" : i === at ? "now" : "");
+    const held = card2.querySelector(".pbusy");
+    const why = r.status === "working" ? r.ran?.why : void 0;
+    if (held) {
+      held.hidden = why !== "lighter" && why !== "processor";
+      held.textContent = why === "lighter" ? t("tr.busyLighter", { model: modelLabel(r.ran?.model) }) : why === "processor" ? t("tr.busyProcessor") : "";
+    }
   }
+  var modelLabel = (name = "") => MODELS.find((m) => m.name === name)?.label ?? name;
   function progressLine(r) {
     if (r.status === "queued") return t("tr.startsAfter");
     const [a, b] = WEIGHTS[r.stage] ?? [0, 1];
@@ -7551,7 +7676,7 @@
     const parts = [];
     if (r.stage === "words" && part === 0) parts.push(t("tr.loadingModel"));
     else if (r.stage === "words" && r.duration && r.source !== "meet") parts.push(position(part * r.duration, r.duration));
-    else if (part > 0) parts.push(`${Math.round(part * 100)}%`);
+    else if (part > 0) parts.push(`${Math.round(r.progress * 100)}%`);
     const left = part > 0 ? pace.left(r) : "";
     if (left) parts.push(left);
     return parts.join(" \xB7 ");
@@ -7673,9 +7798,38 @@
     }
     if (tr.noteError) out.push(aside("info", tr.noteError, " ", linkBtn(t("tr.chooseFolder"), () => void pickKb())));
     if (r.error) out.push(aside("circle-alert", r.error));
+    const lighter = lighterNotice(r, tr);
+    if (lighter) out.push(lighter);
     const speakers = speakersNotice(v, tr);
     if (speakers) out.push(speakers);
     return out;
+  }
+  function lighterNotice(r, tr) {
+    if (r.ran?.why !== "lighter") return null;
+    const said2 = t("tr.lighterDone", { model: modelLabel(r.ran.model) });
+    if (tr.source === "meet") return aside("info", said2);
+    if (tx.againing) {
+      return aside(
+        "info",
+        tr.edited ? t("tr.editsLost") : t("tr.goOn"),
+        " ",
+        linkBtn(t("tr.again"), () => void transcribeAgain(tr.id)),
+        linkBtn(t("common.notNow"), () => (tx.againing = false, redrawPage()))
+      );
+    }
+    return aside("info", `${said2} ${t("tr.lighterAgain")}`, " ", linkBtn(t("tr.again"), () => (tx.againing = true, redrawPage())));
+  }
+  async function transcribeAgain(id) {
+    tx.againing = false;
+    try {
+      await api("POST", `/transcripts/${id}/again`);
+      if (tx.openId === id && tx.row) {
+        tx.row = { ...tx.row, status: "queued", progress: 0, stage: "" };
+        redrawPage();
+      }
+    } catch (error) {
+      fault(error);
+    }
   }
   function splitWay(tr) {
     if (tr.source === "note" || tr.speakersStatus === "ok") return null;
@@ -10034,10 +10188,14 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
     };
     const offer = !s.shotKey && !keyTakenBy("PrintScreen", "shotKey") ? el("div", { class: "offer" }, lucide("camera"), el("div", { class: "ot" }, el("b", {}, t("shot.offerAsk")), el("small", {}, t("shot.offerNote")), el("span", { class: "acts" }, btn(t("shot.offerUse"), () => save({ shotKey: "PrintScreen" }), "primary")))) : null;
     return [
+      // The screenshots kept for later are a list of the page's, so a tile on top.
+      tiles([{ icon: "images", title: t("shots.open"), count: v.shotsHeld || "", open: () => post({ type: "openShots" }), id: "shots" }]),
       offer,
       grp(t("shot.group")),
       keyRow("shotKey", t("shot.keyTitle"), t("shot.keyNote")),
       v.shotApps.length ? warn(t("shot.others", { names: v.shotApps.join(` ${t("common.and")} `) })) : null,
+      toggleCard("camera", t("shot.shutter"), s.shotShutter, (shotShutter) => save({ shotShutter }), t("shot.shutterNote")),
+      toggleCard("mouse-pointer-2", t("shot.cursor"), s.shotCursor, (shotCursor) => save({ shotCursor }), t("shot.cursorNote")),
       card("folder", t("shot.folder"), [s.shotFolder ? pathNote(s.shotFolder) : t("shot.folderNone")], linkBtn(s.shotFolder ? t("dictate.change") : t("dictate.choose"), () => void pick())),
       el("p", { class: "privacy" }, lucide("lock", "s"), t("shot.privacy")),
       grp(t("video.group")),

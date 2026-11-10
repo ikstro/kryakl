@@ -2,7 +2,7 @@
 // fixtures, pictured into .cache/shots/ (every page and second-level page in both themes, the
 // tray panel, the dictation badge with a fake microphone). It never touches the desktop or
 // the installed Kryakl, so it runs while that one runs.
-import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeImage, nativeTheme } from 'electron'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import type { UiLanguage } from '../../src/i18n'
 import { englishHtml, textOutHtml, translationHtml } from '../../src/render'
@@ -74,8 +74,15 @@ const colors = () => (nativeTheme.shouldUseDarkColors ? { bg: '#202020', surface
 /** Seconds of sound the engine has yet to recognize, as its answer to each chunk says (the amber dot past 4). */
 let pending = 0
 let heard = 'Привет, это проверка диктовки: бейдж показывает фразу целиком, пока её слышит движок'
+/** A transcript under way, by its id: what the engine would say of it (the graphics card busy, a lighter model or the processor). */
+const making: Record<string, 'lighter' | 'processor'> = { 'busy-lighter': 'lighter', 'busy-processor': 'processor' }
 ipcMain.handle('host-call', async (_e, r: { call: string; method?: string; route?: string }) => {
   log.push(`host-call ${JSON.stringify(r).slice(0, 120)}`)
+  const id = r.route?.match(/^\/transcripts\/([\w-]+)$/)?.[1]
+  if (r.call === 'speech' && id && making[id]) {
+    const row = { id, title: 'Meeting njd-tckr-mcb', source: 'meet', created: '2026-11-10T14:51:00', duration: 1508, status: 'working', stage: 'words', progress: 0.31, error: '', language: 'ru', speakers_status: '', ran: { model: making[id] === 'lighter' ? 'large-v3-turbo' : 'large-v3', device: making[id] === 'lighter' ? 'cuda' : 'cpu', why: making[id] } }
+    return { ok: true, status: 200, data: { row, transcript: null } }
+  }
   if (r.call === 'speech') {
     if (r.method === 'PUT') return { ok: true, status: 200, data: { pending, heard } }
     if (r.route?.endsWith('/finish')) return { ok: true, status: 200, data: { text: heard, language: 'ru', sure: true } }
@@ -318,6 +325,12 @@ async function appShots(theme: 'dark' | 'light', narrow = false): Promise<void> 
     await esc(w)
     await sleep(400)
     await page('recordings', ['transcripts', 'meet', 'speakers'])
+    // A meeting under way while other programs hold the graphics card: the line under its stages.
+    for (const id of Object.keys(making)) {
+      send(w, { type: 'openTranscript', id })
+      await sleep(700)
+      await shot(w, tag(`tr-${id}`))
+    }
     await page('shots')
     await page('layout', ['kept', 'learned', 'programs', 'layouts', 'fixing'])
     await page('settings', ['languages'])
@@ -530,6 +543,83 @@ function fakeScreen(width: number, height: number, unit: number): Uint8Array {
   return rgba
 }
 
+/** A mouse pointer on the fake screen: an arrow drawn on what was behind it, as the capture thread makes it. */
+function fakePointer(screen: Uint8Array, width: number, unit: number): { x: number; y: number; width: number; height: number; rgba: Uint8Array } {
+  const at = { x: 610 * unit, y: 250 * unit, width: 20 * unit, height: 30 * unit }
+  const rgba = new Uint8Array(at.width * at.height * 4)
+  for (let y = 0; y < at.height; y++) {
+    for (let x = 0; x < at.width; x++) {
+      const to = (y * at.width + x) * 4
+      const from = ((at.y + y) * width + at.x + x) * 4
+      // The arrow: a triangle, white with a black edge.
+      const inside = x <= y * 0.62 && y < at.height * 0.8
+      const edge = inside && (x === 0 || x >= Math.floor(y * 0.62) - unit || y >= at.height * 0.8 - unit)
+      const [r, g, b] = inside ? (edge ? [0, 0, 0] : [255, 255, 255]) : [screen[from] as number, screen[from + 1] as number, screen[from + 2] as number]
+      rgba.set([r, g, b, 255], to)
+    }
+  }
+  return { ...at, rgba }
+}
+
+/** The fake screen as a PNG, cut to a box: what the frame sends to the Screenshots window. */
+function fakePng(box: { x: number; y: number; width: number; height: number }, tint = 0): Buffer {
+  const full = fakeScreen(1280, 720, 1)
+  const bgra = Buffer.alloc(box.width * box.height * 4)
+  for (let y = 0; y < box.height; y++) {
+    for (let x = 0; x < box.width; x++) {
+      const from = ((box.y + y) * 1280 + box.x + x) * 4
+      const to = (y * box.width + x) * 4
+      bgra[to] = Math.min(255, (full[from + 2] as number) + tint)
+      bgra[to + 1] = full[from + 1] as number
+      bgra[to + 2] = full[from] as number
+      bgra[to + 3] = 255
+    }
+  }
+  return nativeImage.createFromBitmap(bgra, { width: box.width, height: box.height }).toPNG()
+}
+
+/** The Screenshots window: three kept, one open with a drawing on it, two ticked, and the window with none left. */
+async function editorShots(theme: 'dark' | 'light'): Promise<void> {
+  nativeTheme.themeSource = theme
+  const w = win('shots.html', 1200, 760, colors().bg)
+  w.webContents.on('console-message', event => log.push(`shots console: ${event.message}`))
+  await new Promise<void>(r => w.webContents.once('did-finish-load', () => r()))
+  await sleep(300)
+  const tag = (n: string) => `shots-${theme}-${n}`
+  const boxes = [
+    { x: 180, y: 90, width: 900, height: 540 },
+    { x: 200, y: 140, width: 420, height: 300 },
+    { x: 640, y: 140, width: 420, height: 470 },
+  ]
+  const pngs = boxes.map((box, i) => fakePng(box, i * 40))
+  const thumb = (png: Buffer) => {
+    const image = nativeImage.createFromBuffer(png)
+    return image.resize({ width: 320, quality: 'good' }).toDataURL()
+  }
+  const now = Date.now()
+  const items = pngs.map((png, i) => ({ id: 3 - i, width: boxes[i]!.width, height: boxes[i]!.height, at: now - i * 47000, handled: i === 2, thumb: thumb(png) }))
+  const list = (some = items, maximized = false) => send(w, { type: 'shotsList', items: some, maximized })
+  const picture = (i: number, shapes: unknown[] = []) =>
+    send(w, { type: 'shotsPicture', id: 3 - i, png: new Uint8Array(pngs[i]!), ink: 1, frame: { x: 0, y: 0, width: boxes[i]!.width, height: boxes[i]!.height }, shapes, style: { color: '#e5383b', size: 1, dashed: false }, tool: 'rect' })
+  list()
+  picture(0, [
+    { id: 1, kind: 'rect', box: { x: 40, y: 60, width: 300, height: 120 }, style: { color: '#e5383b', size: 1, dashed: false } },
+    { id: 2, kind: 'arrow', from: { x: 620, y: 360 }, to: { x: 360, y: 190 }, style: { color: '#e5383b', size: 1, dashed: false } },
+    { id: 3, kind: 'step', at: { x: 400, y: 120 }, style: { color: '#2f6fed', size: 1, dashed: false } },
+  ])
+  await sleep(600)
+  log.push(`shots open: ${await js(w, `document.querySelectorAll('.item.open').length + ' bar hidden ' + document.getElementById('bar').hidden + ' canvas ' + document.getElementById('screen').width + ' ' + document.getElementById('screen').style.cssText`)}`)
+  await shot(w, tag('open'))
+  await click(w, '.item:nth-child(2) .tick')
+  await click(w, '.item:nth-child(3) .tick')
+  await sleep(150)
+  await shot(w, tag('picked'))
+  list([], false)
+  await sleep(300)
+  await shot(w, tag('empty'))
+  w.destroy()
+}
+
 async function shotShots(theme: 'dark' | 'light'): Promise<void> {
   nativeTheme.themeSource = theme
   // 1 and 2: a screen at 100 % and one at 200 %, the same 1280×720 CSS pixels.
@@ -550,7 +640,8 @@ async function shotShots(theme: 'dark' | 'light'): Promise<void> {
     const key = (code: string, ctrl = false) => js(w, `window.dispatchEvent(new KeyboardEvent('keydown', { code: ${JSON.stringify(code)}, key: ${JSON.stringify(code)}, ctrlKey: ${ctrl}, bubbles: true })), 'ok'`)
     const frame = (video = false, quick = false, tool = '') => {
       const rgba = fakeScreen(1280 * unit, 720 * unit, unit)
-      w.webContents.send('to-view', { type: 'shotFrame', width: 1280 * unit, height: 720 * unit, cssWidth: 1280, rgba, windows: [{ x: 200 * unit, y: 140 * unit, width: 420 * unit, height: 470 * unit, panel: true }, { x: 640 * unit, y: 140 * unit, width: 420 * unit, height: 470 * unit, panel: true }, { x: 180 * unit, y: 90 * unit, width: 900 * unit, height: 540 * unit }], style: { color: '#e5383b', size: 1, dashed: false }, tool, video, quick, sound: { mic: false, system: true, micName: '' }, effects: { clicks: true, zoom: false, halo: false, zoomScale: 2 } })
+      const cursor = fakePointer(rgba, 1280 * unit, unit)
+      w.webContents.send('to-view', { type: 'shotFrame', width: 1280 * unit, height: 720 * unit, cssWidth: 1280, rgba, windows: [{ x: 200 * unit, y: 140 * unit, width: 420 * unit, height: 470 * unit, panel: true }, { x: 640 * unit, y: 140 * unit, width: 420 * unit, height: 470 * unit, panel: true }, { x: 180 * unit, y: 90 * unit, width: 900 * unit, height: 540 * unit }], style: { color: '#e5383b', size: 1, dashed: false }, tool, video, quick, sound: { mic: false, system: true, micName: '' }, effects: { clicks: true, zoom: false, halo: false, zoomScale: 2 }, shutter: false, cursor, cursorOn: false })
     }
     frame()
     await sleep(500)
@@ -562,10 +653,43 @@ async function shotShots(theme: 'dark' | 'light'): Promise<void> {
     await js(w, `document.querySelector('#screen').dispatchEvent(new WheelEvent('wheel', { clientX: 500, clientY: 300, deltaY: -100, bubbles: true })), 'ok'`)
     await sleep(150)
     await shot(w, tag('window'))
-    // A frame; the bar under it, then every tool used once.
-    await dragIt(300, 130, 980, 480)
+    // The dashes run round a lit window: the same picture a moment later differs along its line.
+    await sleep(300)
+    await shot(w, tag('window-later'))
+    // A window with no child windows (Chrome): the parts it names come back, the narrowest lit.
+    {
+      const rgba = fakeScreen(1280 * unit, 720 * unit, unit)
+      w.webContents.send('to-view', { type: 'shotFrame', width: 1280 * unit, height: 720 * unit, cssWidth: 1280, rgba, windows: [{ x: 180 * unit, y: 90 * unit, width: 900 * unit, height: 540 * unit }], style: { color: '#e5383b', size: 1, dashed: false }, tool: '', video: false, quick: false, sound: { mic: false, system: true, micName: '' }, effects: { clicks: true, zoom: false, halo: false, zoomScale: 2 }, shutter: false })
+      await sleep(300)
+      await mouse('mousemove', 500, 300)
+      await sleep(100)
+      const boxes = [{ x: 400 * unit, y: 220 * unit, width: 300 * unit, height: 160 * unit, panel: true }, { x: 380 * unit, y: 130 * unit, width: 700 * unit, height: 500 * unit, panel: true }]
+      w.webContents.send('to-view', { type: 'shotElements', window: 0, boxes })
+      await sleep(150)
+      await shot(w, tag('parts'))
+      await js(w, `document.querySelector('#screen').dispatchEvent(new WheelEvent('wheel', { clientX: 500, clientY: 300, deltaY: -100, bubbles: true })), 'ok'`)
+      await sleep(150)
+      await shot(w, tag('parts-wider'))
+      frame()
+      await sleep(400)
+    }
+    // A frame being drawn: dashed, the loupe by the pointer. Then fixed: solid, the bar under it.
+    await mouse('mousedown', 300, 130)
+    await mouse('mousemove', 640, 300)
+    await mouse('mousemove', 980, 480)
+    await sleep(150)
+    await shot(w, tag('drawing'))
+    await mouse('mouseup', 980, 480)
     await sleep(200)
     await shot(w, tag('frame'))
+    // The pointer put on the picture, then taken off again; the arrows move the frame.
+    await click(w, '.b[title="' + (LANG === 'uk' ? 'Курсор на знімку' : LANG === 'ru' ? 'Курсор на снимке' : 'Pointer on the picture') + '"]')
+    await sleep(150)
+    await shot(w, tag('cursor'))
+    await click(w, '.b[title="' + (LANG === 'uk' ? 'Курсор на знімку' : LANG === 'ru' ? 'Курсор на снимке' : 'Pointer on the picture') + '"]')
+    for (let i = 0; i < 4; i++) await js(w, `window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight', key: 'ArrowRight', shiftKey: true, bubbles: true })), 'ok'`)
+    await sleep(150)
+    await shot(w, tag('nudged'))
     await key('KeyR')
     await dragIt(330, 170, 520, 260)
     await key('KeyA')
@@ -810,6 +934,8 @@ app.whenReady().then(async () => {
     }
     // SHOTS=card: the card alone; SHOTS=tray: the tray panel; SHOTS=menu: the menu on one key; SHOTS=shot: a screenshot's page alone; SHOTS=daily: the card, the tray panel, the menu, the badge, the talk window and the setup.
     if (process.env.SHOTS === 'shot') {
+      await editorShots('dark')
+      await editorShots('light')
       await shotShots('dark')
       await shotShots('light')
       await recordShots('dark')
@@ -829,6 +955,8 @@ app.whenReady().then(async () => {
       await talkShots('dark')
       await talkShots('light')
     } else if (process.env.SHOTS !== 'card') {
+      await editorShots('dark')
+      await editorShots('light')
       await shotShots('dark')
       await shotShots('light')
       await recordShots('dark')

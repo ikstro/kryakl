@@ -93,6 +93,7 @@ export class SpeechHost {
       env: o.testHome ? { KRYA_SPEECH_HOME: o.testHome } : { KRYA_SPEECH_DIR: o.root },
       // Beside the engine's settings (its APP_DIR), where an engine run by hand finds it too.
       token: speechToken(path.join(o.testHome ?? o.userDir, 'speech-token')),
+      say: log,
       // Its Python, run from the engine's own folder (the venv's launcher and the interpreter it starts); never uv.
       // Seconds of PowerShell and of waiting, off main's thread: the engine's start waits for it, nothing else does.
       stopStale: async () => {

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; media-src 'self';">
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="shot.css">
+<link rel="stylesheet" href="shots.css">
+<title>Kryakl screenshots</title>
+</head>
+<body class="editor">
+<header class="top" id="top"></header>
+<div class="wrap">
+  <aside class="list" id="list" tabindex="0"></aside>
+  <section class="work">
+    <div class="work-head">
+      <div id="bar" class="bar" role="toolbar" hidden></div>
+      <div class="acts" id="acts"></div>
+    </div>
+    <div class="stage" id="stage"><div class="empty" id="empty" hidden></div></div>
+  </section>
+</div>
+<canvas id="screen"></canvas>
+<div id="hint" class="hint" hidden></div>
+<div id="size" class="size" hidden></div>
+<textarea id="write" class="write" hidden spellcheck="false"></textarea>
+<script src="shots.js"></script>
+</body>
+</html>

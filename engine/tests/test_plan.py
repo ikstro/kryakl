@@ -251,6 +251,66 @@ def test_a_card_held_by_another_program_transcribes_on_the_processor_this_time(s
     assert w.words_model().loaded_with[:2] == ("large-v3-turbo", "cuda")
 
 
+def test_a_busy_card_takes_the_same_model_compact_then_a_lighter_one_before_the_processor(s, monkeypatch):
+    # 2026-11-10: a meeting went to the processor with 4824 MB free (large-v3 needs 4600 and room): 40 min instead of 4.
+    plan = {"cuda": {"transcripts": {"model": "large-v3", "compute": "float16", "lighter": {"model": "large-v3-turbo", "compute": "float16"}}}, "cpu": {"transcripts": {"model": "large-v3"}}}
+    free = {"mb": 4824}
+    on_disk = {"large-v3", "large-v3-turbo"}
+
+    def fresh():
+        w = make_worker(s, monkeypatch)
+        monkeypatch.setattr(asr, "card_free_mb", lambda: free["mb"])
+        monkeypatch.setattr(asr, "downloaded", lambda name: name in on_disk)
+        s.update({"plan": plan})
+        return w
+
+    w = fresh()
+    assert w.words_model().loaded_with[:3] == ("large-v3", "cuda", "int8_float16")
+    assert w.gave_way["transcripts"] == "compact"
+    # Too little even for that: the lighter model, already here, in the compute that fits.
+    free["mb"] = 2500
+    w = fresh()
+    assert w.words_model().loaded_with[:3] == ("large-v3-turbo", "cuda", "int8_float16")
+    assert w.gave_way["transcripts"] == "lighter"
+    # Not downloaded: never fetched for this, the processor instead.
+    on_disk.discard("large-v3-turbo")
+    w = fresh()
+    assert w.words_model().loaded_with[:2] == ("large-v3", "cpu")
+    assert w.gave_way["transcripts"] == "processor"
+    # Room again: the plan's own.
+    free["mb"] = 7000
+    w = fresh()
+    assert w.words_model().loaded_with[:3] == ("large-v3", "cuda", "float16")
+    assert w.gave_way["transcripts"] == ""
+
+
+def test_a_model_on_the_card_gives_its_memory_to_the_next_one(s, monkeypatch):
+    w = make_worker(s, monkeypatch)
+    monkeypatch.setattr(asr, "downloaded", lambda name: True)
+    s.update({"plan": {"cuda": {"transcripts": {"model": "large-v3", "compute": "float16", "lighter": {"model": "large-v3-turbo"}}}, "cpu": {"transcripts": {"model": "small"}}}})
+    w.transcriber.load("large-v3-turbo", "cuda", "int8_float16")
+    # 3600 free and turbo's 1600 it holds: large-v3 (4600 and room) fits once turbo goes.
+    monkeypatch.setattr(asr, "card_free_mb", lambda: 3600)
+    assert w.words_model().loaded_with[:3] == ("large-v3", "cuda", "float16")
+
+
+def test_busy_dictation_keeps_the_same_model_compact_on_the_card(s, monkeypatch):
+    # 2026-11-10: 2.4 GB free, turbo's float16 needs 2600: every piece of a phrase ran on the processor, 6 s each.
+    w = make_worker(s, monkeypatch)
+    monkeypatch.setattr(asr, "card_free_mb", lambda: 2400)
+    s.update({"plan": {"cuda": {"dictation": {"model": "large-v3-turbo", "compute": "float16", "beam": 5}, "transcripts": {"model": "large-v3", "compute": "float16"}}, "cpu": {"dictation": {"model": "large-v3-turbo", "beam": 2}}}})
+    t, entry = w.dictation_model()
+    assert t.loaded_with[:3] == ("large-v3-turbo", "cuda", "int8_float16") and entry["beam"] == 5
+
+
+def test_the_plans_lighter_model_is_for_the_card_and_known(s):
+    s.update({"plan": {"cuda": {"transcripts": {"model": "large-v3", "compute": "float16", "lighter": {"model": "large-v3-turbo", "compute": "int8_float16"}}, "dictation": {"model": "large-v3-turbo", "lighter": {"model": "nonsense"}}}, "cpu": {"transcripts": {"model": "small", "lighter": {"model": "base"}}}}})
+    plan = s["plan"]
+    assert plan["cuda"]["transcripts"]["lighter"] == {"model": "large-v3-turbo", "compute": "int8_float16"}
+    assert "lighter" not in plan["cuda"]["dictation"]
+    assert "lighter" not in plan["cpu"]["transcripts"]
+
+
 def test_a_model_on_the_card_goes_after_three_idle_minutes(s, monkeypatch):
     class NoRecordings:
         def rows(self, statuses):

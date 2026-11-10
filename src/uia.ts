@@ -155,3 +155,128 @@ export function focusedIsPassword(): boolean | undefined {
     release(element)
   }
 }
+
+// ---------------------------------------------------------------- the parts of a window, for a screenshot's frame
+
+const ElementFromHandle = koffi.proto('int32 __stdcall UiaElementFromHandle(void *self, intptr hwnd, _Out_ void **element)')
+const AddProperty = koffi.proto('int32 __stdcall UiaAddProperty(void *self, int32 property)')
+const FindAllBuildCache = koffi.proto('int32 __stdcall UiaFindAllBuildCache(void *self, int32 scope, void *condition, void *request, _Out_ void **found)')
+/** A RECT: the element's edges, in the screen's pixels. */
+const UiaRect = koffi.struct('UiaRect', { left: 'int32', top: 'int32', right: 'int32', bottom: 'int32' })
+const GetRect = koffi.proto('int32 __stdcall UiaGetRect(void *self, _Out_ UiaRect *rect)')
+
+/**
+ * IUIAutomation's ElementFromHandle, get_ControlViewCondition and CreateCacheRequest;
+ * IUIAutomationCacheRequest's AddProperty; IUIAutomationElement's FindAllBuildCache,
+ * get_CachedControlType, get_CachedIsOffscreen and get_CachedBoundingRectangle.
+ */
+const ELEMENT_FROM_HANDLE = 6
+const GET_CONTROL_VIEW_CONDITION = 18
+const CREATE_CACHE_REQUEST = 20
+const ADD_PROPERTY = 3
+const FIND_ALL_BUILD_CACHE = 8
+const GET_CACHED_CONTROL_TYPE = 53
+const GET_CACHED_IS_OFFSCREEN = 70
+const GET_CACHED_BOUNDING_RECTANGLE = 75
+const TREE_SCOPE_CHILDREN = 2
+const UIA_BoundingRectanglePropertyId = 30001
+const UIA_ControlTypePropertyId = 30003
+const UIA_IsOffscreenPropertyId = 30022
+/** A web page (Chrome's, Edge's, an app's web view; Chrome's developer tools too): the one part a screenshot takes from such a window. */
+export const UIA_DocumentControlTypeId = 50030
+/** How deep a walk goes, and how many children of one element it looks at. */
+const MOST_DEPTH = 40
+const MOST_CHILDREN = 500
+
+/** A part of a window on the screen, in the screen's pixels, with its UI Automation control type. */
+export type ElementBox = { x: number; y: number; width: number; height: number; type: number }
+
+let partsQuery: { condition: unknown; request: unknown } | undefined
+
+/** The control view (no bare layout elements) and the three properties each child is read with, made once. */
+function queryOf(uia: unknown): { condition: unknown; request: unknown } | undefined {
+  if (partsQuery) return partsQuery
+  const condition: unknown[] = [null]
+  if (method<(self: unknown, out: unknown[]) => number>(uia, GET_CONTROL_VIEW_CONDITION, GetObject)(uia, condition) < 0 || !condition[0]) return undefined
+  const request: unknown[] = [null]
+  if (method<(self: unknown, out: unknown[]) => number>(uia, CREATE_CACHE_REQUEST, GetObject)(uia, request) < 0 || !request[0]) {
+    release(condition[0])
+    return undefined
+  }
+  const add = method<(self: unknown, id: number) => number>(request[0], ADD_PROPERTY, AddProperty)
+  for (const id of [UIA_BoundingRectanglePropertyId, UIA_ControlTypePropertyId, UIA_IsOffscreenPropertyId]) add(request[0], id)
+  partsQuery = { condition: condition[0], request: request[0] }
+  return partsQuery
+}
+
+/** A cached child's box, or undefined when it would not say or is off the screen. */
+function boxOf(element: unknown): ElementBox | undefined {
+  const rect: Record<string, number> = {}
+  const offscreen = [0]
+  const type = [0]
+  if (method<(self: unknown, out: Record<string, number>) => number>(element, GET_CACHED_BOUNDING_RECTANGLE, GetRect)(element, rect) < 0) return undefined
+  if (method<(self: unknown, out: number[]) => number>(element, GET_CACHED_IS_OFFSCREEN, GetBool)(element, offscreen) < 0 || offscreen[0]) return undefined
+  method<(self: unknown, out: number[]) => number>(element, GET_CACHED_CONTROL_TYPE, GetInt)(element, type)
+  const left = rect.left ?? 0
+  const top = rect.top ?? 0
+  const box = { x: left, y: top, width: (rect.right ?? 0) - left, height: (rect.bottom ?? 0) - top }
+  return box.width > 0 && box.height > 0 ? { ...box, type: type[0] ?? 0 } : undefined
+}
+
+/**
+ * The parts of a window under a point of the screen, the narrowest first, from
+ * the window's tree of elements (what screen readers read): Chrome, VS Code and
+ * other programs that draw everything themselves have no child windows to list,
+ * but they name their panels, page blocks and buttons there. Walked down from
+ * the window, never asked at the point, as the screenshot's overlay is what lies
+ * at every point. Stops at `budget` ms with what it has.
+ */
+export function elementsAt(hwnd: bigint, x: number, y: number, budget: number): ElementBox[] {
+  const uia = automationOf()
+  const query = uia ? queryOf(uia) : undefined
+  if (!uia || !query) return []
+  const started = Date.now()
+  const chain: ElementBox[] = []
+  const root: unknown[] = [null]
+  const fromHandle = method<(self: unknown, hwnd: bigint, out: unknown[]) => number>(uia, ELEMENT_FROM_HANDLE, ElementFromHandle)
+  if (fromHandle(uia, hwnd, root) < 0 || !root[0]) return []
+  let current: unknown = root[0]
+  try {
+    for (let depth = 0; depth < MOST_DEPTH && Date.now() - started < budget; depth++) {
+      const found: unknown[] = [null]
+      const findAll = method<(self: unknown, scope: number, condition: unknown, request: unknown, out: unknown[]) => number>(current, FIND_ALL_BUILD_CACHE, FindAllBuildCache)
+      if (findAll(current, TREE_SCOPE_CHILDREN, query.condition, query.request, found) < 0 || !found[0]) break
+      const array = found[0]
+      let best: { element: unknown; box: ElementBox } | undefined
+      try {
+        const length = [0]
+        if (method<(self: unknown, out: number[]) => number>(array, GET_LENGTH, GetInt)(array, length) < 0) break
+        for (let i = 0; i < Math.min(length[0] ?? 0, MOST_CHILDREN); i++) {
+          const item: unknown[] = [null]
+          if (method<(self: unknown, index: number, out: unknown[]) => number>(array, GET_ELEMENT, GetAt)(array, i, item) < 0 || !item[0]) continue
+          const element = item[0]
+          const box = boxOf(element)
+          const holds = box && x >= box.x && y >= box.y && x < box.x + box.width && y < box.y + box.height
+          // The smallest that holds the point; on a tie the later one, drawn over the earlier.
+          if (box && holds && (!best || box.width * box.height <= best.box.width * best.box.height)) {
+            if (best) release(best.element)
+            best = { element, box }
+          } else release(element)
+        }
+      } finally {
+        release(array)
+      }
+      if (!best) break
+      chain.unshift(best.box)
+      // The page is what is wanted, never its blocks: no need to read its hundreds of elements.
+      if (best.box.type === UIA_DocumentControlTypeId) break
+      release(current)
+      current = best.element
+    }
+  } catch {
+    // What was found by then stands.
+  } finally {
+    release(current)
+  }
+  return chain
+}

@@ -20,6 +20,8 @@ const NAMES = [
   'pencil-line', 'monitor-speaker', 'scan-text', 'text-cursor', 'panel-bottom',
   // a screenshot's tools and its place in the window
   'camera', 'volume-x', 'circle', 'slash', 'pencil', 'highlighter', 'hash', 'droplets', 'grid-3x3', 'undo-2', 'redo-2', 'save',
+  // the pointer on a screenshot, and the Screenshots window (2026-11-10)
+  'mouse-pointer-2', 'images', 'copy-check', 'maximize-2', 'minimize-2',
   // controls
   'plus', 'x', 'minus', 'square', 'chevron-right', 'chevron-left', 'chevron-down', 'arrow-up', 'arrow-down',
 ]

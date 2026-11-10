@@ -9,6 +9,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import * as fs from 'node:fs'
+import * as http from 'node:http'
 import * as path from 'node:path'
 
 import { rotate } from './log'
@@ -79,6 +80,9 @@ export function provesKey(token: string, nonce: string, proof: unknown): boolean
   return !!got && timingSafeEqual(want, got)
 }
 
+/** The port answered, but not as an engine does: a page not found, not JSON. */
+class StrangerAnswer extends Error {}
+
 export type SpeechResult<T = unknown> = { ok: true; status: number; data: T } | { ok: false; status: number; error: string }
 
 export type SpeechServiceOptions = {
@@ -94,6 +98,8 @@ export type SpeechServiceOptions = {
   stopStale?: () => Promise<void>
   env?: Record<string, string>
   change: () => void
+  /** A line for kryakl.log: how long a start took, a stranger on the port. */
+  say?: (line: string) => void
 }
 
 export class SpeechService {
@@ -110,6 +116,10 @@ export class SpeechService {
   private stopping: Promise<void> | undefined
   /** The engine on the port has proved it holds the key (`check`): only then is the key sent to it. */
   private proved = false
+  /** When the engine was last started, until it answers: its start's length goes into the log. */
+  private launchedAt: number | undefined
+  /** A program not Kryakl's engine answered on the port; said once a start. */
+  private strangerSaid = false
 
   constructor(private readonly o: SpeechServiceOptions) {}
 
@@ -157,6 +167,8 @@ export class SpeechService {
       return
     }
     this.set('starting')
+    this.launchedAt = Date.now()
+    this.strangerSaid = false
     fs.mkdirSync(path.dirname(this.o.log), { recursive: true })
     // Past 2 MB a start begins it afresh, the last one kept as speech.old.log.
     rotate(this.o.log, 2_000_000)
@@ -216,19 +228,48 @@ export class SpeechService {
       delete health.proof
       this.health = health
       this.failures = 0
+      if (this.launchedAt !== undefined) {
+        this.o.say?.(`speech: ready ${((Date.now() - this.launchedAt) / 1000).toFixed(1)} s after the start`)
+        this.launchedAt = undefined
+      }
       this.set('ready')
       return true
-    } catch {
+    } catch (error) {
+      // An answer that is no engine's (a page not found, not JSON): another program listens on the port too.
+      if (!this.strangerSaid && error instanceof StrangerAnswer) {
+        this.strangerSaid = true
+        this.o.say?.(`speech: another program answers on port ${this.o.port} too (${error instanceof Error ? error.message : String(error)}); while Kryakl's engine is up it gets the calls, while it starts or stops that program may answer`)
+      }
       this.proved = false
       if (this.state === 'ready') this.set('starting')
       return false
     }
   }
 
-  private async askHealth(headers: Record<string, string>): Promise<unknown> {
-    const response = await fetch(`${this.base}/health`, { headers, signal: AbortSignal.timeout(1500) })
-    if (!response.ok) throw new Error(String(response.status))
-    return response.json()
+  /**
+   * One look at the port on a connection of its own, closed after (2026-11-10: fetch kept the
+   * connection a program that had the port first answered on, a web server of the person's on
+   * 0.0.0.0:8765, and went on asking it after Kryakl's engine took 127.0.0.1:8765, which Windows
+   * gives every new connection; so the engine never became ready).
+   */
+  private askHealth(headers: Record<string, string>): Promise<unknown> {
+    return new Promise((resolve, reject) => {
+      const request = http.get(`${this.base}/health`, { headers, agent: false, timeout: 1500 }, response => {
+        const chunks: Buffer[] = []
+        response.on('data', (chunk: Buffer) => chunks.push(chunk))
+        response.on('error', reject)
+        response.on('end', () => {
+          if ((response.statusCode ?? 0) < 200 || (response.statusCode ?? 0) >= 300) return reject(new StrangerAnswer(String(response.statusCode)))
+          try {
+            resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+          } catch {
+            reject(new StrangerAnswer('not JSON'))
+          }
+        })
+      })
+      request.on('timeout', () => request.destroy(new Error('timeout')))
+      request.on('error', reject)
+    })
   }
 
   /** The engine on the port has proved itself, or does now (a call right after its start comes before the next look). */

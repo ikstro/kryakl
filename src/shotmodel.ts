@@ -96,6 +96,36 @@ export function boxOf(a: Point, b: Point): Box {
   return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.abs(a.x - b.x), height: Math.abs(a.y - b.y) }
 }
 
+/** Shift while drawing a frame, a rectangle or an ellipse: a square from `a` toward `b`, as big as the longer side. */
+export function squareOf(a: Point, b: Point): Box {
+  const side = Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y))
+  return boxOf(a, { x: a.x + (b.x < a.x ? -side : side), y: a.y + (b.y < a.y ? -side : side) })
+}
+
+/** Shift on a line or an arrow: the nearest of eight directions, as long as the pointer has it. */
+export function snap45(a: Point, b: Point): Point {
+  const length = Math.hypot(b.x - a.x, b.y - a.y)
+  const angle = Math.round(Math.atan2(b.y - a.y, b.x - a.x) / (Math.PI / 4)) * (Math.PI / 4)
+  return { x: Math.round(a.x + Math.cos(angle) * length), y: Math.round(a.y + Math.sin(angle) * length) }
+}
+
+/** The arrow keys on a frame: moved within `bounds`; `grow`: its right or bottom edge instead, never under MIN_FRAME. */
+export function nudge(frame: Box, dx: number, dy: number, bounds: Box, grow: boolean): Box {
+  const limit = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value))
+  if (grow) {
+    return {
+      ...frame,
+      width: limit(frame.width + dx, Math.min(MIN_FRAME, frame.width), bounds.x + bounds.width - frame.x),
+      height: limit(frame.height + dy, Math.min(MIN_FRAME, frame.height), bounds.y + bounds.height - frame.y),
+    }
+  }
+  return {
+    ...frame,
+    x: limit(frame.x + dx, bounds.x, bounds.x + bounds.width - frame.width),
+    y: limit(frame.y + dy, bounds.y, bounds.y + bounds.height - frame.height),
+  }
+}
+
 /** The part of `box` inside `bounds`; an empty box when none is. */
 export function clampBox(box: Box, bounds: Box): Box {
   const x = Math.max(box.x, bounds.x)
@@ -144,6 +174,56 @@ export function panelsOf(top: string, frame: Box, children: readonly ChildWindow
   }
   walk(top, frame)
   return out
+}
+
+/** Windows' taskbars (the main one and each other monitor's): no title, and their old inner windows do not match what Windows 11 draws, so no panels. */
+export const SHELL_BARS: ReadonlySet<string> = new Set(['Shell_TrayWnd', 'Shell_SecondaryTrayWnd'])
+/** A menu (Windows' own) and a tooltip: no title either. */
+const UNTITLED_POPUPS: ReadonlySet<string> = new Set(['#32768', 'tooltips_class32'])
+/** An untitled popup this much of its monitor or more is an overlay of some program's, not a menu. */
+const MOST_OF_SCREEN = 0.8
+
+export type UntitledWindow = { cls: string; popup: boolean; topmost: boolean; tool: boolean; box: Box }
+
+/**
+ * Whether a window with no title is one a click may take. Most untitled windows
+ * are helpers no one sees; the taskbar, a menu and a tooltip are not (the owner,
+ * 2026-11-10: the taskbar could not be taken), nor a program's own popup menu
+ * (on top or a tool window, smaller than most of its monitor).
+ */
+export function keepsUntitled(w: UntitledWindow, monitors: readonly Box[]): boolean {
+  if (SHELL_BARS.has(w.cls) || UNTITLED_POPUPS.has(w.cls)) return true
+  if (!w.popup || !(w.topmost || w.tool) || w.box.width < MIN_PANEL || w.box.height < MIN_PANEL) return false
+  const overlap = (m: Box) => clampBox(w.box, m)
+  const home = monitors.map(m => ({ m, o: overlap(m) })).sort((a, b) => b.o.width * b.o.height - a.o.width * a.o.height)[0]
+  if (!home || home.o.width <= 0 || home.o.height <= 0) return false
+  return w.box.width * w.box.height < home.m.width * home.m.height * MOST_OF_SCREEN
+}
+
+/** UI Automation's control type of a web page (Chrome's, Edge's, an app's web view; Chrome's developer tools too). */
+export const DOCUMENT_TYPE = 50030
+/** Smaller than this is no page worth taking. */
+export const MIN_ELEMENT = 24
+/** A page whose edges are all this close to its window's is the window. */
+const SAME_EDGE = 4
+
+/**
+ * What a program that draws itself offers under the pointer (uia.ts elementsAt,
+ * the narrowest first, in the picture's pixels): its page alone, as a panel of
+ * `window`, cut to it; the window itself is the other choice (the owner,
+ * 2026-11-10: "только внутреннюю страницу" or the whole Chrome, never its blocks).
+ * Nothing when the pointer is over no page, or the page is the window itself
+ * (an app that is all page): a browser's page with its tabs above takes most of
+ * the window and is still the other choice.
+ */
+export function elementsOf(window: Box, boxes: readonly (Box & { type?: number })[]): ShotTarget[] {
+  const page = boxes.find(b => b.type === DOCUMENT_TYPE)
+  if (!page) return []
+  const box = clampBox(page, window)
+  const same = (a: number, b: number) => Math.abs(a - b) <= SAME_EDGE
+  const whole = same(box.x, window.x) && same(box.y, window.y) && same(box.x + box.width, window.x + window.width) && same(box.y + box.height, window.y + window.height)
+  if (box.width < MIN_ELEMENT || box.height < MIN_ELEMENT || whole) return []
+  return [{ ...box, panel: true }]
 }
 
 /** What can be taken at a point, the narrowest first, up to and including its window. `targets`: each window's panels before it, the top window first. */

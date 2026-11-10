@@ -110,7 +110,8 @@ export type FeaturePlan = {
   budget: number
 }
 
-export type EngineEntry = { model: string; compute?: string; beam?: number }
+/** `lighter`: what the engine takes on the card when another program leaves too little of it for this model (jobs.py _smaller). */
+export type EngineEntry = { model: string; compute?: string; beam?: number; lighter?: { model: string; compute?: string } }
 export type EnginePlan = {
   fingerprint: string
   threads: number
@@ -290,10 +291,26 @@ function forDevice(device: Device, input: PlanInput): Record<Feature, FeaturePla
 /** Dictation's beam: five on the card, two (one for Speed) on the processor. */
 const beamOn = (device: Device, input: PlanInput) => (device === 'cuda' ? 5 : input.prefer === 'speed' ? 1 : 2)
 
+/** The lightest a busy card may fall to before the processor: tiny and base write a meeting too poorly. */
+const LIGHTEST_RANK = rankOf('small')
+
+/** When another program leaves the card too little for the chosen model (2026-11-10), the most accurate smaller one
+ *  already downloaded, on the card, rather than the chosen one on the processor (a meeting in 40 minutes instead of 4).
+ *  Only for Transcribe on Automatic: a model the person picked was picked over speed. */
+function lighterOf(plan: FeaturePlan): EngineEntry['lighter'] {
+  const c = plan.chosen
+  if (plan.pinned || c.device !== 'cuda') return undefined
+  const vram = (model: string) => MODELS.find(m => m.name === model)?.vramMb.int8_float16 ?? 0
+  const light = plan.choices.find(o => o.device === 'cuda' && !o.why && o.downloaded && o.model !== c.model && rankOf(o.model) >= LIGHTEST_RANK && rankOf(o.model) < rankOf(c.model) && vram(o.model) < vram(c.model))
+  return light ? { model: light.model, compute: light.compute } : undefined
+}
+
 const entryOf = (feature: Feature, plan: FeaturePlan, input: PlanInput): EngineEntry => {
   const c = plan.chosen
   const beam = feature === 'dictation' ? { beam: beamOn(c.device, input) } : {}
-  return c.device === 'cuda' ? { model: c.model, compute: c.compute, ...beam } : { model: c.model, ...beam }
+  if (c.device !== 'cuda') return { model: c.model, ...beam }
+  const lighter = feature === 'transcripts' ? lighterOf(plan) : undefined
+  return { model: c.model, compute: c.compute, ...beam, ...(lighter ? { lighter } : {}) }
 }
 
 export function planSpeech(input: PlanInput): SpeechPlan {

@@ -42,6 +42,7 @@ function view(profile: DeviceProfile, over: Partial<AppView> = {}): AppView {
     layouts: [],
     rivals: [],
     shotApps: [],
+    shotsHeld: 0,
     videoDir: '',
     keyboardApps: [],
     foreignKeys: false,

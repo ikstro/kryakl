@@ -80,6 +80,7 @@ import { shotFileName } from './shotmodel'
 import { dibFromBgra } from './shotpixels'
 import { ScreenRecorder } from './recordwindow'
 import { dropFiles } from './recordmodel'
+import { ShotsEditor } from './shotseditor'
 import { ShotOverlay, type ShotOutcome } from './shotwindow'
 import { placeByTray, placeNear, resize, type Point } from './placement'
 import type { AppTab, AppView, BusyPart, CardKind, CardState, CheckResult, DictationMode, DictionaryStatus, GlossMissing, HostCall, HostVoice, Refused, ShotAction, StorageId, StoragePart, StorageView, TalkWindowView, TextResult, ToHost, ToView, TranslationState, TrayCommand, TrayView, ViewConfig } from './protocol'
@@ -302,6 +303,10 @@ let dictation: Dictation
 let balloonClick: (() => void) | undefined
 let keyboard: KeyboardHelper
 let shots: ShotOverlay | undefined
+/** The Screenshots window: the screenshots sent to it, while Kryakl runs. */
+let shotsEditor: ShotsEditor | undefined
+/** Asked once whether the screenshots there may go: Kryakl then goes on quitting. */
+let shotsAsked = false
 let recorder: ScreenRecorder | undefined
 /** A frame opened for its text alone: what it is for, and the key that asked. */
 let quickShot: { purpose: 'listen' | 'translate'; via?: string } | undefined
@@ -556,6 +561,7 @@ function applyUiLanguage(): void {
   dictation?.languageChanged()
   oneKeyMenu?.languageChanged()
   shots?.languageChanged()
+  shotsEditor?.languageChanged()
 }
 
 /** Light, dark or as Windows is: the pages follow `prefers-color-scheme`, which this sets. */
@@ -583,6 +589,7 @@ function applyColors(): void {
     frameWindow(talkWin, { corner: 'round', border: borderColor() })
   }
   oneKeyMenu?.repaint()
+  shotsEditor?.repaint()
   // The dictation badge needs nothing: its page draws its ground and edge, and follows the theme itself.
 }
 
@@ -1308,6 +1315,7 @@ function appView(): AppView {
     translations: translationLog.list(10),
     rivals,
     shotApps,
+    shotsHeld: shotsEditor?.count ?? 0,
     videoDir: videoFolder(),
     keyboardApps,
     foreignKeys,
@@ -1635,6 +1643,9 @@ function onMessage(message: ToHost, page: Page): void {
       return
     case 'showInFolder':
       if (typeof message.path === 'string' && path.win32.isAbsolute(message.path)) shell.showItemInFolder(message.path)
+      return
+    case 'openShots':
+      shotsEditor?.show()
       return
     case 'recordFolder':
       void fs.promises
@@ -3068,34 +3079,47 @@ async function finishShot(action: ShotAction, png: Buffer, win: BrowserWindow): 
   }
   if (action === 'copy') {
     try {
-      const image = nativeImage.createFromBuffer(png)
-      const { width, height } = image.getSize()
-      const dib = dibFromBgra(image.toBitmap(), width, height)
-      await ownClipboard(() => clipGuard.own(() => writeClipboardImage(clipboardOwner(), png, dib)))
+      await copyShotImage(png)
     } catch (error) {
       log(`shot: could not copy: ${messageOf(error)}`)
       return { close: false, message: t('shot.copyFailed', { why: messageOf(error) }) }
     }
     return { close: true, after: () => keyboard.say(t('shot.copied'), SHOT_SAY_MS) }
   }
-  let folder = settings.shotFolder
-  if (!folder) {
-    const picked = await dialog.showOpenDialog(win, { title: t('shot.pickFolder'), properties: ['openDirectory', 'createDirectory'] })
-    if (picked.canceled || !picked.filePaths[0]) return { close: false }
-    folder = picked.filePaths[0]
-    saveSettings({ shotFolder: folder })
-  }
   try {
-    fs.mkdirSync(folder, { recursive: true })
-    const now = new Date()
-    let n = 1
-    while (fs.existsSync(path.join(folder, shotFileName(now, n)))) n++
-    fs.writeFileSync(path.join(folder, shotFileName(now, n)), png)
+    if (!(await saveShots([{ name: shotFileName(new Date()), png }], win))) return { close: false }
   } catch (error) {
     log(`shot: could not save: ${(error as NodeJS.ErrnoException).code ?? messageOf(error)}`)
     return { close: false, message: t('shot.saveFailed', { why: messageOf(error) }) }
   }
   return { close: true, after: () => keyboard.say(t('shot.saved'), SHOT_SAY_MS) }
+}
+
+/** A screenshot on the clipboard as the person's own copy: a PNG and a bitmap, so every program can paste it. */
+async function copyShotImage(png: Buffer): Promise<void> {
+  const image = nativeImage.createFromBuffer(png)
+  const { width, height } = image.getSize()
+  const dib = dibFromBgra(image.toBitmap(), width, height)
+  await ownClipboard(() => clipGuard.own(() => writeClipboardImage(clipboardOwner(), png, dib)))
+}
+
+/** Into the screenshots' folder, asked for the first time; a name taken there gets (2), (3). False when no folder was picked. */
+async function saveShots(files: { name: string; png: Buffer }[], win: BrowserWindow): Promise<boolean> {
+  let folder = settings.shotFolder
+  if (!folder) {
+    const picked = await dialog.showOpenDialog(win, { title: t('shot.pickFolder'), properties: ['openDirectory', 'createDirectory'] })
+    if (picked.canceled || !picked.filePaths[0]) return false
+    folder = picked.filePaths[0]
+    saveSettings({ shotFolder: folder })
+  }
+  fs.mkdirSync(folder, { recursive: true })
+  for (const file of files) {
+    const { name, ext } = path.parse(file.name)
+    let target = path.join(folder, file.name)
+    for (let n = 2; fs.existsSync(target); n++) target = path.join(folder, `${name} (${n})${ext}`)
+    fs.writeFileSync(target, file.png)
+  }
+  return true
 }
 
 /** Runs Kryakl's own use of the clipboard; the changes it makes, until a moment after, are not taken for requests. */
@@ -3246,6 +3270,7 @@ function trayView(): TrayView {
     },
     speech: { installed: speech?.installed ?? false, recording: dictation?.state === 'recording', noteKey: settings.noteKey },
     translator: activeTranslator().state(langCode(settings.native)).status,
+    shots: shotsEditor?.count ?? 0,
     native: settings.native,
     version: app.getVersion(),
     build: buildText(),
@@ -3480,6 +3505,9 @@ function runTrayCommand(command: TrayCommand): void {
       return
     case 'shot':
       setTimeout(() => openShot(), SHOT_AFTER_MS)
+      return
+    case 'shots':
+      shotsEditor?.show()
       return
     case 'video':
       setTimeout(() => videoPressed(), SHOT_AFTER_MS)
@@ -3896,10 +3924,15 @@ function start(): void {
     page: path.join(app.getAppPath(), 'media', 'shot.html'),
     preload: path.join(__dirname, 'preload.js'),
     worker: unpacked('dist', 'shot-worker.js'),
+    elements: unpacked('dist', 'elements-worker.js'),
     query: pageQuery,
     style: () => settings.shotStyle,
     saveStyle: shotStyle => saveSettings({ shotStyle }),
     tool: () => settings.shotTool,
+    shutter: () => settings.shotShutter,
+    cursor: () => settings.shotCursor,
+    saveCursor: shotCursor => saveSettings({ shotCursor }),
+    keep: shot => shotsEditor?.add(shot),
     saveTool: shotTool => saveSettings({ shotTool }),
     sound: () => settings.videoSound,
     saveSound: videoSound => saveSettings({ videoSound }),
@@ -3911,6 +3944,32 @@ function start(): void {
     done: finishShot,
     quitting: () => quitting,
     log: win => logPageErrors(win, 'screenshot'),
+    say: log,
+  })
+  shotsEditor = new ShotsEditor({
+    page: path.join(app.getAppPath(), 'media', 'shots.html'),
+    preload: path.join(__dirname, 'preload.js'),
+    icon: path.join(app.getAppPath(), 'media', 'icon.png'),
+    query: pageQuery,
+    background: appColor,
+    frame: win => frameWindow(win, { corner: 'default', border: borderColor() }),
+    bounds: () => settings.shotsBounds,
+    saveBounds: shotsBounds => saveSettings({ shotsBounds }),
+    style: () => settings.shotStyle,
+    saveStyle: shotStyle => saveSettings({ shotStyle }),
+    tool: () => settings.shotTool,
+    saveTool: shotTool => saveSettings({ shotTool }),
+    copyImage: copyShotImage,
+    copyFiles: files => ownClipboard(() => clipGuard.own(() => writeClipboardFiles(clipboardOwner(), dropFiles(files)))),
+    save: saveShots,
+    text: png => void readScreenText(png),
+    badge: text => keyboard.say(text, SHOT_SAY_MS),
+    changed: () => {
+      postApp()
+      refreshTray()
+    },
+    quitting: () => quitting,
+    log: win => logPageErrors(win, 'screenshots'),
     say: log,
   })
   recorder = new ScreenRecorder({
@@ -3938,6 +3997,7 @@ function start(): void {
     const page = pageOf(event.sender.getURL())
     if (!messageAllowed(page, message?.type) || (message.type === 'saveSettings' && !patchAllowed(page, message.patch))) log(`bridge: ${page} may not send ${String(message?.type)}`)
     else if (page === 'shot') shots?.onMessage(message, event.sender)
+    else if (page === 'shots') shotsEditor?.onMessage(message, event.sender)
     else if (page === 'record') recorder?.onMessage(message, event.sender)
     else onMessage(message, page)
   })
@@ -3983,6 +4043,16 @@ if (!theOnlyOne) {
     if (!runCommand(argv)) openApp()
   })
   app.on('before-quit', event => {
+    // Screenshots not saved or copied: one question first, and a No keeps Kryakl running.
+    if (!shotsAsked && shotsEditor?.unhandled) {
+      event.preventDefault()
+      void shotsEditor.mayClose(true).then(go => {
+        if (!go) return
+        shotsAsked = true
+        app.quit()
+      })
+      return
+    }
     quitting = true
     // Quitting within a paste's moment: what the person had goes back now, while the card's window can still own the clipboard.
     clipGuard.flush()
@@ -4008,6 +4078,7 @@ if (!theOnlyOne) {
       ['keyboard', () => keyboard?.dispose()],
       ['learning', () => learned?.flush()],
       ['talks', () => talks?.flush()],
+      ['screenshots', () => shotsEditor?.dispose()],
     ]
     for (const [name, step] of steps) {
       try {

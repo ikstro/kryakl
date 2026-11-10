@@ -28,6 +28,8 @@ export type Row = {
   language: string
   speakers_status: string
   snippet?: string
+  /** What recognized it when the graphics card was busy (the engine's jobs.py): a lighter model, or the processor. */
+  ran?: { model: string; device?: string; why: '' | 'compact' | 'lighter' | 'processor' }
 }
 
 export type Utterance = { speaker: string; start: number; end: number; text: string; edited?: boolean }

@@ -63,6 +63,7 @@ describe('the engine on the port', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kryakl-engine-'))
     dirs.push(dir)
     const stopStale = vi.fn(async () => undefined)
+    const say = vi.fn()
     const service: SpeechService = new SpeechService({
       python: () => path.join(dir, 'no-python.exe'),
       engineDir: dir,
@@ -72,13 +73,14 @@ describe('the engine on the port', () => {
       token: 'k',
       stopStale,
       change: () => undefined,
+      say,
     })
     await service.start()
     const seen = { state: service.state, trouble: service.trouble, health: service.health, token: service.token }
     await then?.(service)
     service.stop()
     await new Promise<void>(resolve => server.close(() => resolve()))
-    return { ...seen, stopStale, received, keyed: received.filter(r => 'x-krya-token' in r.headers) }
+    return { ...seen, stopStale, say, received, keyed: received.filter(r => 'x-krya-token' in r.headers) }
   }
 
   test('Kryakl\'s own engine proves it holds the key before it gets it, and is then used', async () => {
@@ -96,6 +98,12 @@ describe('the engine on the port', () => {
     expect(r.health).not.toHaveProperty('proof')
     expect(listed).toMatchObject({ ok: true, data: { items: [] } })
     expect(r.stopStale).not.toHaveBeenCalled()
+  })
+
+  test('another program answering on the port without being an engine is named in the log once', async () => {
+    const r = await onPort(() => undefined)
+    expect(r.say).toHaveBeenCalledTimes(1)
+    expect(r.say.mock.calls[0]![0]).toMatch(/another program answers on port \d+ too \(401\)/)
   })
 
   test('an older engine of Kryakl\'s without the key is stopped, once, and Kryakl starts its own', async () => {

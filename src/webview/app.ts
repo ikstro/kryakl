@@ -2768,10 +2768,14 @@ function shotsPage(v: AppView): HTMLElement[] {
       ? el('div', { class: 'offer' }, lucide('camera'), el('div', { class: 'ot' }, el('b', {}, t('shot.offerAsk')), el('small', {}, t('shot.offerNote')), el('span', { class: 'acts' }, btn(t('shot.offerUse'), () => save({ shotKey: 'PrintScreen' }), 'primary'))))
       : null
   return [
+    // The screenshots kept for later are a list of the page's, so a tile on top.
+    tiles([{ icon: 'images', title: t('shots.open'), count: v.shotsHeld || '', open: () => post({ type: 'openShots' }), id: 'shots' }]),
     offer,
     grp(t('shot.group')),
     keyRow('shotKey', t('shot.keyTitle'), t('shot.keyNote')),
     v.shotApps.length ? warn(t('shot.others', { names: v.shotApps.join(` ${t('common.and')} `) })) : null,
+    toggleCard('camera', t('shot.shutter'), s.shotShutter, shotShutter => save({ shotShutter }), t('shot.shutterNote')),
+    toggleCard('mouse-pointer-2', t('shot.cursor'), s.shotCursor, shotCursor => save({ shotCursor }), t('shot.cursorNote')),
     card('folder', t('shot.folder'), [s.shotFolder ? pathNote(s.shotFolder) : t('shot.folderNone')], linkBtn(s.shotFolder ? t('dictate.change') : t('dictate.choose'), () => void pick())),
     el('p', { class: 'privacy' }, lucide('lock', 's'), t('shot.privacy')),
     grp(t('video.group')),

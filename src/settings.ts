@@ -89,6 +89,12 @@ export type Settings = {
   shotStyle: ShotStyle
   /** The tool last picked, in hand again at the next screenshot; '' for none yet. */
   shotTool: Tool | ''
+  /** A shutter's click when a screenshot's frame is fixed. */
+  shotShutter: boolean
+  /** The mouse pointer stays on a screenshot (the bar's button). */
+  shotCursor: boolean
+  /** Where the Screenshots window was last left, in screen pixels; none until it is moved or sized. */
+  shotsBounds: { x: number; y: number; width: number; height: number } | null
   /** A screen recording: opens the frame on Video, and stops a recording under way; empty for none. */
   videoKey: string
   /** Where recordings go; empty: Videos\Kryakl. */
@@ -255,6 +261,9 @@ export const DEFAULTS: Settings = {
   shotFolder: '',
   shotStyle: SHOT_STYLE,
   shotTool: '',
+  shotShutter: true,
+  shotCursor: false,
+  shotsBounds: null,
   videoKey: '',
   videoFolder: '',
   videoSound: VIDEO_SOUND,
@@ -464,6 +473,9 @@ export function normalize(raw: unknown, native = DEFAULTS.native): Settings {
     shotFolder: typeof r.shotFolder === 'string' ? r.shotFolder : DEFAULTS.shotFolder,
     shotStyle: shotStyleOf(r.shotStyle),
     shotTool: shotToolOf(r.shotTool),
+    shotShutter: flag(r.shotShutter, DEFAULTS.shotShutter),
+    shotCursor: flag(r.shotCursor, DEFAULTS.shotCursor),
+    shotsBounds: windowBounds(r.shotsBounds),
     videoKey: key(r.videoKey, DEFAULTS.videoKey),
     videoFolder: typeof r.videoFolder === 'string' ? r.videoFolder : DEFAULTS.videoFolder,
     videoSound: videoSoundOf(r.videoSound),

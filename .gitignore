@@ -2,6 +2,7 @@ node_modules/
 dist/
 media/card.js
 media/shot.js
+media/shots.js
 media/record.js
 media/codicon.*
 release/

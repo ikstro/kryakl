@@ -217,6 +217,7 @@ function render(v: TrayView): void {
     group(
       t('tray.actions'),
       command('shot', 'camera', t('tray.shot'), 'shot', v.keys.shot),
+      v.shots ? command('shots', 'images', t('tray.shots', { n: v.shots }), 'shots') : null,
       command('video', 'video', t('tray.video'), 'video', v.keys.video),
       command('listenCopied', 'volume-2', t('tray.listenCopied'), 'listenCopied', v.keys.listenCopied),
       command('translateCopied', 'languages', t('tray.translateCopied'), 'translateCopied'),

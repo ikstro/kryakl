@@ -63,7 +63,7 @@ describe('the menu on one key', () => {
 describe('a screenshot', () => {
   test('is a page of its own, sends its own messages and no other, and no other page sends them', () => {
     expect(pageOf('file:///C:/app/media/shot.html?lang=ru')).toBe('shot')
-    for (const type of ['shotReady', 'shotShown', 'shotBegan', 'shotCancel', 'shotStyle', 'shotDone']) {
+    for (const type of ['shotReady', 'shotShown', 'shotBegan', 'shotHover', 'shotCancel', 'shotStyle', 'shotDone']) {
       expect(messageAllowed('shot', type), type).toBe(true)
       for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
     }
@@ -78,8 +78,25 @@ describe('a screenshot', () => {
   test('its page alone asks to record a frame', () => {
     for (const type of ['shotRecord', 'shotSound']) {
       expect(messageAllowed('shot', type), type).toBe(true)
-      for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu', 'record'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+      for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu', 'record', 'shots'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
     }
+  })
+})
+
+describe('the Screenshots window', () => {
+  test('is a page of its own, sends its own messages and the look of what is drawn, and no other page sends its own', () => {
+    expect(pageOf('file:///C:/app/media/shots.html?lang=uk')).toBe('shots')
+    for (const type of ['shotsReady', 'shotsWant', 'shotsEdit', 'shotsAction', 'shotsDrag', 'shotsWindow']) {
+      expect(messageAllowed('shots', type), type).toBe(true)
+      for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu', 'shot', 'record'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+    }
+    for (const type of ['shotStyle', 'shotTool']) expect(messageAllowed('shots', type), type).toBe(true)
+    for (const type of ['saveSettings', 'copyText', 'openPath', 'shotDone', 'shotKeep', 'shotRecord', 'openLink']) expect(messageAllowed('shots', type), type).toBe(false)
+  })
+
+  test('changes no setting and calls nothing', () => {
+    expect(patchAllowed('shots', { shotFolder: 'C:\\' })).toBe(false)
+    expect(callAllowed('shots', { call: 'speech', method: 'POST', route: '/dictate' })).toBe(false)
   })
 })
 

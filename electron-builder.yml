@@ -36,6 +36,7 @@ asarUnpack:
   - dist/kbd-worker.js
   - dist/field-worker.js
   - dist/shot-worker.js
+  - dist/elements-worker.js
   - node_modules/koffi/**
   - vendor/**
   # Windows plays a sound from a file of its own, never from inside the archive.

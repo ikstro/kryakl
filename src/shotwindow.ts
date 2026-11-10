@@ -4,6 +4,8 @@
 // no picture in them, and gone after five idle minutes or when the monitors
 // change. What the finished picture becomes is main.ts's.
 
+import { Worker } from 'node:worker_threads'
+
 import { BrowserWindow, screen, type Display, type WebContents } from 'electron'
 
 import type { ShotAction, ToHost, ToView } from './protocol'
@@ -11,8 +13,9 @@ import type { VideoEffects, VideoSound } from './recordmodel'
 import { MIN_VIDEO_FRAME, videoSoundOf } from './recordmodel'
 import type { RecordRequest } from './recordwindow'
 import type { ShotWindow } from './shot-worker'
-import type { Box, ShotStyle, ShotTarget, Tool } from './shotmodel'
-import { clampBox } from './shotmodel'
+import type { Box, Shape, ShotStyle, ShotTarget, Tool } from './shotmodel'
+import { clampBox, elementsOf } from './shotmodel'
+import type { ElementBox } from './uia'
 import { captureScreens } from './winshot'
 import { handleOf } from './winclip'
 import { mayTakeKeyboard } from './wincursor'
@@ -25,6 +28,11 @@ const SHOW_WAIT_MS = 1500
 const IDLE_MS = 5 * 60 * 1000
 const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
 
+/** A frame for the Screenshots window: its picture as taken, the same with what is drawn, the drawings in its own pixels, and the screen's pixels in one CSS pixel. */
+export type KeptShot = { png: Buffer; flat: Buffer; shapes: Shape[]; ink: number }
+
+const isPng = (bytes: Buffer) => PNG.every((byte, i) => bytes[i] === byte)
+
 /** What is left to do once a picture is handed over: go (and then something), or stay on the screen, saying why. */
 export type ShotOutcome = { close: true; after?: () => void } | { close: false; message?: string }
 
@@ -32,10 +40,19 @@ export type ShotOptions = {
   page: string
   preload: string
   worker: string
+  /** The thread that asks a window for its parts (elements-worker.ts). */
+  elements: string
   query: () => Record<string, string>
   style: () => ShotStyle
   saveStyle: (style: ShotStyle) => void
   tool: () => Tool | ''
+  /** The shutter sounds as the frame is fixed and its bar appears. */
+  shutter: () => boolean
+  /** The pointer stays on the picture, as last chosen in the bar. */
+  cursor: () => boolean
+  saveCursor: (on: boolean) => void
+  /** The frame goes into the Screenshots window: the overlay is gone by now. */
+  keep: (shot: KeptShot) => void
   saveTool: (tool: Tool) => void
   /** What the bar's Video side records, as last chosen. */
   sound: () => VideoSound
@@ -56,7 +73,9 @@ export type ShotOptions = {
 
 type Frame = Extract<ToView, { type: 'shotFrame' }>
 /** `hwnds` beside the page's list of windows: the page only ever names a place in it. `size`: the monitor in its own pixels. */
-type Pane = { display: Display; win: BrowserWindow; ready: boolean; shown: boolean; frame?: Frame; hwnds: string[]; size: Box }
+type Pane = { display: Display; win: BrowserWindow; ready: boolean; shown: boolean; frame?: Frame; hwnds: string[]; size: Box; windows: ShotTarget[]; origin: { x: number; y: number } }
+/** A question for the parts' thread: the pane and the window it is about. */
+type Probe = { pane: Pane; window: number; hwnd: string; x: number; y: number }
 
 export class ShotOverlay {
   private panes = new Map<number, Pane>()
@@ -65,6 +84,11 @@ export class ShotOverlay {
   private idle: NodeJS.Timeout | undefined
   private allShown: (() => void) | undefined
   private finishing = false
+  /** The parts' thread, made at the first question; one question at a time, the latest waiting. */
+  private elements: Worker | undefined
+  private asking: Probe | undefined
+  private next: Probe | undefined
+  private asked = { count: 0, slowest: 0, most: 0 }
 
   constructor(private readonly o: ShotOptions) {
     screen.on('display-added', () => this.reset())
@@ -99,6 +123,7 @@ export class ShotOverlay {
       const shownOne = new Promise<void>(resolve => {
         this.allShown = resolve
       })
+      const shutter = mode !== 'video' && this.o.shutter()
       for (const pane of panes) {
         const monitor = shot.monitors.find(m => m.id === pane.display.id)
         if (!monitor) throw new Error('a monitor was not captured')
@@ -110,6 +135,8 @@ export class ShotOverlay {
         pane.shown = false
         const { boxes, hwnds } = windowsOn(shot.windows, monitor)
         pane.hwnds = hwnds
+        pane.windows = boxes
+        pane.origin = { x: monitor.x, y: monitor.y }
         pane.size = { x: 0, y: 0, width: monitor.width, height: monitor.height }
         pane.frame = {
           type: 'shotFrame',
@@ -124,6 +151,10 @@ export class ShotOverlay {
           quick: mode === 'quick',
           sound: this.o.sound(),
           effects: this.o.effects(),
+          // The page sounds it on the monitor where the frame is fixed.
+          shutter,
+          ...(monitor.cursor && mode === 'shot' ? { cursor: { ...monitor.cursor, rgba: new Uint8Array(monitor.cursor.rgba) } } : {}),
+          cursorOn: this.o.cursor(),
         }
         this.sendFrame(pane)
       }
@@ -166,6 +197,9 @@ export class ShotOverlay {
     this.state = 'idle'
     this.finishing = false
     this.allShown = undefined
+    this.next = undefined
+    if (this.asked.count) this.o.say(`shot: parts asked ${this.asked.count} times, ${this.asked.slowest} ms at the slowest, ${this.asked.most} at most`)
+    this.asked = { count: 0, slowest: 0, most: 0 }
     if (this.before) focusWindow(this.before)
     for (const pane of this.panes.values()) {
       if (pane.win.isDestroyed()) continue
@@ -193,6 +227,10 @@ export class ShotOverlay {
       case 'shotBegan':
         for (const other of this.panes.values()) if (other !== pane && !other.win.isDestroyed()) other.win.webContents.send('to-view', { type: 'shotOther' } satisfies ToView)
         return
+      case 'shotHover':
+        // One monitor lights a window at a time (2026-11-10: the last one lit stayed on the monitor the pointer left).
+        for (const other of this.panes.values()) if (other !== pane && !other.win.isDestroyed()) other.win.webContents.send('to-view', { type: 'shotAway' } satisfies ToView)
+        return
       case 'shotCancel':
         this.close()
         return
@@ -211,11 +249,66 @@ export class ShotOverlay {
       case 'shotRecord':
         this.startRecording(message, pane)
         return
+      case 'shotProbe':
+        this.probe(message, pane)
+        return
+      case 'shotCursor':
+        this.o.saveCursor(message.on === true)
+        return
+      case 'shotKeep': {
+        if (this.state !== 'open' || this.finishing) return
+        const png = Buffer.from(new Uint8Array(message.png))
+        const flat = Buffer.from(new Uint8Array(message.flat))
+        if (!isPng(png) || !isPng(flat) || !Array.isArray(message.shapes) || !(message.ink > 0)) return
+        this.close()
+        this.o.keep({ png, flat, shapes: message.shapes, ink: message.ink })
+        return
+      }
       case 'shotDone':
         void this.finish(message.action, Buffer.from(new Uint8Array(message.png)), pane)
         return
       default:
     }
+  }
+
+  /** A window with no child windows to list (Chrome, VS Code) is asked for the parts it names; its handle never leaves main. */
+  private probe(message: Extract<ToHost, { type: 'shotProbe' }>, pane: Pane): void {
+    if (this.state !== 'open' || this.finishing) return
+    if (![message.window, message.x, message.y].every(Number.isInteger)) return
+    const hwnd = pane.hwnds[message.window]
+    if (!hwnd) return
+    const ask = { pane, window: message.window, hwnd, x: message.x, y: message.y }
+    if (this.asking) this.next = ask
+    else this.ask(ask)
+  }
+
+  private ask(probe: Probe): void {
+    if (!this.elements) {
+      this.elements = new Worker(this.o.elements)
+      this.elements.on('message', (reply: { boxes: ElementBox[]; ms: number }) => this.answered(reply))
+      this.elements.on('error', error => {
+        this.o.say(`shot: the parts' thread failed: ${error.message}`)
+        this.elements = undefined
+        this.asking = undefined
+      })
+    }
+    this.asking = probe
+    this.elements.postMessage({ id: 0, hwnd: probe.hwnd, x: probe.pane.origin.x + probe.x, y: probe.pane.origin.y + probe.y })
+  }
+
+  private answered(reply: { boxes: ElementBox[]; ms: number }): void {
+    const probe = this.asking
+    this.asking = undefined
+    const next = this.next
+    this.next = undefined
+    if (next) this.ask(next)
+    if (!probe || this.state !== 'open' || probe.pane.win.isDestroyed()) return
+    const window = probe.pane.windows[probe.window]
+    if (!window) return
+    const { x, y } = probe.pane.origin
+    const boxes = elementsOf(window, reply.boxes.map(b => ({ ...b, x: b.x - x, y: b.y - y })))
+    this.asked = { count: this.asked.count + 1, slowest: Math.max(this.asked.slowest, reply.ms), most: Math.max(this.asked.most, boxes.length) }
+    probe.pane.win.webContents.send('to-view', { type: 'shotElements', window: probe.window, boxes } satisfies ToView)
   }
 
   /** The frame becomes a recording: the frozen screen goes first, so that what is recorded is the live one. */
@@ -237,7 +330,7 @@ export class ShotOverlay {
     this.finishing = true
     let outcome: ShotOutcome
     try {
-      if (!PNG.every((byte, i) => png[i] === byte)) throw new Error('the page sent no picture')
+      if (!isPng(png)) throw new Error('the page sent no picture')
       outcome = await this.o.done(action, png, pane.win)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
@@ -267,6 +360,9 @@ export class ShotOverlay {
     if (this.state !== 'idle') return
     if (this.idle) clearTimeout(this.idle)
     for (const pane of this.panes.values()) if (!pane.win.isDestroyed()) pane.win.destroy()
+    void this.elements?.terminate()
+    this.elements = undefined
+    this.asking = undefined
     this.panes.clear()
   }
 
@@ -311,7 +407,7 @@ export class ShotOverlay {
       this.close()
     })
     void win.loadFile(this.o.page, { query: this.o.query() })
-    const pane: Pane = { display, win, ready: false, shown: false, hwnds: [], size: { x: 0, y: 0, width: 0, height: 0 } }
+    const pane: Pane = { display, win, ready: false, shown: false, hwnds: [], size: { x: 0, y: 0, width: 0, height: 0 }, windows: [], origin: { x: 0, y: 0 } }
     this.panes.set(display.id, pane)
     return pane
   }

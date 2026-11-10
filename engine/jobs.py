@@ -49,6 +49,11 @@ WEIGHTS = {"decode": (0.0, 0.1), "words": (0.1, 0.6), "speakers": (0.6, 0.95), "
 AGAIN = ("speakers", "redo")
 
 
+def vram_mb(model: str | None, compute: str | None = None) -> int:
+    """What a model takes on the card in that compute type (models.json), 0 when unknown."""
+    return ALL_MODELS.get(model or "", {}).get("vramMb", {}).get(compute or "float16", 0)
+
+
 def ram_gb() -> float:
     """This computer's memory, in GB (Windows' GlobalMemoryStatusEx); 8 when it cannot be read."""
     try:
@@ -118,6 +123,9 @@ class Worker:
         self.last_work = time.monotonic()
         # Why the card is not used though it is there (it would not take a model); the processor's plan applies until a restart.
         self.fallback: str | None = None
+        # Per feature, what the last load gave way to because the card was busy: '' (the plan's own), 'compact' (the same
+        # model in int8_float16), 'lighter' (the plan's lighter model) or 'processor'. A transcript says the last two.
+        self.gave_way: dict[str, str] = {}
         # Grows with every phrase and job started: the speed test sees it was disturbed.
         self.activity = 0
         self._thread = threading.Thread(target=self._run, name="kryakl-worker", daemon=True)
@@ -159,22 +167,50 @@ class Worker:
 
     def _card_full(self, t: Transcriber, entry: dict) -> str | None:
         """Why the card cannot take this model whole now (another program holds its memory), or None.
-        A model already on it holds its memory, and a card that cannot say is tried as before."""
-        if t.loaded and t.device == "cuda" and t.name == entry["model"]:
-            return None
-        need = ALL_MODELS.get(entry["model"], {}).get("vramMb", {}).get(entry.get("compute") or "float16", 0)
+        The same model already on it stays (whatever its compute: no reload in the middle of a phrase); another
+        model on it gives its memory to this one; a card that cannot say is tried as before."""
+        held = 0
+        if t.loaded and t.device == "cuda":
+            if t.name == entry["model"]:
+                return None
+            held = vram_mb(t.name, t.compute)
+        need = vram_mb(entry["model"], entry.get("compute"))
         free = asr.card_free_mb()
-        if free is None or not need or free >= need + CARD_HEADROOM_MB:
+        if free is None or not need or free + held >= need + CARD_HEADROOM_MB:
             return None
         return f"the graphics card has {free} MB free, {entry['model']} needs {need}"
 
+    def _smaller(self, t: Transcriber, entry: dict) -> tuple[dict, str] | None:
+        """What fits the card when the plan's model does not (2026-11-10): the same model in int8_float16 (the same
+        file, nearly the same words), then the plan's lighter model when it is downloaded already; never a download."""
+        steps: list[tuple[dict, str]] = []
+        rest = {k: v for k, v in entry.items() if k != "lighter"}
+        if (entry.get("compute") or "float16") != "int8_float16":
+            steps.append(({**rest, "compute": "int8_float16"}, "compact"))
+        lighter = entry.get("lighter")
+        if lighter and asr.downloaded(lighter["model"]):
+            first = lighter.get("compute") or "float16"
+            for compute in dict.fromkeys((first, "int8_float16")):
+                steps.append(({**rest, "model": lighter["model"], "compute": compute}, "lighter"))
+        for step, why in steps:
+            if not self._card_full(t, step):
+                return step, why
+        return None
+
     def _load(self, t: Transcriber, feature: str) -> tuple[str, dict]:
         device, entry = self.entry(feature)
-        # The card is the person's programs' (2026-10-31): too little of it free, this one on the processor.
+        why = ""
+        # The card is the person's programs' (2026-10-31): too little of it free, a smaller model on it, else the processor.
         full = self._card_full(t, entry) if device == "cuda" else None
         if full:
-            log.info("%s: %s; on the processor this time", feature, full)
-            device, entry = self.entry(feature, "cpu")
+            smaller = self._smaller(t, entry)
+            if smaller:
+                entry, why = smaller
+                log.info("%s: %s; %s in %s on the card this time", feature, full, entry["model"], entry["compute"])
+            else:
+                log.info("%s: %s; on the processor this time", feature, full)
+                device, entry = self.entry(feature, "cpu")
+                why = "processor"
         try:
             t.load(entry["model"], device, entry.get("compute"), self.threads())
         except CudaFailed as error:
@@ -182,6 +218,8 @@ class Worker:
             log.warning("the card would not take %s; the processor's plan from now on", entry["model"])
             device, entry = self.entry(feature, "cpu")
             t.load(entry["model"], device, None, self.threads())
+            why = "processor"
+        self.gave_way[feature] = why
         return device, entry
 
     def words_model(self) -> Transcriber:
@@ -364,10 +402,17 @@ class Worker:
         language = None if language == "auto" else language
         hotwords = vocab.hotwords(settings["vocabulary"], settings["hotwords"])
         speakers_status = "single"
+        # What recognized the words when the card was busy, for the page to say (and, for a lighter model, the transcript).
+        lighter: str | None = None
 
         def words(samples, share=(0.0, 1.0)):
+            nonlocal lighter
             a, b = share
             t = self.words_model()
+            why = self.gave_way.get("transcripts", "")
+            if why == "lighter":
+                lighter = t.name
+            store.update(id, job={**job, "ran": {"model": t.name, "device": t.device, "why": why}})
 
             def step(p):
                 progress("words", a + (b - a) * p)
@@ -431,7 +476,7 @@ class Worker:
             if item.get("temp"):
                 Path(item["path"]).unlink(missing_ok=True)
         shutil.rmtree(store.folder(id) / "incoming", ignore_errors=True)
-        store.update(id, status="done", stage="", progress=1.0, speakers_status=speakers_status, job={"kind": kind})
+        store.update(id, status="done", stage="", progress=1.0, speakers_status=speakers_status, job={"kind": kind, **({"ran": {"model": lighter, "why": "lighter"}} if lighter else {})})
 
     def _resplit(self, id: str, row: dict) -> None:
         """Speakers for a finished transcript from its saved sound and words; the text is not recognized again."""

@@ -2,6 +2,11 @@ import { describe, expect, test } from 'vitest'
 
 import {
   shotFileName,
+  keepsUntitled,
+  squareOf,
+  snap45,
+  nudge,
+  MIN_FRAME,
   arrowHead,
   barPlace,
   boxOf,
@@ -21,6 +26,7 @@ import {
   stepNumber,
   toolOfCode,
   undo,
+  elementsOf,
   panelsOf,
   shotToolOf,
   targetAt,
@@ -289,5 +295,76 @@ describe('panels inside a window', () => {
     const list = [top, panel, low]
     expect(targetsAt(list, { x: 20, y: 20 })).toEqual([top])
     expect(targetsAt(list, { x: 200, y: 200 })).toEqual([panel, low])
+  })
+})
+
+describe('parts a program names (Chrome, VS Code)', () => {
+  const D = 50030
+  const chrome = { x: 0, y: 0, width: 2560, height: 1392 }
+  test("Chrome's page alone, cut to the window, never its blocks or panels", () => {
+    // As measured on 2026-11-10: the walk stops at the page, the panels around it wider.
+    const boxes = [
+      { x: 540, y: 89, width: 2020, height: 4568, type: D },
+      { x: 540, y: 49, width: 2020, height: 1343, type: 50033 },
+      { x: 240, y: 49, width: 2320, height: 1343, type: 50033 },
+    ]
+    expect(elementsOf(chrome, boxes)).toEqual([{ x: 540, y: 89, width: 2020, height: 1303, panel: true }])
+  })
+  test('over the tabs or the toolbar there is no page: the window alone', () => {
+    expect(elementsOf(chrome, [{ x: 550, y: 55, width: 28, height: 28, type: 50000 }, { x: 240, y: 0, width: 2320, height: 48, type: 50021 }])).toEqual([])
+  })
+  test('the developer tools are a page of their own', () => {
+    expect(elementsOf(chrome, [{ x: 1800, y: 89, width: 760, height: 1303, type: D }])).toEqual([{ x: 1800, y: 89, width: 760, height: 1303, panel: true }])
+  })
+  test("a browser's page under its tabs is a choice however big; an app that is all page is the window", () => {
+    expect(elementsOf(chrome, [{ x: 0, y: 86, width: 2560, height: 1306, type: D }])).toEqual([{ x: 0, y: 86, width: 2560, height: 1306, panel: true }])
+    expect(elementsOf(chrome, [{ x: 1, y: 2, width: 2558, height: 1389, type: D }])).toEqual([])
+  })
+  test('the page lights before its window, the wheel going up to it', () => {
+    const parts = elementsOf(chrome, [{ x: 540, y: 89, width: 2020, height: 1303, type: D }])
+    const targets = [...parts, chrome]
+    expect(targetAt(targets, { x: 1000, y: 600 }, 0)).toEqual(parts[0])
+    expect(targetAt(targets, { x: 1000, y: 600 }, 1)).toEqual(chrome)
+  })
+})
+
+describe('windows with no title (the taskbar, menus)', () => {
+  const screens = [{ x: 0, y: 0, width: 2560, height: 1440 }, { x: 2560, y: 0, width: 2560, height: 1440 }]
+  const plain = { popup: false, topmost: false, tool: false }
+  test("Windows' taskbars are taken, on either monitor (measured 2026-11-10: both have no title)", () => {
+    expect(keepsUntitled({ cls: 'Shell_TrayWnd', ...plain, topmost: true, tool: true, box: { x: 0, y: 1392, width: 2560, height: 48 } }, screens)).toBe(true)
+    expect(keepsUntitled({ cls: 'Shell_SecondaryTrayWnd', ...plain, box: { x: 2560, y: 1392, width: 2560, height: 48 } }, screens)).toBe(true)
+  })
+  test("a menu, a tooltip and a program's own popup menu are taken", () => {
+    expect(keepsUntitled({ cls: '#32768', ...plain, box: { x: 300, y: 300, width: 240, height: 400 } }, screens)).toBe(true)
+    expect(keepsUntitled({ cls: 'tooltips_class32', ...plain, box: { x: 300, y: 300, width: 120, height: 24 } }, screens)).toBe(true)
+    expect(keepsUntitled({ cls: 'Chrome_WidgetWin_1', popup: true, topmost: true, tool: false, box: { x: 2900, y: 200, width: 300, height: 500 } }, screens)).toBe(true)
+  })
+  test('a helper no one sees, a sliver and an overlay over the whole screen are not', () => {
+    expect(keepsUntitled({ cls: 'Chrome_WidgetWin_0', ...plain, box: { x: 0, y: 0, width: 800, height: 600 } }, screens)).toBe(false)
+    expect(keepsUntitled({ cls: 'Overlay', popup: true, topmost: true, tool: true, box: { x: 0, y: 0, width: 2560, height: 1440 } }, screens)).toBe(false)
+    expect(keepsUntitled({ cls: 'Edge', popup: true, topmost: true, tool: false, box: { x: 10, y: 10, width: 4, height: 300 } }, screens)).toBe(false)
+    expect(keepsUntitled({ cls: 'Away', popup: true, topmost: true, tool: false, box: { x: -5000, y: 0, width: 200, height: 200 } }, screens)).toBe(false)
+  })
+})
+
+describe('a precise frame', () => {
+  const screen = { x: 0, y: 0, width: 1920, height: 1080 }
+  test('Shift makes a square from the press toward the pointer, the longer side', () => {
+    expect(squareOf({ x: 100, y: 100 }, { x: 160, y: 120 })).toEqual({ x: 100, y: 100, width: 60, height: 60 })
+    expect(squareOf({ x: 100, y: 100 }, { x: 80, y: 40 })).toEqual({ x: 40, y: 40, width: 60, height: 60 })
+  })
+  test('Shift on a line keeps it to eight directions', () => {
+    expect(snap45({ x: 0, y: 0 }, { x: 100, y: 8 })).toEqual({ x: 100, y: 0 })
+    expect(snap45({ x: 0, y: 0 }, { x: 70, y: 72 })).toEqual({ x: 71, y: 71 })
+    expect(snap45({ x: 0, y: 0 }, { x: -3, y: -90 })).toEqual({ x: 0, y: -90 })
+  })
+  test('the arrows move the frame inside the screen, with Ctrl its right or bottom edge', () => {
+    const frame = { x: 10, y: 10, width: 100, height: 50 }
+    expect(nudge(frame, 1, 0, screen, false)).toEqual({ x: 11, y: 10, width: 100, height: 50 })
+    expect(nudge(frame, -50, 0, screen, false)).toEqual({ x: 0, y: 10, width: 100, height: 50 })
+    expect(nudge({ ...frame, x: 1815 }, 10, 0, screen, false).x).toBe(1820)
+    expect(nudge(frame, 0, 10, screen, true)).toEqual({ x: 10, y: 10, width: 100, height: 60 })
+    expect(nudge(frame, -500, 0, screen, true).width).toBe(MIN_FRAME)
   })
 })

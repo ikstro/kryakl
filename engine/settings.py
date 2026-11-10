@@ -267,6 +267,11 @@ def clean_plan(plan: dict) -> dict:
                 clean["compute"] = entry["compute"]
             if isinstance(entry.get("beam"), int) and 1 <= entry["beam"] <= 10:
                 clean["beam"] = entry["beam"]
+            # What the card takes when it is too busy for this one (jobs.py _smaller): a model it knows, for the card and this feature.
+            lighter = entry.get("lighter")
+            light = ALL_MODELS.get(lighter.get("model")) if isinstance(lighter, dict) else None
+            if device == "cuda" and light and "cuda" in light.get("devices", DEVICES) and feature in light.get("features", FEATURES) and lighter["model"] != clean["model"]:
+                clean["lighter"] = {"model": lighter["model"]} | ({"compute": lighter["compute"]} if lighter.get("compute") in COMPUTE["cuda"] else {})
             out.setdefault(device, {})[feature] = clean
     return out
 

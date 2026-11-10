@@ -36,6 +36,19 @@ function input(over: Partial<PlanInput> = {}): PlanInput {
 }
 
 describe('planSpeech', () => {
+  it('a busy card falls to a lighter model already here, never a picked one, never tiny or base', () => {
+    const both = planSpeech(input({ cuda: true, downloaded: ['large-v3', 'large-v3-turbo', 'base'] }))
+    expect(both.engine.cuda?.transcripts).toMatchObject({ model: 'large-v3', lighter: { model: 'large-v3-turbo', compute: 'float16' } })
+    // Nothing lighter on the disk but base: the processor, as before.
+    expect(planSpeech(input({ cuda: true, downloaded: ['large-v3', 'base'] })).engine.cuda?.transcripts.lighter).toBeUndefined()
+    // Picked by hand: kept, on the processor if it must be.
+    const picked = planSpeech(input({ cuda: true, downloaded: ['large-v3', 'large-v3-turbo'], pins: { dictation: '', transcripts: 'large-v3' } }))
+    expect(picked.engine.cuda?.transcripts.lighter).toBeUndefined()
+    // Dictation and the processor's plan have none.
+    expect(both.engine.cuda?.dictation.lighter).toBeUndefined()
+    expect(both.engine.cpu.transcripts.lighter).toBeUndefined()
+  })
+
   it('a weak laptop dictates Russian with Parakeet, Kazakh with a quick Whisper', () => {
     const plan = planSpeech(input({ profile: weakLaptop }))
     expect(plan.device).toBe('cpu')
@@ -108,7 +121,8 @@ describe('planSpeech', () => {
     expect(plan.device).toBe('cuda')
     expect(plan.transcripts.chosen.model).toBe('large-v3-turbo')
     expect(plan.dictation.chosen.model).toBe('large-v3-turbo')
-    expect(plan.engine.cuda?.transcripts).toEqual({ model: 'large-v3-turbo', compute: 'float16' })
+    // small, downloaded, is what a busy card takes instead of the processor.
+    expect(plan.engine.cuda?.transcripts).toEqual({ model: 'large-v3-turbo', compute: 'float16', lighter: { model: 'small', compute: 'float16' } })
     expect(plan.engine.cuda?.dictation.beam).toBe(5)
     // Should the card fail, the processor's own choice.
     expect(plan.engine.cpu.dictation.model).toBe('small')

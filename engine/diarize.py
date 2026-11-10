@@ -117,6 +117,24 @@ def status(token: str, setup: Setup) -> str:
     return "missing" if token else "needs-token"
 
 
+def give_back() -> None:
+    """torch keeps the card's memory it no longer uses for itself (2026-11-10: 2.9 GB after a 25-minute
+    meeting, which made dictation think the card full and run on the processor): hand it back."""
+    import gc
+    import sys
+
+    torch = sys.modules.get("torch")
+    if torch is None:
+        return
+    # What still points at a model let go (a cycle) is collected first, or its memory stays in use.
+    gc.collect()
+    try:
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
+
+
 class Diarizer:
     def __init__(self):
         self._pipeline = None
@@ -154,6 +172,7 @@ class Diarizer:
     def unload(self) -> None:
         with self._lock:
             self._pipeline = None
+            give_back()
 
     def diarize(
         self,
@@ -179,7 +198,11 @@ class Diarizer:
 
         options = {"num_speakers": speakers} if speakers else {}
         waveform = torch.from_numpy(np.ascontiguousarray(samples)).unsqueeze(0)
-        output = self._pipeline({"waveform": waveform, "sample_rate": RATE}, hook=hook, **options)
+        try:
+            output = self._pipeline({"waveform": waveform, "sample_rate": RATE}, hook=hook, **options)
+        finally:
+            # The run's working memory goes back to the card at once; the model itself (some 100 MB) stays for the next job.
+            give_back()
         annotation = getattr(output, "exclusive_speaker_diarization", None) or getattr(output, "speaker_diarization", output)
         return [
             (round(turn.start, 2), round(turn.end, 2), str(label))

@@ -70,6 +70,8 @@ const keyboard = { ...node, entryPoints: ['src/kbd-worker.ts'], external: ['koff
 const field = { ...keyboard, entryPoints: ['src/field-worker.ts'], outfile: 'dist/field-worker.js' }
 /** One look at the screens for a screenshot: GDI through koffi. */
 const shotWorker = { ...keyboard, entryPoints: ['src/shot-worker.ts'], outfile: 'dist/shot-worker.js' }
+/** The parts of a window under a screenshot's pointer: UI Automation through koffi. */
+const elementsWorker = { ...keyboard, entryPoints: ['src/elements-worker.ts'], outfile: 'dist/elements-worker.js' }
 
 /** @type {import('esbuild').BuildOptions} */
 const card = {
@@ -95,12 +97,14 @@ const menuWindow = { ...card, entryPoints: ['src/webview/menu.ts'], outfile: 'me
 const talkWindow = { ...card, entryPoints: ['src/webview/talk.ts'], outfile: 'media/talk.js' }
 /** A screenshot: the frozen screen, the frame and the tools. */
 const shotPage = { ...card, entryPoints: ['src/webview/shot.ts'], outfile: 'media/shot.js' }
+/** The Screenshots window: the screenshots kept, the one open drawn by the frame's own page. */
+const shotsPage = { ...card, entryPoints: ['src/webview/shots.ts'], outfile: 'media/shots.js' }
 /** A recording's strip: the recorder and its buttons. */
 const recordPage = { ...card, entryPoints: ['src/webview/record.ts'], outfile: 'media/record.js' }
 /** The badge's audio thread: the microphone as 16 kHz samples for the engine (an AudioWorklet, loaded by URL). */
 const pcmWorklet = { ...card, entryPoints: ['src/webview/pcm-worklet.ts'], outfile: 'media/pcm-worklet.js' }
 
-const all = [main, preload, voice, translator, keyboard, field, shotWorker, card, appWindow, trayPanel, dictation, menuWindow, talkWindow, shotPage, recordPage, pcmWorklet]
+const all = [main, preload, voice, translator, keyboard, field, shotWorker, elementsWorker, card, appWindow, trayPanel, dictation, menuWindow, talkWindow, shotPage, shotsPage, recordPage, pcmWorklet]
 if (watch) {
   const contexts = await Promise.all(all.map(o => context(o)))
   await Promise.all(contexts.map(c => c.watch()))
