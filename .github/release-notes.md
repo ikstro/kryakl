@@ -1,18 +1,22 @@
-## What's new in 0.17.0
+## What's new in 0.17.1
 
-**Screenshots (new).** Give it a key, Print Screen if you like, and the screen freezes. Draw right on it: a frame, an oval, an arrow, a line, a pencil, a marker, a label, a number, a blur or pixels. Each tool has one letter, and the one you used last is in hand next time. Ctrl+C copies the picture with your drawings, Text reads its words to copy or translate, Save writes a PNG. A blur replaces what was under it, so it cannot be read back. Kryakl asks once before it takes Print Screen, and never changes Windows' own setting.
+**A window for your screenshots (new).** Press Ctrl+E on the frame's bar: the screenshot goes to the Screenshots window and the frame closes, so you can take the next one at once. Collect up to 50, then pick the ones you need: draw on them, copy, save, or drag them into another program. Kryakl asks before it closes with any you have not saved or copied.
 
-**Screen recording (new).** The same frame has a Video switch. Record a window, a monitor or a piece of the screen, with your microphone, the system's sound or both, into an MP4 in Videos\Kryakl. Nothing to download. Pick the microphone by the arrow beside it. After Stop, a strip gives Open, Folder, Delete and Copy.
+**A precise frame.** A magnifier by the pointer shows each pixel. The arrow keys move the frame or a shape by one pixel (ten with Shift). Shift draws squares and keeps lines at 45°.
 
-**Clicks and zoom in a video (new, off by default).** Rings show your clicks, and the video moves in where you click or press a key of your own, following the pointer. Both go straight into the file.
+**The pointer in the picture (off by default).** A button on the bar puts the mouse pointer into the screenshot.
 
-**Panels inside a window.** In programs with real panels, such as Total Commander, the frame lights one panel and a click takes it; the wheel goes wider. Programs drawn by a web engine (VS Code, Chrome) have none, so a click takes the window.
+**More can be taken.** The taskbar, open menus, tooltips, the tray menu and Kryakl's own card are now in the picture, and a click takes just them. Press Print Screen again while the frame is open to take a picture of the frame itself. In Chrome and other programs that show a web page, a click takes the page alone, and the mouse wheel the whole window.
 
-**Text from the screen.** Ctrl+Alt+S and Ctrl+Alt+T now open Kryakl's own frame. Over a full-screen game they still open Windows' snipping tool.
+**The frame.** Its line is dashed and moves while you choose, and turns solid once the frame is fixed. A camera sound plays when the frame is fixed; a switch on the Screenshots page turns it off.
 
-**Smaller things.** The layout switch now asks the field you type in as well as the window.
+**Dictated phrases.** The page shows every phrase Kryakl keeps (up to 200, for 30 days), with a search. The tray menu shows the last three: a click copies one.
 
-Screenshots and recording are new, and not every setup has been tried yet: several monitors with different scaling, sleep, a full disk. If something breaks, use Report a problem in Kryakl.
+**Dictation hears more words.** The microphone now goes to recognition as it is. In our tests the browser's noise and echo handling made recognition lose words. The wave in the dictation panel now shows a quiet voice too.
+
+**Sharing the graphics card.** When other programs leave too little room on the card for a speech model, Kryakl uses a lighter model on the card before it moves to the processor, and the transcript says so, with Transcribe again. Kryakl's own speech model now frees the card for Accurate translation, instead of Kryakl calling the card busy.
+
+**Fixes.** Letters like g, y and p are no longer cut in the window's left menu. The speech engine no longer gets stuck at "starting" when another program uses its port.
 
 ## Install and update
 
