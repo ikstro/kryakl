@@ -234,6 +234,8 @@ button:disabled {
 .it .lb {
   flex: 1;
   min-width: 0;
+  /* A box one line tall would cut g, y, p: the label's own box holds what hangs below the line. */
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
 }

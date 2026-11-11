@@ -2341,23 +2341,58 @@ function vocabularyPage(v: AppView): HTMLElement[] {
   ]
 }
 
-/** The phrases typed lately (dictationlog.ts), one line each: a tap copies it, a cross forgets it; Kryakl forgets them after 30 days by itself. */
+/** The phrases typed lately (dictationlog.ts), all that are kept, one line each, searched by what was typed or said: a tap copies one, a cross forgets it; Kryakl forgets them after 30 days by itself. */
 function recentPage(v: AppView): HTMLElement[] {
   const recent = v.dictation.recent
+  const list = el('div', {})
+  const fill = () => {
+    // The newest phrases: this list may outlive the message it was drawn from.
+    const all = view?.dictation.recent ?? recent
+    const q = search.trim().toLowerCase()
+    const shown = q ? all.filter(e => `${e.text} ${e.heard ?? ''}`.toLowerCase().includes(q)) : all
+    list.replaceChildren(
+      shown.length
+        ? lineList(
+            shown.map(e => ({
+              text: e.text,
+              more: whenSaid(e.at, Date.now()),
+              title: e.heard ? `${e.text}
+
+${t('dictate.said', { heard: e.heard })}` : e.text,
+              open: () => copyText(e.text),
+              remove: () => post({ type: 'forgetPhrase', at: e.at }),
+            })),
+            'time',
+          )
+        : aside('info', all.length ? t('dictate.noSuch') : t('dictate.recentEmpty')),
+    )
+  }
+  fill()
   return [
     grp(t('dictate.phrases'), recent.length || undefined, recent.length ? linkBtn(t('mistakes.clear'), () => post({ type: 'clearDictation' })) : null),
-    recent.length
-      ? lineList(
-          recent.map(e => ({
-            text: e.text,
-            more: whenSaid(e.at, Date.now()),
-            title: e.heard ? `${e.text}\n\n${t('dictate.said', { heard: e.heard })}` : e.text,
-            open: () => copyText(e.text),
-            remove: () => post({ type: 'forgetPhrase', at: e.at }),
-          })),
-          'time',
-        )
-      : aside('info', t('dictate.recentEmpty')),
+    ...(recent.length > 5
+      ? [
+          el(
+            'div',
+            { class: 'tools' },
+            el(
+              'label',
+              { class: 'search' },
+              icon('search'),
+              el('input', {
+                type: 'search',
+                placeholder: t('dictate.search'),
+                value: search,
+                oninput: event => {
+                  search = (event.target as HTMLInputElement).value
+                  fill()
+                },
+              }),
+            ),
+          ),
+        ]
+      : []),
+    list,
   ]
 }
 

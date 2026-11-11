@@ -149,6 +149,21 @@ const MIN_PANEL = 16
 /** A child nearly as big as its window is the window's content (a browser's page): the whole window is what is meant. */
 const WHOLE_WINDOW = 0.9
 
+/** The list without the windows named, and without their panels, which come right before each window (shot-worker.ts). */
+export function withoutWindows<T extends { hwnd?: string; panel?: boolean }>(windows: readonly T[], drop: ReadonlySet<string>): T[] {
+  const kept: T[] = []
+  let panels: T[] = []
+  for (const w of windows) {
+    if (w.panel) {
+      panels.push(w)
+      continue
+    }
+    if (!drop.has(w.hwnd ?? '')) kept.push(...panels, w)
+    panels = []
+  }
+  return [...kept, ...panels]
+}
+
 /**
  * The panels of one window, in the order a click looks for them: the deepest
  * before what holds it, the sibling on top before the one under it. Each is cut

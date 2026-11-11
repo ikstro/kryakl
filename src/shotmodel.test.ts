@@ -28,6 +28,7 @@ import {
   undo,
   elementsOf,
   panelsOf,
+  withoutWindows,
   shotToolOf,
   targetAt,
   targetsAt,
@@ -366,5 +367,20 @@ describe('a precise frame', () => {
     expect(nudge({ ...frame, x: 1815 }, 10, 0, screen, false).x).toBe(1820)
     expect(nudge(frame, 0, 10, screen, true)).toEqual({ x: 10, y: 10, width: 100, height: 60 })
     expect(nudge(frame, -500, 0, screen, true).width).toBe(MIN_FRAME)
+  })
+})
+
+describe('the frame taken over itself', () => {
+  test('its own windows and their panels leave the list, the others stay in order', () => {
+    const box = { x: 0, y: 0, width: 10, height: 10 }
+    const list = [
+      { ...box, panel: true, hwnd: undefined, id: 'p1' },
+      { ...box, hwnd: '7', id: 'frame' },
+      { ...box, panel: true, hwnd: undefined, id: 'p2' },
+      { ...box, hwnd: '8', id: 'chrome' },
+      { ...box, hwnd: '9', id: 'frame2' },
+    ]
+    expect(withoutWindows(list, new Set(['7', '9'])).map(w => w.id)).toEqual(['p2', 'chrome'])
+    expect(withoutWindows(list, new Set()).map(w => w.id)).toEqual(['p1', 'frame', 'p2', 'chrome', 'frame2'])
   })
 })

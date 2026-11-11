@@ -7,13 +7,19 @@
 
 import { t } from '../i18n'
 import type { HostCall, SpeechResult } from '../protocol'
+import { loudnessOf } from './loudness'
 import { micDevice } from '../recordmodel'
 
 export type Call = (request: HostCall) => Promise<unknown>
 
-/** The browser's own echo and noise handling suits speech close to the microphone; a room recording keeps everything. */
+/**
+ * Speech close to the microphone (a phrase, a note, Talk) goes to the recognizer as the microphone gives it:
+ * the browser's echo, noise and gain handling cost words (2026-11-10, 120 FLEURS phrases through Chromium's
+ * fake microphone: turbo 10.2 % of words wrong with all three, 8.8 % with none; Parakeet 18.0 against 17.2;
+ * the voice at the limit in 79 of 120). A room recording keeps the gain handling.
+ */
 export async function microphone(close: boolean): Promise<MediaStream> {
-  return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: close, noiseSuppression: close, autoGainControl: true, channelCount: 1 } })
+  return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: !close, channelCount: 1 } })
 }
 
 /**
@@ -45,7 +51,7 @@ class Meter {
     this.analyser.getFloatTimeDomainData(this.samples)
     let sum = 0
     for (const v of this.samples) sum += v * v
-    return Math.min(1, Math.sqrt(sum / this.samples.length) * 4)
+    return loudnessOf(sum / this.samples.length)
   }
 
   close(): void {
@@ -269,7 +275,7 @@ export class StreamRecorder {
       this.spanSum += v * v
       if (++this.spanCount === LEVEL_SPAN) {
         // How loud these 50 ms were, 0…1, as Meter measures it.
-        this.loudness = Math.min(1, Math.sqrt(this.spanSum / LEVEL_SPAN) * 4)
+        this.loudness = loudnessOf(this.spanSum / LEVEL_SPAN)
         this.heard.push(this.loudness)
         if (this.heard.length > LEVELS_KEPT) this.heard.shift()
         this.spanSum = 0

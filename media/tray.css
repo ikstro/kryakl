@@ -15,7 +15,9 @@ html {
   height: 100%;
   border: 1px solid var(--border);
   background: var(--bg);
-  overflow: hidden;
+  /* Taller than the screen's work area (every row on a short screen): the rows scroll, with no bar drawn. */
+  overflow: hidden auto;
+  scrollbar-width: none;
 }
 
 /* Windows 11 draws the edge (dwm.ts); the pixel stays, so the height holds. */

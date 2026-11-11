@@ -147,6 +147,7 @@ export type AppTab =
   | 'transcripts'
   | 'vocabulary'
   | 'kept'
+  | 'phrases'
   | 'settings'
   | 'models'
   | 'checkModel'
@@ -285,7 +286,7 @@ export type AppView = {
   /** Some program pressed keys by itself since the keyboard helper started; Kryakl ignores those. */
   foreignKeys: boolean
   speech: SpeechView
-  /** The phrases dictated lately, newest first (the last 10). */
+  /** The phrases dictated lately, newest first: all kept (200 at most, 30 days, dictationlog.ts). */
   dictation: { recent: DictationEntry[] }
   /** The translator for the person's language with its download's progress and size (MB), for the setup's list. */
   translatorState: TranslatorState
@@ -347,6 +348,8 @@ export type TrayView = {
   translator: AppView['translator']
   /** How many screenshots the Screenshots window holds: its row shows while there are any. */
   shots: number
+  /** The last dictated phrases, newest first (3 at most): a click copies one. */
+  phrases: { at: string; text: string }[]
   native: string
   version: string
   build: string
@@ -354,7 +357,7 @@ export type TrayView = {
 }
 
 /** What the tray's panel can do; each puts the panel away first. */
-export type TrayCommand = 'shot' | 'shots' | 'video' | 'listenCopied' | 'translateCopied' | 'typeToTranslate' | 'checkEnglish' | 'talk' | 'listenScreen' | 'translateScreen' | 'note' | 'transcripts' | 'vocabulary' | 'kept' | 'settings' | 'report' | 'open' | 'quit'
+export type TrayCommand = 'shot' | 'shots' | 'video' | 'listenCopied' | 'translateCopied' | 'typeToTranslate' | 'checkEnglish' | 'talk' | 'listenScreen' | 'translateScreen' | 'note' | 'transcripts' | 'vocabulary' | 'kept' | 'phrases' | 'settings' | 'report' | 'open' | 'quit'
 
 /**
  * Why a word has no meanings: no dictionary exists for the person's language,
@@ -585,6 +588,8 @@ export type ToHost =
   | { type: 'tray'; command: TrayCommand }
   /** The tray's "Keep a word as typed…" field: add it to Kept as typed (the panel stays). */
   | { type: 'keepWord'; word: string }
+  /** A dictated phrase in the tray clicked: onto the clipboard as the person's own copy, then the panel goes. */
+  | { type: 'trayCopy'; at: string }
   /** Esc, or a click outside it. */
   | { type: 'trayClose' }
   // The speech engine; `models` are downloaded once the service runs (the setup's picks).

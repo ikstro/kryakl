@@ -407,6 +407,15 @@ def calibrate(body: dict = Body(...)):
     return calibrator.status()
 
 
+@app.post("/card/release")
+def release_card():
+    """Kryakl's language model is about to load on the graphics card: the speech models resting there let go
+    of it -> {freed: [names]}; none while a phrase, a session, a job or the speed test runs. Kryakl's only."""
+    if calibrator.running:
+        return {"freed": []}
+    return {"freed": worker.release_card(_dictating.locked)}
+
+
 @app.post("/models/{name}/download")
 def download_model(name: str):
     """A model downloaded now (it would be at its first use otherwise); /health's `downloaded` shows when it is here."""

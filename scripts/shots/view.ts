@@ -201,6 +201,7 @@ function full(over: Partial<AppView['settings']>, plan: AppView['speech']['plan'
       recent: [
         { at: new Date(now - 600e3).toISOString(), mode: 'type', text: 'Привет, это проверка диктовки в новом бейдже.' },
         { at: new Date(now - 86400e3).toISOString(), mode: 'english', text: 'I will send the updated layouts before the call.', heard: 'Пришлю обновлённые макеты до созвона.' },
+        ...['Но были параллельные задачи в других окнах.', 'Только Claude Code.', 'Есть такая статистика по Киме.', 'Так может проще пересобрать сборку.', 'Ты можешь ещё определить, сколько это лимитов съела у кого?'].map((text, i) => ({ at: new Date(now - 2 * 86400e3 - i * 600e3).toISOString(), mode: 'type' as const, text })),
       ],
     },
     translatorState: { status: 'ready', progress: 1, size: 84 },
@@ -264,6 +265,11 @@ export function trayView(over: Partial<TrayView> = {}): TrayView {
     speech: { installed: true, recording: false, noteKey: 'Control+Alt+N' },
     translator: 'ready',
     shots: 3,
+    phrases: [
+      { at: new Date(Date.now() - 600e3).toISOString(), text: 'Привет, это проверка диктовки в новом бейдже.' },
+      { at: new Date(Date.now() - 1200e3).toISOString(), text: 'I will send the updated layouts before the call, and the notes after it.' },
+      { at: new Date(Date.now() - 3600e3).toISOString(), text: 'Так может проще пересобрать сборку.' },
+    ],
     native: 'Russian',
     version: '0.11.0',
     build: '30 Oct, 07:12 (ff17ba8, changed)',

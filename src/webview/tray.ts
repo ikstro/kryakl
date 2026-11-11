@@ -5,7 +5,8 @@
 // with their keys as quiet text; the note and Transcripts once the engine is
 // in), Quick settings, Your words ("Keep a word as typed…", which opens into a
 // field in place while the layout is fixed; the words to spell and the words
-// kept, each opening its page in the window), and a footer of Pause, Settings,
+// kept, each opening its page in the window), the last dictated phrases (a
+// click copies one; 2026-11-11), and a footer of Pause, Settings,
 // Report and Quit. A menu in behaviour: ↑ ↓ move, Enter runs, Esc or a click elsewhere
 // puts it away (the main process hides it, and after any command). Everything
 // shown comes in one `tray` message, sent again whenever any of it changes.
@@ -160,6 +161,38 @@ function redraw(): void {
   if (v) render(v)
 }
 
+// ---------------------------------------------------------------- dictated phrases
+
+/** The phrase just copied, by its time: its row says "Copied" until the panel goes. */
+let copied: string | undefined
+let copiedTimer: number | undefined
+
+/** One dictated phrase on one line, its whole text in the tooltip: a click copies it, and the panel goes a moment later (main). */
+function phraseRow(p: { at: string; text: string }, i: number): HTMLElement {
+  if (copied === p.at) return el('div', { class: 'cmd kept', 'data-id': `phrase${i}`, role: 'status' }, lucide('check', 's'), el('span', { class: 'l' }, t('tray.copied')))
+  return el(
+    'button',
+    {
+      class: 'cmd',
+      'data-nav': true,
+      'data-id': `phrase${i}`,
+      title: p.text,
+      onclick: () => {
+        copied = p.at
+        post({ type: 'trayCopy', at: p.at })
+        redraw()
+        window.clearTimeout(copiedTimer)
+        copiedTimer = window.setTimeout(() => {
+          copied = undefined
+          redraw()
+        }, 1500)
+      },
+    },
+    lucide('message-square-text', 's'),
+    el('span', { class: 'l' }, p.text),
+  )
+}
+
 // ---------------------------------------------------------------- the panel
 
 /** The footer's Pause: a switch that names what a press does, Resume (in the paused indigo) while paused; the panel stays. */
@@ -242,6 +275,9 @@ function render(v: TrayView): void {
       v.speech.installed ? command('vocabulary', 'mic', t('tray.vocabulary'), 'vocabulary') : null,
       command('kept', 'list', t('tray.keptList'), 'kept'),
     ),
+    v.speech.installed && v.phrases.length
+      ? group(t('tray.phrases'), ...v.phrases.map(phraseRow), command('phrases', 'history', t('tray.allPhrases'), 'phrases'))
+      : null,
     el(
       'footer',
       { class: 'foot' },

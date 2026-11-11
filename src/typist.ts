@@ -568,10 +568,10 @@ export class Typist {
       }
       this.spoilTap()
       const heard = this.hotkeyOf(vk, this.heldMods())
-      // The screenshot key works over a video or a browser on the full screen, never over a game; while the frame is open it does nothing, and still never reaches Windows' own tool.
+      // The screenshot key works over a video or a browser on the full screen, never over a game; while the frame is open it takes the frame itself into a new one (2026-11-11), and never reaches Windows' own tool; the recording's key does nothing there.
       if ((heard?.action === 'shot' || heard?.action === 'video') && (this.shooting || (heard.action === 'video' && this.videoRecording) || (!this.env.game() && !this.offHere('keys')))) {
         this.swallowed.add(vk)
-        if (!repeat && !this.shooting) this.env.send({ type: 'hotkey', action: heard.action })
+        if (!repeat && (!this.shooting || heard.action === 'shot')) this.env.send({ type: 'hotkey', action: heard.action })
         return true
       }
       // Bound only while the screen is recorded, and it is the recording's: over a game or a full-screen video too.

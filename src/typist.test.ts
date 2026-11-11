@@ -1274,11 +1274,11 @@ describe('the screenshot key', () => {
     expect(shots(desk)).toBe(0)
   })
 
-  test('while the frame is open the key does nothing and never reaches Windows, and typing is left as typed', () => {
+  test('while the frame is open the key takes the frame itself, never reaches Windows, and typing is left as typed', () => {
     const desk = new Desk({ autoFix: true, keys: { shot: 'PrintScreen' } })
     desk.typist.setShooting(true)
     expect(press(desk)).toEqual([true, true])
-    expect(shots(desk)).toBe(0)
+    expect(shots(desk)).toBe(1)
     desk.keys('ghbdtn ')
     expect(desk.text).toBe('ghbdtn ')
   })

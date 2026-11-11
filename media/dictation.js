@@ -90,6 +90,9 @@
     "tray.kept": "Kept: {word}",
     "tray.vocabulary": "Add a name or term\u2026",
     "tray.keptList": "Kept as typed",
+    "tray.phrases": "Dictated phrases",
+    "tray.allPhrases": "All phrases\u2026",
+    "tray.copied": "Copied",
     "tray.pausedTitle": "Keys are off",
     "tray.pauseTitle": "Every key and reaction off until resumed",
     "tray.resume": "Resume",
@@ -1182,6 +1185,8 @@
     "dictate.phrases": "Phrases",
     "dictate.said": "Said: {heard}",
     "dictate.recentEmpty": "Nothing yet. Dictated phrases (not notes) are kept here 30 days, 200 at most.",
+    "dictate.search": "Search your phrases",
+    "dictate.noSuch": "No such phrase.",
     "dictate.yesterdayAt": "yesterday {time}",
     "dictate.copiedText": "Copied: {text}",
     "dictate.justNow": "just now",
@@ -1620,6 +1625,9 @@
     "tray.kept": "\u0414\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043E: {word}",
     "tray.vocabulary": "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0438\u043C\u044F \u0438\u043B\u0438 \u0442\u0435\u0440\u043C\u0438\u043D\u2026",
     "tray.keptList": "\u041D\u0435 \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C",
+    "tray.phrases": "\u041D\u0430\u0434\u0438\u043A\u0442\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0444\u0440\u0430\u0437\u044B",
+    "tray.allPhrases": "\u0412\u0441\u0435 \u0444\u0440\u0430\u0437\u044B\u2026",
+    "tray.copied": "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E",
     "tray.pausedTitle": "\u041A\u043B\u0430\u0432\u0438\u0448\u0438 \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u044B",
     "tray.pauseTitle": "\u0412\u0441\u0435 \u043A\u043B\u0430\u0432\u0438\u0448\u0438 \u0438 \u0440\u0435\u0430\u043A\u0446\u0438\u0438 \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u044B, \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u0435",
     "tray.resume": "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C",
@@ -2712,6 +2720,8 @@
     "dictate.phrases": "\u0424\u0440\u0430\u0437\u044B",
     "dictate.said": "\u0421\u043A\u0430\u0437\u0430\u043D\u043E: {heard}",
     "dictate.recentEmpty": "\u041F\u043E\u043A\u0430 \u043D\u0438\u0447\u0435\u0433\u043E. \u041D\u0430\u0434\u0438\u043A\u0442\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0444\u0440\u0430\u0437\u044B (\u043D\u0435 \u0437\u0430\u043C\u0435\u0442\u043A\u0438) \u0445\u0440\u0430\u043D\u044F\u0442\u0441\u044F \u0437\u0434\u0435\u0441\u044C 30 \u0434\u043D\u0435\u0439, \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 200.",
+    "dictate.search": "\u041F\u043E\u0438\u0441\u043A \u043F\u043E \u0444\u0440\u0430\u0437\u0430\u043C",
+    "dictate.noSuch": "\u0422\u0430\u043A\u043E\u0439 \u0444\u0440\u0430\u0437\u044B \u043D\u0435\u0442.",
     "dictate.yesterdayAt": "\u0432\u0447\u0435\u0440\u0430 {time}",
     "dictate.copiedText": "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E: {text}",
     "dictate.justNow": "\u0442\u043E\u043B\u044C\u043A\u043E \u0447\u0442\u043E",
@@ -3150,6 +3160,9 @@
     "tray.kept": "\u0414\u043E\u0434\u0430\u043D\u043E: {word}",
     "tray.vocabulary": "\u0414\u043E\u0434\u0430\u0442\u0438 \u0456\u043C\u2019\u044F \u0430\u0431\u043E \u0442\u0435\u0440\u043C\u0456\u043D\u2026",
     "tray.keptList": "\u041D\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u0438",
+    "tray.phrases": "\u041D\u0430\u0434\u0438\u043A\u0442\u043E\u0432\u0430\u043D\u0456 \u0444\u0440\u0430\u0437\u0438",
+    "tray.allPhrases": "\u0423\u0441\u0456 \u0444\u0440\u0430\u0437\u0438\u2026",
+    "tray.copied": "\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E",
     "tray.pausedTitle": "\u041A\u043B\u0430\u0432\u0456\u0448\u0456 \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043E",
     "tray.pauseTitle": "\u0423\u0441\u0456 \u043A\u043B\u0430\u0432\u0456\u0448\u0456 \u0439 \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043E, \u0434\u043E\u043A\u0438 \u043D\u0435 \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0435",
     "tray.resume": "\u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438",
@@ -4242,6 +4255,8 @@
     "dictate.phrases": "\u0424\u0440\u0430\u0437\u0438",
     "dictate.said": "\u0421\u043A\u0430\u0437\u0430\u043D\u043E: {heard}",
     "dictate.recentEmpty": "\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E. \u041D\u0430\u0434\u0438\u043A\u0442\u043E\u0432\u0430\u043D\u0456 \u0444\u0440\u0430\u0437\u0438 (\u043D\u0435 \u043D\u043E\u0442\u0430\u0442\u043A\u0438) \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F \u0442\u0443\u0442 30 \u0434\u043D\u0456\u0432, \u043D\u0435 \u0431\u0456\u043B\u044C\u0448\u0435 200.",
+    "dictate.search": "\u041F\u043E\u0448\u0443\u043A \u0443 \u0444\u0440\u0430\u0437\u0430\u0445",
+    "dictate.noSuch": "\u0422\u0430\u043A\u043E\u0457 \u0444\u0440\u0430\u0437\u0438 \u043D\u0435\u043C\u0430\u0454.",
     "dictate.yesterdayAt": "\u0443\u0447\u043E\u0440\u0430 {time}",
     "dictate.copiedText": "\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E: {text}",
     "dictate.justNow": "\u0449\u043E\u0439\u043D\u043E",
@@ -4751,9 +4766,18 @@
     return svg;
   }
 
+  // src/webview/loudness.ts
+  var FLOOR_DB = -55;
+  var FULL_DB = -15;
+  function loudnessOf(meanSquare) {
+    if (!(meanSquare > 0)) return 0;
+    const db = 10 * Math.log10(meanSquare);
+    return Math.min(1, Math.max(0, (db - FLOOR_DB) / (FULL_DB - FLOOR_DB)));
+  }
+
   // src/webview/recorder.ts
   async function microphone(close) {
-    return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: close, noiseSuppression: close, autoGainControl: true, channelCount: 1 } });
+    return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: !close, channelCount: 1 } });
   }
   var Meter = class {
     context;
@@ -4771,7 +4795,7 @@
       this.analyser.getFloatTimeDomainData(this.samples);
       let sum = 0;
       for (const v of this.samples) sum += v * v;
-      return Math.min(1, Math.sqrt(sum / this.samples.length) * 4);
+      return loudnessOf(sum / this.samples.length);
     }
     close() {
       void this.context.close();
@@ -4944,7 +4968,7 @@
         const v = samples[i];
         this.spanSum += v * v;
         if (++this.spanCount === LEVEL_SPAN) {
-          this.loudness = Math.min(1, Math.sqrt(this.spanSum / LEVEL_SPAN) * 4);
+          this.loudness = loudnessOf(this.spanSum / LEVEL_SPAN);
           this.heard.push(this.loudness);
           if (this.heard.length > LEVELS_KEPT) this.heard.shift();
           this.spanSum = 0;

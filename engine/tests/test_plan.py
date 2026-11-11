@@ -230,6 +230,20 @@ def test_a_model_no_plan_names_is_let_go_at_once(s, monkeypatch):
     assert w.drop_unplanned() == ["small"] and not w.dictator.loaded
 
 
+def test_the_card_is_let_go_for_kryakls_language_model(s, monkeypatch):
+    w = make_worker(s, monkeypatch)
+    s.update({"plan": {"cuda": {"dictation": {"model": "large-v3-turbo"}, "transcripts": {"model": "large-v3-turbo"}}, "cpu": {"dictation": {"model": "base"}, "transcripts": {"model": "base"}}}})
+    w.dictation_model()
+    assert w.transcriber.loaded
+    # A phrase under way keeps it.
+    w.dictating = lambda: True
+    assert w.release_card() == [] and w.transcriber.loaded
+    w.dictating = lambda: False
+    assert w.release_card(lambda: True) == [] and w.transcriber.loaded
+    assert w.release_card() == ["large-v3-turbo"] and not w.transcriber.loaded
+    assert w.release_card() == []
+
+
 def test_parakeet_in_the_cards_plan_dictates_on_the_processor(s, monkeypatch):
     w = make_worker(s, monkeypatch)
     s.update({"plan": {"cuda": {"dictation": {"model": "parakeet-tdt-0.6b-v3"}, "transcripts": {"model": "large-v3-turbo", "compute": "float16"}}}})

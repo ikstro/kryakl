@@ -14,7 +14,7 @@ import { MIN_VIDEO_FRAME, videoSoundOf } from './recordmodel'
 import type { RecordRequest } from './recordwindow'
 import type { ShotWindow } from './shot-worker'
 import type { Box, Shape, ShotStyle, ShotTarget, Tool } from './shotmodel'
-import { clampBox, elementsOf } from './shotmodel'
+import { clampBox, elementsOf, withoutWindows } from './shotmodel'
 import type { ElementBox } from './uia'
 import { captureScreens } from './winshot'
 import { handleOf } from './winclip'
@@ -65,6 +65,8 @@ export type ShotOptions = {
   keys: (on: boolean) => void
   /** Puts away what would be in the picture and is not the person's (the card, the menu); true when something was on the screen. */
   putAway: () => boolean
+  /** The screen is copied: what had to be in the picture and would cover the frame (the tray's panel) may go now. */
+  captured: () => void
   done: (action: ShotAction, png: Buffer, win: BrowserWindow) => Promise<ShotOutcome>
   quitting: () => boolean
   log: (win: BrowserWindow) => void
@@ -104,19 +106,32 @@ export class ShotOverlay {
     return this.state !== 'idle'
   }
 
-  /** `video`: on the bar's Video side from the start; `quick`: a frame for its text alone, read the moment it is drawn. */
+  /**
+   * `video`: on the bar's Video side from the start; `quick`: a frame for its text alone, read the moment it is drawn.
+   * A screenshot asked for while the frame is open takes the frame itself, its bar and drawings, into a new one
+   * over it (2026-11-11, the owner: a picture of Kryakl's own frame); the first goes, and the program in front before stays the one to return to.
+   */
   async open(mode: 'shot' | 'video' | 'quick' = 'shot'): Promise<void> {
-    if (this.state !== 'idle') return
+    const over = this.state === 'open' && mode === 'shot' && !this.finishing
+    if (this.state !== 'idle' && !over) return
     this.state = 'opening'
     if (this.idle) clearTimeout(this.idle)
-    this.o.keys(true)
-    this.before = foreground().hwnd
+    if (over) {
+      this.next = undefined
+      this.allShown = undefined
+    } else {
+      this.o.keys(true)
+      this.before = foreground().hwnd
+    }
     const began = Date.now()
     try {
-      if (this.o.putAway()) await new Promise(resolve => setTimeout(resolve, HIDDEN_MS))
+      if (!over && this.o.putAway()) await new Promise(resolve => setTimeout(resolve, HIDDEN_MS))
       const displays = screen.getAllDisplays()
       const rects = displays.map(display => ({ id: display.id, ...screen.dipToScreenRect(null, display.bounds) }))
       const shot = await captureScreens(this.o.worker, rects)
+      this.o.captured()
+      // The frame's own windows are in the picture, not windows to light: over every other one, they would take every click.
+      if (over) shot.windows = withoutWindows(shot.windows, new Set([...this.panes.values()].filter(p => !p.win.isDestroyed()).map(p => String(handleOf(p.win)))))
       const took = Date.now() - began
       if ((this.state as string) === 'idle') return
       const panes = displays.map(display => this.pane(display))
@@ -130,8 +145,11 @@ export class ShotOverlay {
         // Twice: a window moved onto a monitor of another scaling takes its size in the old one's first.
         pane.win.setBounds(pane.display.bounds)
         pane.win.setBounds(pane.display.bounds)
-        pane.win.setOpacity(0)
-        pane.win.showInactive()
+        // A frame taken over the last one keeps its windows on the screen: the new picture replaces the old in them, with no blink.
+        if (!over || !pane.win.isVisible()) {
+          pane.win.setOpacity(0)
+          pane.win.showInactive()
+        }
         pane.shown = false
         const { boxes, hwnds } = windowsOn(shot.windows, monitor)
         pane.hwnds = hwnds
@@ -162,7 +180,7 @@ export class ShotOverlay {
       if ((this.state as string) === 'idle') return
       this.state = 'open'
       this.reveal(panes)
-      this.o.say(`shot: open, ${panes.length} monitor(s), captured in ${took} ms, shown in ${Date.now() - began} ms`)
+      this.o.say(`shot: ${over ? 'again over the frame' : 'open'}, ${panes.length} monitor(s), captured in ${took} ms, shown in ${Date.now() - began} ms`)
     } catch (error) {
       this.o.say(`shot: could not open: ${error instanceof Error ? error.message : String(error)}`)
       this.close()

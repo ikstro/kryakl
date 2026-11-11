@@ -273,6 +273,26 @@ class Worker:
             gc.collect()
         return gone
 
+    def release_card(self, busy: Callable[[], bool] = lambda: False) -> list[str]:
+        """Kryakl's own language model wants the graphics card (translation, a check, Talk): the speech models
+        resting on it let go of it at once, not after CARD_IDLE, as they are Kryakl's too, not the person's
+        programs (2026-11-11: Accurate was refused three times a morning for the 2 GB Whisper turbo held).
+        Never while a job, a phrase or a session may use one; the next phrase loads its model again."""
+        if not self.idle() or self.dictating() or busy():
+            return []
+        gone = []
+        for t in (self.transcriber, self.dictator, self.parakeet):
+            if t.loaded and t.device == "cuda":
+                gone.append(str(t.name))
+                t.unload()
+        if self.diarizer.loaded and self.diarizer.device == "cuda":
+            self.diarizer.unload()
+            gone.append("speakers")
+        if gone:
+            log.info("card: let go of %s for Kryakl's language model", ", ".join(gone))
+            gc.collect()
+        return gone
+
     def yield_to_dictation(self) -> None:
         """A transcription on the processor stops between its windows while someone dictates: the phrase comes first."""
         until = time.monotonic() + YIELD_LONGEST

@@ -180,6 +180,9 @@ const RECORD_SAY_MS = 4000
 /** The tray's panel: its width; a click on the tray icon this soon after the panel hid on that click's blur only closes it. */
 const TRAY_WIDTH = 360
 const TRAY_REOPEN_MS = 300
+/** The tray's last dictated phrases, a click copying one (3: with 5 the panel outgrew a 1080p screen); "Copied" shows this long before the panel goes. */
+const TRAY_PHRASES = 3
+const TRAY_COPIED_MS = 700
 /** Ctrl+C pressed twice, a key of an action on the selection (settings.ts COPY_TWICE_KEYS), as a card's header draws it too. */
 const DOUBLE_COPY = COPY_TWICE
 /** The settings that are keys of actions. */
@@ -1320,7 +1323,7 @@ function appView(): AppView {
     keyboardApps,
     foreignKeys,
     speech: speech.view(speechKeysOk),
-    dictation: { recent: dictationLog.list(10) },
+    dictation: { recent: dictationLog.list() },
   }
 }
 
@@ -1549,6 +1552,7 @@ function onMessage(message: ToHost, page: Page): void {
     case 'forgetPhrase':
       dictationLog.remove(message.at)
       postApp()
+      sendTrayView()
       return
     case 'forgetTranslation':
       translationLog.remove(message.at)
@@ -1868,6 +1872,14 @@ function onMessage(message: ToHost, page: Page): void {
     case 'trayClose':
       hideTrayPanel()
       return
+    case 'trayCopy': {
+      // As Copy on the Dictated phrases page: the person's own copy. The row says "Copied" a moment, then the panel goes.
+      const phrase = dictationLog.list().find(e => e.at === message.at)
+      if (!phrase) return
+      clipboard.writeText(phrase.text).catch(error => console.warn('Kryakl: could not copy the phrase', error))
+      setTimeout(hideTrayPanel, TRAY_COPIED_MS)
+      return
+    }
     case 'keepWord': {
       // As the Kept as typed page adds one (and as Backspace after a fix does): fixed by itself no more.
       const keepWords = addKept(settings.keepWords, message.word)
@@ -1950,8 +1962,30 @@ function translationJob(codes: readonly string[], wait = false): TranslationJob 
   return { t, translate: drafted(roomFirst(level, t.hurried(slowAfter(modelSpeeds[level]?.sentence ?? [], LEVEL_SURE_AFTER))), throughEnglish(translator.translate), gaveUp), busy: () => fell }
 }
 
-/** The graphics card's free memory, one nvidia-smi reading shared by a key press and the job after it. */
-const cardFree = sharedReading(cardMemoryFree, 5000)
+/** The graphics card's free memory, one nvidia-smi reading shared by a key press and the job after it (read afresh once Kryakl's speech model let go of it). */
+let cardFree = sharedReading(cardMemoryFree, 5000)
+
+/** How long the driver takes to count the memory a speech model let go of. */
+const CARD_SETTLE_MS = 300
+
+/**
+ * Kryakl's own speech model resting on the graphics card is no program of the
+ * person's (2026-11-11: Accurate was refused three times a morning for the
+ * 2 GB Whisper turbo held after a phrase): the engine lets go of it, unless a
+ * phrase, a job or the speed test needs it, and the card is read again. Its
+ * free memory then, else nothing when nothing went.
+ */
+async function freeOwnSpeech(): Promise<number | undefined> {
+  if (!speech?.service.health?.loaded?.some(m => m.device === 'cuda')) return undefined
+  const answer = await speech.call<{ freed?: string[] }>('POST', '/card/release')
+  const freed = answer.ok ? (answer.data?.freed ?? []) : []
+  if (!freed.length) return undefined
+  await new Promise(resolve => setTimeout(resolve, CARD_SETTLE_MS))
+  cardFree = sharedReading(cardMemoryFree, 5000)
+  const free = await cardFree()
+  log(`model: the speech engine let go of the graphics card (${freed.join(', ')}): ${free ?? '?'} MB free now`)
+  return free
+}
 
 /**
  * The card too full to hold the level's model whole (resources.ts): the free
@@ -1963,7 +1997,8 @@ const cardFree = sharedReading(cardMemoryFree, 5000)
 async function cardFull(model: LlmModel): Promise<{ free: number; need: number } | undefined> {
   if (llmFiles.server.model !== undefined || translationAdvice(speech?.profile)[model].where !== 'card') return undefined
   const need = modelSpeeds[model]?.card ?? LEVEL_VRAM_MB[model]
-  const free = await cardFree()
+  let free = await cardFree()
+  if (free !== undefined && !cardRoom(free, need)) free = (await freeOwnSpeech().catch(() => undefined)) ?? free
   return free !== undefined && !cardRoom(free, need) ? { free, need } : undefined
 }
 
@@ -2028,7 +2063,9 @@ async function recheckBusy(): Promise<void> {
   // A server running now holds its memory, and its model loaded: nothing to look at.
   if (busy.where === 'card' && llmFiles.server.model === undefined) {
     recheckingBusy = true
-    free = await cardFree().finally(() => (recheckingBusy = false))
+    free = await cardFree()
+      .then(async mb => (mb !== undefined && !cardRoom(mb, need) ? ((await freeOwnSpeech().catch(() => undefined)) ?? mb) : mb))
+      .finally(() => (recheckingBusy = false))
   }
   if (modelBusy !== busy) return
   if (tryAgain(busy, Date.now(), free, need)) {
@@ -3051,23 +3088,21 @@ function recordChanged(): void {
   refreshTray()
 }
 
-/** What would be in a screenshot and is not the person's: a card not pinned, the menu, the tray panel, a badge. True when one of them was on the screen. */
+/** What would be in a screenshot and is not the person's: the menu, a badge. True when one of them was on the screen. The card and the tray panel stay: the person may be taking a picture of them (2026-11-11); they go once the screen is copied (`afterShotCopy`). */
 function putAwayForShot(): boolean {
   let any = false
-  if (shown && !pinned) {
-    hideCard()
-    any = true
-  }
   if (oneKeyMenu?.isOpen) {
     oneKeyMenu.close()
     any = true
   }
-  if (trayPanel && !trayPanel.isDestroyed() && trayPanel.isVisible()) {
-    trayPanel.hide()
-    any = true
-  }
   keyboard.say('')
   return any
+}
+
+/** The screen is copied with the card and the tray panel in it: they would cover the frame, so they go now, a pinned card staying as it always did. */
+function afterShotCopy(): void {
+  hideTrayPanel()
+  if (shown && !pinned) hideCard()
 }
 
 /** A finished screenshot: on the clipboard for the person to paste (nothing of theirs comes back over it), in a file, or read in the Translate card. */
@@ -3271,6 +3306,7 @@ function trayView(): TrayView {
     speech: { installed: speech?.installed ?? false, recording: dictation?.state === 'recording', noteKey: settings.noteKey },
     translator: activeTranslator().state(langCode(settings.native)).status,
     shots: shotsEditor?.count ?? 0,
+    phrases: (dictationLog?.list(TRAY_PHRASES) ?? []).map(e => ({ at: e.at, text: e.text })),
     native: settings.native,
     version: app.getVersion(),
     build: buildText(),
@@ -3531,6 +3567,9 @@ function runTrayCommand(command: TrayCommand): void {
     case 'kept':
       openApp('kept')
       return
+    case 'phrases':
+      openApp('phrases')
+      return
     case 'settings':
       openApp('settings')
       return
@@ -3654,7 +3693,10 @@ function setUpSpeechEngine(): void {
       refreshTray()
     },
     log: dictationLog,
-    logged: () => postApp(),
+    logged: () => {
+      postApp()
+      sendTrayView()
+    },
     panel: () => settings.dictationPanel,
     trayPoint,
     offset: () => settings.dictationBadge,
@@ -3941,6 +3983,7 @@ function start(): void {
     record: request => void recorder?.start(request),
     keys: on => keyboard.shooting(on),
     putAway: putAwayForShot,
+    captured: afterShotCopy,
     done: finishShot,
     quitting: () => quitting,
     log: win => logPageErrors(win, 'screenshot'),

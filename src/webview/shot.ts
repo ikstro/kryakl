@@ -1257,6 +1257,13 @@ function receive(frame: Extract<ToView, { type: 'shotFrame' }>): void {
   cursorOn = frame.cursorOn
   loupeAt = undefined
   here = false
+  // A frame taken over this one (Print Screen again) comes into the same page: nothing of the last one stays.
+  if (probeLater !== undefined) clearTimeout(probeLater)
+  probeLater = undefined
+  writing = undefined
+  write.hidden = true
+  sizeLabel.hidden = true
+  loupe.hidden = true
   canvas.width = base.width = frame.width
   canvas.height = base.height = frame.height
   ;(base.getContext('2d') as CanvasRenderingContext2D).putImageData(new ImageData(rgba, frame.width, frame.height), 0, 0)
