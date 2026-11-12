@@ -98,6 +98,15 @@ def test_pieces_are_recognized_while_speaking_and_the_tail_at_the_end():
     assert r.calls[1]["language"] == "ru" and r.calls[1]["before"] == "[1]"
 
 
+def test_finish_says_where_the_time_went():
+    r = Recognizer()
+    s = make(r)
+    send(s, np.concatenate([tone(5), silence(1.0), tone(3)]))
+    assert wait(lambda: len(r.calls) >= 1)
+    t = s.finish(b"")["timing"]
+    assert t["piece"] + t["kept"] == 2 and t["wait"] >= 0 and t["slowest"] >= 0
+
+
 def test_the_badge_is_told_everything_heard_so_far():
     class Wordy(Recognizer):
         def __call__(self, sound, language, expected, before):

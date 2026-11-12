@@ -31,7 +31,7 @@ from typing import Callable
 
 import numpy as np
 
-from audio import RATE
+from audio import RATE, lift
 
 log = logging.getLogger("kryakl.stream")
 
@@ -48,6 +48,9 @@ PIECES = {("whisper", "cpu"): (4.0, 25.0), ("whisper", "cuda"): (10.0, 25.0), ("
 # processor pays a whole window each time, so it shows words at the pauses only).
 PREVIEW_EVERY = {("parakeet", "cpu"): 2.0, ("whisper", "cuda"): 3.0}
 PREVIEW_SPAN = 6.0
+# The whole dictation is not heard again when the key is let go (measured 2026-11-11, the
+# quality bench: Parakeet 42.9 → 48.3 % of words wrong, as a whole pass drops sentences; turbo
+# on the card the same 37.9 % either way), so the pieces' texts are the phrase.
 
 # (sound, language or None, expected languages, text before) -> (text, language, how sure)
 Recognize = Callable[[np.ndarray, "str | None", list, str], "tuple[str, str, float]"]
@@ -59,6 +62,7 @@ def speech_in(samples: np.ndarray) -> list[tuple[int, int]]:
         return []
     from faster_whisper.vad import VadOptions, get_speech_timestamps
 
+    samples = lift(samples)
     chunks = get_speech_timestamps(samples, VadOptions(min_silence_duration_ms=int(PAUSE * 1000), speech_pad_ms=0, min_speech_duration_ms=150))
     return [(c["start"], c["end"]) for c in chunks]
 
@@ -81,6 +85,7 @@ class Session:
         self.id = secrets.token_hex(6)
         self._recognize = recognize
         self._speech = speech
+        self.kind = kind
         self.shortest, self.longest = PIECES.get(kind, (4.0, 25.0))
         self.preview_every = PREVIEW_EVERY.get(kind)
         self._preview: tuple[int, str] | None = None  # (where the open sound ended, its last words) shown meanwhile
@@ -100,6 +105,8 @@ class Session:
         self.state = "listening"  # listening, finishing, done, cancelled, failed
         self.error = ""
         self.took = 0.0
+        self.runs = {"piece": 0, "guess": 0, "preview": 0, "kept": 0}  # recognitions of each kind; kept: guesses that stood for a piece
+        self.slowest = 0.0
         self.touched = time.monotonic()
         self._lock = threading.Condition()
         self._thread = threading.Thread(target=self._run, name=f"kryakl-session-{self.id}", daemon=True)
@@ -175,6 +182,7 @@ class Session:
             if guess[2]:
                 self._texts.append(guess[2])
             self._settle(guess[3], guess[4])
+            self.runs["kept"] += 1
             return
         self._pieces.append((start, end))
 
@@ -256,6 +264,8 @@ class Session:
                 return
             with self._lock:
                 self.took += spent
+                self.runs[job[0]] += 1
+                self.slowest = max(self.slowest, spent)
                 self._working = None
                 if job[0] == "piece":
                     self._settle(language, sure)
@@ -281,8 +291,10 @@ class Session:
     def finish(self, pcm: bytes, timeout: float = 120.0) -> dict:
         """The last chunk; waits for every piece; the whole text."""
         until = time.monotonic() + timeout
+        pressed = time.perf_counter()
         with self._lock:
             self.touched = time.monotonic()
+            behind = sum(e - s for s, e in self._pieces) / RATE
             if self.state == "listening":
                 self._append(pcm)
                 # A guess being made of the tail now is worth its wait: it is what the tail needs
@@ -306,13 +318,16 @@ class Session:
                 raise RuntimeError(self.error)
             if self.state != "done":
                 raise TimeoutError("the dictation took too long")
-            return {
+            out = {
                 "text": " ".join(t for t in self._texts if t).strip(),
                 "language": self.language or "",
                 "sure": round(self.sure, 3),
                 "seconds": round(self._length / RATE, 2),
                 "took": round(self.took, 2),
             }
+            timing = {**self.runs, "behind": round(behind, 2), "slowest": round(self.slowest, 2)}
+        out["timing"] = {**timing, "wait": round(time.perf_counter() - pressed, 2)}
+        return out
 
     def cancel(self) -> None:
         with self._lock:

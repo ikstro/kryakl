@@ -1,5 +1,5 @@
 {
-  "about": "The speech models Kryakl can use, read by the engine (asr.py) and by Kryakl (src/speechplan.ts). rank: how accurate, higher is better. phrase: seconds to recognize a 7 s phrase as Dictate does; rtf: seconds per second of a long recording as Transcribe does (words with their times). Both are first guesses, measured on an i9-9900K (cpu, int8) and an RTX 2080 SUPER (cuda, float16) on 2026-10-28, until this computer is tested. Whisper pads every phrase to a 30 s window, so a phrase costs one window whatever its length; turbo's decoder is light, so on long recordings it is nearly as quick as small. ramMb: memory on the processor; vramMb: on the card, per compute type. Parakeet (NVIDIA's TDT 0.6B v3 through onnx-asr, int8, on the processor) costs what the sound lasts, not a window: a 7 s phrase in 0.3 s on the i9, Russian as good as turbo on the card in a test on a LibriVox reading; it dictates in its 25 languages. devices and features: where and for what a model is used.",
+  "about": "The speech models Kryakl can use, read by the engine (asr.py) and by Kryakl (src/speechplan.ts). rank: how accurate, higher is better, used for a language not in errors; errors: words wrong in a hundred per language as Kryakl dictates, clean and with a fan, measured by engine/quality on 2026-11-11 (docs/speech-quality.md). phrase: seconds to recognize a 7 s phrase as Dictate does; rtf: seconds per second of a long recording as Transcribe does (words with their times). Both are first guesses, measured on an i9-9900K (cpu, int8) and an RTX 2080 SUPER (cuda, float16) on 2026-10-28, until this computer is tested. Whisper pads every phrase to a 30 s window, so a phrase costs one window whatever its length; turbo's decoder is light, so on long recordings it is nearly as quick as small. ramMb: memory on the processor; vramMb: on the card, per compute type. Parakeet (NVIDIA's TDT 0.6B v3 through onnx-asr, int8, on the processor) costs what the sound lasts, not a window: a 7 s phrase in 0.3 s on the i9; it dictates in its 25 languages. On the bench (2026-11-11) it makes about one and a half times turbo's errors (Russian 7.6 against 5.0, Ukrainian 16.9 against 10.0 words wrong in a hundred), as many as small but seven times quicker on the processor, so its rank is under turbo's. devices and features: where and for what a model is used.",
   "speakers": {
     "cpu": {
       "rtf": 0.8
@@ -17,6 +17,7 @@
       "repo": "Systran/faster-whisper-tiny",
       "bytes": 77000000,
       "rank": 1,
+      "errors": { "ru": 34.0, "uk": 65.3, "en": 31.8 },
       "languages": "all",
       "cpu": {
         "phrase": 0.25,
@@ -48,6 +49,7 @@
       "repo": "Systran/faster-whisper-base",
       "bytes": 147000000,
       "rank": 2,
+      "errors": { "ru": 20.4, "uk": 50.1, "en": 17.8 },
       "languages": "all",
       "cpu": {
         "phrase": 0.45,
@@ -79,6 +81,7 @@
       "repo": "Systran/faster-whisper-small",
       "bytes": 486000000,
       "rank": 3,
+      "errors": { "ru": 10.1, "uk": 24.6, "en": 10.5 },
       "languages": "all",
       "cpu": {
         "phrase": 1.4,
@@ -110,6 +113,7 @@
       "repo": "mobiuslabsgmbh/faster-whisper-large-v3-turbo",
       "bytes": 1620000000,
       "rank": 5,
+      "errors": { "ru": 5.0, "uk": 10.0, "en": 6.4 },
       "languages": "all",
       "cpu": {
         "phrase": 4.5,
@@ -141,6 +145,7 @@
       "repo": "Systran/faster-whisper-large-v3",
       "bytes": 3090000000,
       "rank": 6,
+      "errors": { "ru": 4.7, "uk": 8.4, "en": 5.1 },
       "languages": "all",
       "cpu": {
         "phrase": 9.0,
@@ -172,7 +177,8 @@
       "repo": "istupakov/parakeet-tdt-0.6b-v3-onnx",
       "onnx": "nemo-parakeet-tdt-0.6b-v3",
       "bytes": 670500000,
-      "rank": 5,
+      "rank": 4,
+      "errors": { "ru": 7.6, "uk": 16.9, "en": 11.3 },
       "languages": [
         "bg",
         "hr",

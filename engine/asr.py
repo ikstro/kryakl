@@ -18,13 +18,15 @@ from typing import Callable
 import numpy as np
 
 import phantoms
-from audio import RATE
+from audio import RATE, lift
 from settings import CATALOG, MODELS_DIR
 
 log = logging.getLogger("kryakl.asr")
 
 # Whisper writes in the style of the text before it; without one it sometimes
-# drops capitals and full stops for a whole recording.
+# drops capitals and full stops for a whole recording. Recordings only, never a dictated
+# phrase (measured 2026-11-11, docs/speech-quality.md): given it, turbo kept only the last
+# sentence of a 20 s dictation of three, and small models wrote it as the phrase on quiet sound.
 STYLE = {
     "ru": "Здравствуйте. Давайте начнём, у нас сегодня несколько вопросов.",
     "uk": "Добрий день. Давайте почнемо, у нас сьогодні кілька питань.",
@@ -45,6 +47,12 @@ PLAUSIBLE_ENGLISH = 0.2
 # and the first 0.3 s of Russian read as English 2 to 4 times likelier than Russian; a whole
 # second of English reads at least 19 times likelier, a second of Russian never the other way.
 OWN_LEAN = 5
+
+# Parakeet's text is dropped when its tokens' mean log-probability is under this (None: never).
+# On faint speech it makes up English ("Yeah, I don't know" for distant Russian); measured on the
+# bench's phrases (2026-11-11): under -0.5 were 45 of its 52 phrases in a wrong language and none
+# of its 206 good ones; the phrases in the right language it dropped had 82 % of their words wrong.
+PARAKEET_FLOOR: float | None = -0.5
 
 
 def _cuda_dirs() -> list[Path]:
@@ -174,6 +182,7 @@ def _speech_only(samples: np.ndarray) -> np.ndarray | None:
     """The phrase with its silences cut out (Silero VAD, inside faster-whisper); None when nobody spoke."""
     from faster_whisper.vad import VadOptions, collect_chunks, get_speech_timestamps
 
+    samples = lift(samples)
     chunks = get_speech_timestamps(samples, VadOptions(min_silence_duration_ms=500, speech_pad_ms=300))
     if not chunks:
         return None
@@ -374,7 +383,7 @@ class Transcriber:
                 language = "en"
         # The options as faster-whisper fills them (thresholds, suppressed tokens…), from a call
         # that only prepares: its segments are a generator that is never run.
-        prompt = " ".join(p for p in (STYLE.get(language), before[-150:].strip()) if p) or None
+        prompt = before[-150:].strip() or None
         _, info = model.transcribe(
             speech[:RATE],
             language=language,
@@ -404,7 +413,7 @@ class Transcriber:
         segments, info = self._model.transcribe(
             speech,
             language=language,
-            initial_prompt=STYLE.get(language) if language else None,
+            initial_prompt=None,
             beam_size=beam,
             vad_filter=False,
             condition_on_previous_text=False,
@@ -474,7 +483,15 @@ class Parakeet:
         speech = _speech_only(samples)
         if speech is None:
             return "", language or "", 0.0
-        return str(self._model.recognize(speech)).strip(), language or "", 0.0
+        if PARAKEET_FLOOR is None:
+            return str(self._model.recognize(speech)).strip(), language or "", 0.0
+        heard = self._model.with_timestamps().recognize(speech)
+        logprobs = heard.logprobs or []
+        mean = float(np.mean(logprobs)) if logprobs else 0.0
+        if logprobs and mean < PARAKEET_FLOOR:
+            log.info("parakeet: dropped %.1f s it was not sure of (%.2f)", len(speech) / RATE, mean)
+            return "", language or "", 0.0
+        return heard.text.strip(), language or "", 0.0
 
     def warm(self) -> None:
         if self._warm == self._key:

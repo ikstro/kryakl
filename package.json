@@ -22,6 +22,7 @@
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
     "test:engine": "uv run --project engine --frozen --no-sync pytest engine/tests -q -p no:cacheprovider",
+    "quality:speech": "cd engine && uv run --frozen --no-sync python -W ignore -m quality.run",
     "dist": "node esbuild.mjs && electron-builder --win --x64",
     "models": "node scripts/build-mt.mjs",
     "glyphs": "node scripts/build-glyphs.mjs",

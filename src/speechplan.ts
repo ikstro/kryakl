@@ -31,6 +31,8 @@ export type CatalogModel = {
   repo: string
   bytes: number
   rank: number
+  /** Words wrong in a hundred, measured per language (docs/speech-quality.md); a language not here falls back to `rank`. */
+  errors?: Record<string, number>
   languages: 'all' | string[]
   /** Where it runs (Parakeet: the processor only) and what for (Parakeet: dictation). */
   devices: Device[]
@@ -247,11 +249,41 @@ function choice(m: CatalogModel, feature: Feature, plan: Device, input: PlanInpu
 
 const rankOf = (model: string) => MODELS.find(m => m.name === model)?.rank ?? 0
 
+/** Models whose errors are this close count as equally accurate, and the quicker one goes first. Measured
+ *  2026-11-11 (docs/speech-quality.md): large led turbo on read speech by up to a quarter (English 5.1 against
+ *  6.4 words wrong in a hundred) and lost on the owner's own reading (16.8 against 15.4, five phrases in the
+ *  wrong language), so a lead under 30 % is not worth twice the time. */
+const SAME_ERRORS = 1.3
+
+/** The model's words wrong in a hundred for this person: the worst among the languages they use; undefined
+ *  when one of them was not measured. */
+export function errorsFor(model: string, input: Pick<PlanInput, 'native' | 'languages'>): number | undefined {
+  const errors = MODELS.find(m => m.name === model)?.errors
+  if (!errors) return undefined
+  const languages = input.languages?.length ? input.languages : [input.native]
+  let worst = 0
+  for (const code of languages) {
+    const e = errors[code]
+    if (e === undefined) return undefined
+    worst = Math.max(worst, e)
+  }
+  return worst
+}
+
+/** Negative when `a` is the more accurate for this person: by the errors measured in their languages, else by rank. */
+function accuracyOrder(a: string, b: string, input: PlanInput): number {
+  const ea = errorsFor(a, input)
+  const eb = errorsFor(b, input)
+  if (ea !== undefined && eb !== undefined) return ea * SAME_ERRORS < eb ? -1 : eb * SAME_ERRORS < ea ? 1 : 0
+  return rankOf(b) - rankOf(a)
+}
+
 function decide(feature: Feature, device: Device, input: PlanInput): FeaturePlan {
   const budget = BUDGET[feature][input.prefer]
+  const better = (a: Choice, b: Choice) => accuracyOrder(a.model, b.model, input) < 0
   const choices = MODELS.filter(m => m.features.includes(feature))
     .map(m => choice(m, feature, device, input))
-    .sort((a, b) => Number(!!a.why) - Number(!!b.why) || rankOf(b.model) - rankOf(a.model) || a.estimate - b.estimate)
+    .sort((a, b) => Number(!!a.why) - Number(!!b.why) || accuracyOrder(a.model, b.model, input) || a.estimate - b.estimate)
   const usable = choices.filter(c => !c.why)
   const pick = (c: Choice, pinned = false, better?: Choice): FeaturePlan => ({ chosen: c, choices, pinned, budget, ...(better ? { better } : {}) })
   const pinned = input.pins[feature] && usable.find(c => c.model === input.pins[feature])
@@ -262,8 +294,8 @@ function decide(feature: Feature, device: Device, input: PlanInput): FeaturePlan
   const kept = usable.find(c => c.model === input.previous?.[feature] && c.downloaded && words(c) <= budget * KEEP)
   const best = fits[0]
   const here = fits.find(c => c.downloaded)
-  if (kept && (!here || rankOf(here.model) <= rankOf(kept.model))) return pick(kept, false, best && best !== kept && !best.downloaded && rankOf(best.model) > rankOf(kept.model) ? best : undefined)
-  if (here) return pick(here, false, best && best !== here ? best : undefined)
+  if (kept && (!here || !better(here, kept))) return pick(kept, false, best && best !== kept && !best.downloaded && better(best, kept) ? best : undefined)
+  if (here) return pick(here, false, best && best !== here && better(best, here) ? best : undefined)
   // Nothing within the budget is here yet: the best that downloads by itself (a big one is only offered).
   const first = fits.find(c => c.mb <= AUTO_DOWNLOAD_MB)
   if (first) return pick(first, false, best && best !== first ? best : undefined)
@@ -288,8 +320,10 @@ function forDevice(device: Device, input: PlanInput): Record<Feature, FeaturePla
   return { dictation, transcripts }
 }
 
-/** Dictation's beam: five on the card, two (one for Speed) on the processor. */
-const beamOn = (device: Device, input: PlanInput) => (device === 'cuda' ? 5 : input.prefer === 'speed' ? 1 : 2)
+/** Dictation's beam: five on the card, two on the processor. Speed gets the same: measured 2026-11-11
+ * (docs/speech-quality.md, Whisper small on the processor), a beam of one made 4 % more word errors and
+ * no phrase quicker (1.73 s against 1.67), as the encoder, not the search, costs the time there. */
+const beamOn = (device: Device, _input: PlanInput) => (device === 'cuda' ? 5 : 2)
 
 /** The lightest a busy card may fall to before the processor: tiny and base write a meeting too poorly. */
 const LIGHTEST_RANK = rankOf('small')

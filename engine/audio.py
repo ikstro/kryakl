@@ -14,6 +14,14 @@ import numpy as np
 
 RATE = 16000
 BAD_SHARE = 0.02  # more damaged packets than this and the file is refused
+# A dictated phrase quieter than this (its loudest sound, dBFS) is raised before speech is looked
+# for and recognized, up to LIFT_TO, by LIFT_MOST dB at most; None: left as it came. Dictation
+# hears the microphone with no gain control of the browser's (2026-11-10). Measured 2026-11-11
+# (docs/speech-quality.md): 7 % fewer wrong words with turbo, 5 % with small and Parakeet, the
+# VAD no longer missing faint and far speech.
+LIFT_BELOW: float | None = -20.0
+LIFT_TO = -6.0
+LIFT_MOST = 30.0
 
 Progress = Callable[[float], None]
 
@@ -109,6 +117,17 @@ def save_opus(samples: np.ndarray, path: Path, bitrate: int = 24000, progress: P
         for packet in stream.encode(None):
             out.mux(packet)
     tmp.replace(path)
+
+
+def lift(samples: np.ndarray) -> np.ndarray:
+    """A quiet phrase made louder (LIFT_BELOW); its loudest sound is taken past single clicks."""
+    if LIFT_BELOW is None or not len(samples):
+        return samples
+    peak = float(np.percentile(np.abs(samples), 99.9))
+    if peak <= 0 or 20 * np.log10(peak) >= LIFT_BELOW:
+        return samples
+    gain = min(10 ** ((LIFT_TO - 20 * np.log10(peak)) / 20), 10 ** (LIFT_MOST / 20))
+    return np.clip(samples * gain, -1.0, 1.0).astype(np.float32)
 
 
 def duration(samples: np.ndarray) -> float:

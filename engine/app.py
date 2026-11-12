@@ -382,6 +382,14 @@ async def session_finish(id: str, request: Request):
         worker.last_work = time.monotonic()
     # On the whole text, so a name cut between two pieces is still found; what the badge showed meanwhile stays raw.
     result["text"] = vocab.correct(result["text"], settings["vocabulary"])
+    # Where a phrase's seconds went, never its words: the wait after the key is what the person feels.
+    t = result.pop("timing", {})
+    log.info(
+        "dictation: %.1f s of sound by %s on %s, %.2f s after the key (%.1f s of sound still waiting then), "
+        "recognizing %.2f s in all, the slowest piece %.2f s; pieces %d, guesses %d (%d kept), previews %d",
+        result["seconds"], planned("dictation") or "?", s.kind[1], t.get("wait", 0.0), t.get("behind", 0.0),
+        result["took"], t.get("slowest", 0.0), t.get("piece", 0), t.get("guess", 0), t.get("kept", 0), t.get("preview", 0),
+    )
     return result
 
 

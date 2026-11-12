@@ -37,7 +37,8 @@ function input(over: Partial<PlanInput> = {}): PlanInput {
 
 describe('planSpeech', () => {
   it('a busy card falls to a lighter model already here, never a picked one, never tiny or base', () => {
-    const both = planSpeech(input({ cuda: true, downloaded: ['large-v3', 'large-v3-turbo', 'base'] }))
+    const previous = { transcripts: 'large-v3' }
+    const both = planSpeech(input({ cuda: true, downloaded: ['large-v3', 'large-v3-turbo', 'base'], previous }))
     expect(both.engine.cuda?.transcripts).toMatchObject({ model: 'large-v3', lighter: { model: 'large-v3-turbo', compute: 'float16' } })
     // Nothing lighter on the disk but base: the processor, as before.
     expect(planSpeech(input({ cuda: true, downloaded: ['large-v3', 'base'] })).engine.cuda?.transcripts.lighter).toBeUndefined()
@@ -93,10 +94,10 @@ describe('planSpeech', () => {
     expect(plan.offers.gpu).toBe(false)
   })
 
-  it('speed over accuracy takes quicker models and a beam of one', () => {
+  it('speed over accuracy takes quicker models, the beam kept (a beam of one saved no time)', () => {
     const plan = planSpeech(input({ profile: weakLaptop, prefer: 'speed', native: 'kk' }))
     expect(plan.dictation.chosen.model).toBe('tiny')
-    expect(plan.engine.cpu.dictation).toEqual({ model: 'tiny', beam: 1 })
+    expect(plan.engine.cpu.dictation).toEqual({ model: 'tiny', beam: 2 })
   })
 
   it('a downloaded model within the budget is used, and a better one offered', () => {
@@ -127,15 +128,30 @@ describe('planSpeech', () => {
     // Should the card fail, the processor's own choice.
     expect(plan.engine.cpu.dictation.model).toBe('small')
     expect(plan.offers).toEqual({ gpu: true, speakersGpu: true })
-    // large-v3 fits the card and is better: offered, not downloaded on its own.
-    expect(plan.transcripts.better?.model).toBe('large-v3')
+    // large-v3 fits the card but is no more accurate than turbo by what was measured: not offered.
+    expect(plan.transcripts.better).toBeUndefined()
   })
 
-  it('a fresh install on a strong card downloads turbo first, not the 3 GB model', () => {
+  it('a fresh install on a strong card downloads turbo, not the 3 GB model', () => {
     const plan = planSpeech(input({ cuda: true }))
     expect(plan.transcripts.chosen.model).toBe('large-v3-turbo')
     expect(plan.dictation.chosen.model).toBe('large-v3-turbo')
-    expect(plan.transcripts.better?.model).toBe('large-v3')
+    expect(plan.transcripts.better).toBeUndefined()
+  })
+
+  it('accuracy is the errors measured in the person\'s languages, the worst of them', async () => {
+    const { errorsFor } = await import('./speechplan')
+    expect(errorsFor('large-v3-turbo', { native: 'ru' })).toBe(5.0)
+    expect(errorsFor('large-v3-turbo', { native: 'ru', languages: ['ru', 'uk', 'en'] })).toBe(10.0)
+    // A language never measured: no number, and the plan goes by rank.
+    expect(errorsFor('large-v3-turbo', { native: 'kk', languages: ['kk', 'en'] })).toBeUndefined()
+    expect(errorsFor('nothing', { native: 'ru' })).toBeUndefined()
+  })
+
+  it('a model already here that is clearly less accurate is not used when a better one is here too', () => {
+    // small makes twice turbo's errors in Russian: turbo, though small is quicker.
+    const plan = planSpeech(input({ cuda: true, downloaded: ['small', 'large-v3-turbo'], previous: { transcripts: 'small' } }))
+    expect(plan.transcripts.chosen.model).toBe('large-v3-turbo')
   })
 
   it('a small card takes int8_float16, and too small a card is left out', () => {

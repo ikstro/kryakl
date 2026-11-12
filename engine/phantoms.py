@@ -14,6 +14,8 @@ Three kinds, each cut on its own terms:
   (`Sound.weak`) or there is more text than sound (`Sound.too_fast`).
 - thanks ("Спасибо.", "Thank you.", "Спасибо за внимание."): people say them all
   the time, so only when they are all of the text and the sound does not carry it.
+- murmurs ("you"): a lone word Whisper writes for a breath; all of a dictated phrase,
+  always cut; in a recording only when the sound does not carry it.
 
 The thresholds are first guesses, to be tuned on the owner's recordings (bench.py):
 the app log counts every cut (never its words).
@@ -78,6 +80,13 @@ THANKS = [re.compile(p) for p in (
     r"thank you for your attention",
 )]
 
+# What Whisper writes for a breath or a murmur it could not read: never a dictated phrase on its
+# own (2026-11-11: faint Ukrainian raised by audio.lift came out "you" with turbo, 6 of 120).
+MURMURS = [re.compile(p) for p in (
+    r"you",
+    r"come on",
+)]
+
 _SENTENCE = re.compile(r"[^.!?…\n]+(?:[.!?…]+|$)")
 
 
@@ -136,6 +145,9 @@ def phantoms(text: str, sound: Sound, dictation: bool) -> list[tuple[int, int]]:
                 break
         elif _is(THANKS, last):
             if not (whole and sound.weak):
+                break
+        elif _is(MURMURS, last):
+            if not (whole and (dictation or sound.weak)):
                 break
         else:
             break

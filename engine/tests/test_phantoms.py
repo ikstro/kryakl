@@ -68,6 +68,21 @@ def test_thanks_over_silence_go(said):
     assert clean(said, SILENT, dictation=True) == ""
 
 
+@pytest.mark.parametrize("said", ["you", "You.", "Come on."])
+def test_a_murmur_alone_is_never_a_dictated_phrase(said):
+    assert clean(said, HEARD, dictation=True) == ""
+
+
+def test_a_murmur_in_a_recording_goes_only_over_silence():
+    assert clean("You.", HEARD, dictation=False) == "You."
+    assert clean("You.", SILENT, dictation=False) == ""
+
+
+@pytest.mark.parametrize("said", ["I told you.", "Come on, let's go.", "You and me."])
+def test_you_in_a_sentence_stays(said):
+    assert clean(said, HEARD, dictation=True) == said
+
+
 @pytest.mark.parametrize("said", [
     "Всё готово, спасибо.",
     "Хорошо. Спасибо.",  # thanks after a text: said, whatever the sound
