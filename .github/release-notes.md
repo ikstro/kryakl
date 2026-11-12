@@ -1,6 +1,14 @@
-## What's new in 0.17.1
+## What's new in 0.17.2
 
-**A window for your screenshots (new).** Press Ctrl+E on the frame's bar: the screenshot goes to the Screenshots window and the frame closes, so you can take the next one at once. Collect up to 50, then pick the ones you need: draw on them, copy, save, or drag them into another program. Kryakl asks before it closes with any you have not saved or copied.
+0.17.1 was not published, so its changes are here too.
+
+**Text from a screenshot, as it was.** Text on the frame's bar and in the Screenshots window keeps the lines, indents and gaps of the screen, so code and lists come out as they were. Nothing is translated until you press Translate. Ctrl+Alt+T still translates at once. Line numbers that Windows read as letters ("30" as "за") now come out as numbers.
+
+**The bar.** The tool in hand has a grey background and its icon in the colour you draw with. Colour, size and dashed lines are behind the colour circle, so the bar is one row.
+
+**Dictation quality.** Quiet and distant speech is raised before it is recognized: about 5–7 % fewer wrong words. Parakeet no longer makes up English over faint speech in another language. A lone "you" or "come on" is no longer typed. Models are chosen by how many words they get wrong in your languages, so Whisper large no longer replaces turbo.
+
+**A window for your screenshots (new).** Press **Editor** (Ctrl+E) on the frame's bar: the frame closes and the Screenshots window opens with the screenshot, so you can take the next one at once. Collect up to 50, then pick the ones you need: draw on them, copy, save, or drag them into another program. Kryakl asks before it closes with any you have not saved or copied.
 
 **A precise frame.** A magnifier by the pointer shows each pixel. The arrow keys move the frame or a shape by one pixel (ten with Shift). Shift draws squares and keeps lines at 45°.
 
