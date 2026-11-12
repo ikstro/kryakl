@@ -93,8 +93,8 @@ export type CardState =
    * those the translator has); `canPaste`: it was selected in a window the
    * translation can be pasted into, over the selection.
    */
-  /** `mine`: the languages the person uses, put first in From and To. */
-  | { status: 'text'; text: string; from: string; to: string; languages: string[]; mine?: string[]; result: TextResult; canPaste?: boolean }
+  /** `mine`: the languages the person uses, put first in From and To; `manual`: the text read from a screenshot, translated only when Translate is pressed. */
+  | { status: 'text'; text: string; from: string; to: string; languages: string[]; mine?: string[]; result: TextResult; canPaste?: boolean; manual?: boolean }
   /** Check my English: the person's text as it is (editable) and what the checker (`model`, its level's name: Accurate) says of it; `canPaste` as a text's. */
   | { status: 'check'; text: string; result: CheckResult; model: string; canPaste?: boolean }
   /** The snipped piece of the screen holds no text. */

@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 
 import { describe, expect, test } from 'vitest'
 
-import { lineScore, mergeLine, pickLines, type OcrReading } from './ocrpick'
+import { fixScripts, lineScore, mergeLine, pickLines, type OcrReading } from './ocrpick'
 import type { OcrLine } from './ocrtext'
 
 const list = (code: string) => new Set(fs.readFileSync(`media/layout/${code}.txt`, 'utf8').split('\n'))
@@ -53,6 +53,19 @@ describe('lineScore', () => {
     expect(lineScore('a[ready', known)).toBe(-1)
     expect(lineScore('KНопКи', known)).toBe(-1)
     expect(lineScore('— 2080, (2,5)', known)).toBe(0)
+  })
+
+  test('a number alone beats a letter alone, which a word list would know', () => {
+    expect(lineScore('5', known)).toBeGreaterThan(lineScore('Б', known))
+    expect(lineScore('3', known)).toBeGreaterThan(lineScore('З', known))
+    expect(lineScore('12.', known)).toBe(1)
+    expect(lineScore('в Telegram', known)).toBeGreaterThan(0)
+    expect(lineScore('30', known)).toBeGreaterThan(lineScore('за', known))
+  })
+
+  test("a list's number read as letters is taken from the reading that has it", () => {
+    expect(mergeLine('зе. на сегодня всё', '30. Ha cerommq Bcë', known)).toBe('30. на сегодня всё')
+    expect(mergeLine('я. на сегодня всё', 'я. Ha cerommq Bcë', known)).toBe('я. на сегодня всё')
   })
 })
 
@@ -116,5 +129,26 @@ describe('pickLines', () => {
     const english: OcrReading = { lang: 'en-US', lines: [{ text: 'Paste', x: 10, y: 60, w: 50, h: 13 }] }
     expect(pickLines([russian, english], known).map(l => l.text)).toEqual([mixedText[0], 'Paste'])
     expect(pickLines([], known)).toEqual([])
+  })
+})
+
+describe('fixScripts', () => {
+  const uk = list('uk')
+  const all = (word: string) => known(word) || uk.has(word)
+
+  test('an English word written with Cyrillic look-alikes goes back to Latin', () => {
+    expect(fixScripts('мой риll rеqиеst, там', all)).toBe('мой pull request, там')
+    expect(fixScripts('Сделай соттіт и отправь', all)).toBe('Сделай commit и отправь')
+    expect(fixScripts('запуске VS Соде диктовка', all)).toBe('запуске VS Code диктовка')
+    expect(fixScripts('Модель: Ассигаtе (Gemma 4 Е4В)', all)).toBe('Модель: Accurate (Gemma 4 E4B)')
+    expect(fixScripts('Добавь в RЕАДМЕ инструкцию', all)).toBe('Добавь в README инструкцию')
+  })
+
+  test('a Ukrainian word written with Latin look-alikes goes back to Cyrillic', () => {
+    expect(fixScripts('Вiдкрий Settings, yвiмкни Translate i нaтисни Paste.', all)).toBe('Відкрий Settings, увімкни Translate i натисни Paste.')
+  })
+
+  test('words of one script stay, known or not', () => {
+    for (const text of ['Сборка опять упала', 'Can you send me the link?', 'Кряклу', 'а то', 'в Telegram']) expect(fixScripts(text, all)).toBe(text)
   })
 })

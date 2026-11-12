@@ -73,7 +73,7 @@ import { NATURAL_PREFIX, systemVoiceName, type NaturalState } from './natural'
 import { recognize } from './ocr'
 import { pickLines } from './ocrpick'
 import { adoptLocalFolder, adoptOldFolders, freeFolder, hasToMove, healSpeech, leftIn, moveDownloads, OLD_LOCAL_FOLDERS, partDir, removeOldUpdaterCaches, type LeftPart, type Warn } from './oldfolder'
-import { paragraphsOf } from './ocrtext'
+import { paragraphsOf, screenText } from './ocrtext'
 import { menuGroups, type MenuAction } from './menu'
 import { KryaklMenu } from './menuwindow'
 import { shotFileName } from './shotmodel'
@@ -2147,12 +2147,13 @@ function translateText(text: string, kind: CardKind, at: Point, via?: string): v
 }
 
 /**
- * Reads a snipped picture with Windows OCR into card `id`: the text, and
+ * Reads a snipped picture with Windows OCR into card `id` (`screen`: its lines
+ * as they stand, for copying; else joined into paragraphs): the text, and
  * whether Windows lacked the person's language (an English engine reads
  * Cyrillic or Greek letters as Latin look-alikes); undefined when there is no
  * text, the card showing why.
  */
-async function recognizeSnip(id: number, png: Buffer): Promise<{ text: string; misread: boolean } | undefined> {
+async function recognizeSnip(id: number, png: Buffer, layout: 'paragraphs' | 'screen' = 'paragraphs'): Promise<{ text: string; misread: boolean } | undefined> {
   const file = path.join(app.getPath('temp'), `kryakl-${process.pid}-${id}.png`)
   try {
     fs.writeFileSync(file, png)
@@ -2160,7 +2161,8 @@ async function recognizeSnip(id: number, png: Buffer): Promise<{ text: string; m
     // Every one of the person's languages Windows reads (their own first), English last; each line from the one that reads it best.
     const result = await recognize(file, [...new Set([native, ...settings.languages, 'en'].filter(Boolean))])
     if (result.readings.length === 0) return void setState(id, { status: 'no-ocr' })
-    const text = paragraphsOf(pickLines(result.readings, ocrKnown()))
+    const lines = pickLines(result.readings, ocrKnown())
+    const text = layout === 'screen' ? screenText(lines) : paragraphsOf(lines)
     if (!text.trim()) return void setState(id, { status: 'empty' })
     const nativeRead = result.readings.some(r => r.lang.split('-')[0]?.toLowerCase() === native)
     return { text, misread: scriptFor(settings.native) !== 'Latin' && !nativeRead }
@@ -2316,6 +2318,22 @@ async function translateInPlace(text: string, at: Point, window: bigint, via?: s
 function logTranslation(text: string, translation: string, from: string, to: string): void {
   translationLog.add({ text, translation, from, to })
   postApp()
+}
+
+/**
+ * A screenshot's Text (2026-11-12, the owner: "first OCR to text… Translate is
+ * an option"): the text with its lines as on the screen, in the translator's
+ * card to fix and copy, translated only when its Translate is pressed.
+ */
+async function readScreenAsText(png: Buffer, via?: string): Promise<void> {
+  const id = openCard('text', { status: 'reading' }, screen.getCursorScreenPoint(), via)
+  try {
+    const read = await recognizeSnip(id, png, 'screen')
+    if (!read) return
+    setState(id, { ...textState(read.text), manual: true })
+  } catch (error) {
+    setState(id, { status: 'failed', message: messageOf(error) })
+  }
 }
 
 /** Reads a snipped picture with Windows OCR and translates the text in the translator, where it can be fixed and copied. */
@@ -3110,7 +3128,9 @@ async function finishShot(action: ShotAction, png: Buffer, win: BrowserWindow): 
   if (action === 'text') {
     const quick = quickShot
     quickShot = undefined
-    return { close: true, after: () => void (quick?.purpose === 'listen' ? readScreenshot(png, quick.via) : readScreenText(png, quick ? quick.via : settings.shotKey || undefined)) }
+    // The quick frame does what its key says; the bar's Text only reads.
+    const after = () => (!quick ? readScreenAsText(png, settings.shotKey || undefined) : quick.purpose === 'listen' ? readScreenshot(png, quick.via) : readScreenText(png, quick.via))
+    return { close: true, after: () => void after() }
   }
   if (action === 'copy') {
     try {
@@ -4005,7 +4025,7 @@ function start(): void {
     copyImage: copyShotImage,
     copyFiles: files => ownClipboard(() => clipGuard.own(() => writeClipboardFiles(clipboardOwner(), dropFiles(files)))),
     save: saveShots,
-    text: png => void readScreenText(png),
+    text: png => void readScreenAsText(png),
     badge: text => keyboard.say(text, SHOT_SAY_MS),
     changed: () => {
       postApp()

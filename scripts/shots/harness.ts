@@ -176,6 +176,18 @@ async function cardShots(theme: 'dark' | 'light'): Promise<void> {
   await sleep(300)
   await shot(w, `card-${theme}-translate-ru-en-word`)
 
+  // A screenshot's Text: the lines as on the screen, nothing translated until Translate is pressed.
+  const screenLines = [
+    ' 9   Can you send me the link to the new version?',
+    '10   Почему при запуске VS Code диктовка печатает текст с задержкой?',
+    '11   В выходные поедем за город, если не будет дождя.',
+    '',
+    '    return 1',
+  ].join('\n')
+  card(20, 'text', { status: 'text', text: screenLines, from: 'ru', to: 'en', languages: ['en', 'ru', 'uk', 'de'], mine: ['ru', 'en'], result: { status: 'none' }, manual: true })
+  await fit()
+  await shot(w, `card-${theme}-screen-text`)
+
   // English into Russian: the field is the English half; a click in it marks the sentence's pair and opens the word.
   await translate(3, `${PHRASES[0]![0]}\n${PHRASES[1]![0]}`, 'en', 'ru')
   await shot(w, `card-${theme}-translate-en-ru`)

@@ -223,6 +223,9 @@ const article = el(
 )
 const list = el('main', { class: 'list', hidden: true }, article, note)
 
+/** The text read from a screenshot, not translated until its Translate is pressed: no languages shown, an edit not sent. */
+let held = false
+
 /** After an edit, the text is translated again once typing pauses this long. */
 const RETRANSLATE_MS = 700
 
@@ -255,6 +258,7 @@ const textField = el('div', {
     stopTextReading()
     unmarkField()
     window.clearTimeout(retranslate)
+    if (held) return
     retranslate = window.setTimeout(() => {
       retranslate = undefined
       translateText()
@@ -278,6 +282,8 @@ const swapButton = el('button', { class: 'swap-btn', title: t('card.swapTitle'),
 /** A list of languages drawn as a pill: the select itself, its arrow over it. */
 const pill = (select: HTMLSelectElement) => el('span', { class: 'select-pill' }, select, icon('chevron-down'))
 const textLangs = el('span', { class: 'text-langs' }, pill(fromSelect), el('span', { class: 'to', 'aria-hidden': 'true' }, '→'), pill(toSelect), swapButton)
+/** A screenshot's text: Translate shows the languages and translates it; from then on it is the translator. */
+const translateNow = el('button', { class: 'swap-btn', title: t('card.translateNowTip'), hidden: true, onclick: () => startTranslating() }, icon('globe'), el('span', {}, t('kind.translate')))
 const textResult = el('div', { class: 'text-result', hidden: true })
 // Nothing leaves the computer, and the card says so where the translation is made.
 const textFoot = el('footer', { class: 'card-foot' })
@@ -285,7 +291,7 @@ const textView = el(
   'main',
   { class: 'text-view', hidden: true },
   textField,
-  halfBar([textCopy, textListen], [textLangs]),
+  halfBar([textCopy, textListen], [textLangs, translateNow]),
   textResult,
   textBusy.box,
   textFoot,
@@ -383,7 +389,8 @@ const checking = () => state.card?.kind === 'check'
 
 function renderChrome(): void {
   const c = state.card
-  const [kindName, source] = KINDS[c?.kind ?? 'selection']
+  const [named, source] = KINDS[c?.kind ?? 'selection']
+  const kindName: Key = c?.kind === 'text' && held ? 'kind.text' : named
   kindLabel.replaceChildren(viaKeys(c?.via) ?? '', el('span', { class: 'kind-name' }, t(kindName), source ? el('span', { class: 'kind-source' }, ` · ${t(source)}`) : null))
   // The translator has no translation under an English text to hide.
   translationButton.hidden = translator(c)
@@ -560,7 +567,10 @@ function renderText(c: CardView, s: Extract<CardState, { status: 'text' | 'check
     window.clearTimeout(retranslate)
     retranslate = undefined
     setFieldText(s.text)
-    textLangs.hidden = s.status === 'check'
+    held = s.status === 'text' && !!s.manual
+    textLangs.hidden = s.status === 'check' || held
+    translateNow.hidden = !held
+    renderChrome()
     textField.setAttribute('aria-label', s.status === 'check' ? t('card.yourEnglish') : t('card.text'))
     textField.dataset.placeholder = s.status === 'check' ? t('card.typeEnglish') : ''
     if (s.status === 'text') fillLanguages(s.languages, s.from, s.to, s.mine ?? [])
@@ -657,6 +667,15 @@ function swapLanguages(): void {
     updateTextButtons()
   }
   markRareWords()
+  translateText()
+}
+
+/** A screenshot's text, translated at last: the languages show, and an edit is translated again from now on. */
+function startTranslating(): void {
+  held = false
+  textLangs.hidden = false
+  translateNow.hidden = true
+  renderChrome()
   translateText()
 }
 
@@ -815,6 +834,7 @@ function updateTextButtons(): void {
   const empty = !fieldText(textField).trim()
   textCopy.disabled = empty
   textListen.disabled = empty
+  translateNow.disabled = empty
   swapButton.disabled = empty
 }
 

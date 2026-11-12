@@ -17,6 +17,8 @@ export type OcrReading = {
 const LOOKALIKE = new Set('аеорсухпидтАВЕКМНОРСТХИДУПοαειкνρτυχΑΒΕΖΗΙΚΜΝΟΡΤΥΧ')
 
 const LATIN = /^\p{Script=Latin}+$/u
+/** A list's number opening a line, maybe read as one or two letters: "зе." for "30.". */
+const LETTER_MARKER = /^\p{L}{1,2}[.)]$/u
 const LETTER = /\p{L}/u
 /** A bracket or a bar next to a letter: "a[ready", "[п", "FastAP|". */
 const BROKEN = /\p{L}[[\]|{}]|[[\]|{}]\p{L}/u
@@ -41,16 +43,24 @@ function isKnown(core: string, known: (word: string) => boolean): boolean {
 /**
  * How well a line reads: a word found in the person's word lists counts for
  * it; a word that mixes scripts, holds a bracket by a letter, or is a word of
- * look-alike letters between Latin words, against it.
+ * look-alike letters between Latin words, against it. A line of one number
+ * reads better than a line of one letter.
  */
 export function lineScore(text: string, known: (word: string) => boolean): number {
+  // A line of one number (a line number in an editor's margin) against one letter alone: the Russian engine read 5 as "Б" and 3 as "З" (2026-11-12).
+  const alone = text.trim()
+  if (/^\d+[.,:)]?$/u.test(alone)) return 1
+  if (/^\p{L}{1,2}[.,:)]?$/u.test(alone)) return 0
   const cores = text.split(/\s+/).map(token => ({ token, core: coreOf(token) }))
   const letters = cores.map(c => c.core.replace(/[^\p{L}]/gu, ''))
   const latin = letters.map(l => l.length > 0 && LATIN.test(l))
-  let score = 0
+  // A list's number opening the line ("30. На сегодня…") counts for it: the Russian engine read it "зе.".
+  let score = /^\d+[.)]$/u.test(cores[0]?.token ?? '') ? 1 : 0
   cores.forEach(({ token, core }, i) => {
     const own = letters[i] ?? ''
     if (!LETTER.test(own)) return
+    // "зе." opening a line is no word of the list, but a number misread ("зе" is a Russian word too).
+    if (i === 0 && LETTER_MARKER.test(token)) return
     if (BROKEN.test(token) || scriptOf(own) === 'mixed') return void (score -= 1)
     if (!latin[i] && [...own].every(c => LOOKALIKE.has(c))) {
       let before = i - 1
@@ -100,7 +110,8 @@ export function mergeLine(line: string, other: string, known: (word: string) => 
     const pairs = mine.length === theirs.length ? mine.map((word, k) => [[word], [theirs[k] as string]]) : [[mine, theirs]]
     pairs.forEach(([own, other], k) => {
       if (!own || !other) return
-      if (own.length === 0 || other.length === 0 || !own.some(doubtful)) return void out.push(...own)
+      const marker = out.length === 0 && own.length === 1 && LETTER_MARKER.test(own[0] as string)
+      if (own.length === 0 || other.length === 0 || !(marker || own.some(doubtful))) return void out.push(...own)
       const rest = [...pairs.slice(k + 1).flatMap(([o]) => o ?? []), ...a.slice(endA)]
       const kept = lineScore([...out, ...own, ...rest].join(' '), known)
       const taken = lineScore([...out, ...other, ...rest].join(' '), known)
@@ -192,4 +203,68 @@ export function pickLines(readings: readonly OcrReading[], known: (word: string)
     ordered.splice(at < 0 ? ordered.length : at, 0, extra)
   }
   return ordered.flatMap(c => c.lines)
+}
+
+/** Cyrillic letters a recognizer writes for Latin ones, and back: each with the letters it may stand for, the likelier first. */
+const TO_LATIN: Record<string, string> = {
+  а: 'a', в: 'b', г: 'r', д: 'gd', е: 'e', и: 'un', і: 'il', ј: 'j', к: 'k', м: 'm', н: 'h', о: 'o', п: 'n', р: 'p', с: 'c', т: 'mt', у: 'y', х: 'x', ѕ: 's',
+  А: 'A', В: 'B', Д: 'D', Е: 'E', З: '3', І: 'Il', Ј: 'J', К: 'K', М: 'M', Н: 'H', О: 'O', Р: 'P', С: 'C', Т: 'T', У: 'Y', Х: 'X', Ѕ: 'S',
+}
+const TO_CYRILLIC: Record<string, string> = {
+  a: 'а', b: 'в', c: 'с', e: 'е', h: 'н', i: 'і', j: 'ј', k: 'к', m: 'м', n: 'п', o: 'о', p: 'р', r: 'г', u: 'и', x: 'х', y: 'у',
+  A: 'А', B: 'В', C: 'С', E: 'Е', H: 'Н', I: 'І', K: 'К', M: 'М', O: 'О', P: 'Р', T: 'Т', X: 'Х', Y: 'У',
+}
+const CYRILLIC = /\p{Script=Cyrillic}/u
+/** At most this many spellings of one word are tried. */
+const MOST_SPELLINGS = 64
+
+/** Every spelling of `word` with its letters of one script put into the other by `map`; undefined when a letter of that script has no look-alike. */
+function spellings(word: string, from: RegExp, map: Record<string, string>): string[] | undefined {
+  let out = ['']
+  for (const ch of word) {
+    const options = from.test(ch) ? map[ch] : ch
+    if (options === undefined) return undefined
+    out = out.flatMap(start => [...options].map(o => start + o)).slice(0, MOST_SPELLINGS)
+  }
+  return out
+}
+
+/**
+ * A word a recognizer wrote in two scripts, or in Cyrillic look-alikes between
+ * Latin words, put into one script letter by letter: "риll rеqиеst" → "pull
+ * request", "Fідта" → "Figma", "VS Соде" → "VS Code", "yвiмкни" → "увімкни".
+ * A Cyrillic word no list knows becomes the Latin word it may be ("соттіт" →
+ * "commit"). A spelling in the word lists wins; with none, a word of two scripts goes into
+ * the script most of its letters are in (Latin on a tie, as Cyrillic
+ * look-alikes stand for Latin more often), look-alikes between Latin words go
+ * into Latin ("Gemma 4 Е4В" → "E4B"), and any other word stays.
+ */
+export function fixScripts(text: string, known: (word: string) => boolean): string {
+  const tokens = text.split(/(\s+)/)
+  const words = tokens.map(t => coreOf(t).replace(/[^\p{L}]/gu, ''))
+  const isLatin = words.map(w => w.length > 0 && LATIN.test(w))
+  return tokens
+    .map((token, i) => {
+      const core = coreOf(token)
+      const letters = words[i] ?? ''
+      if (!letters) return token
+      const mixed = scriptOf(letters) === 'mixed' && CYRILLIC.test(letters)
+      let before = i - 1
+      while (before >= 0 && !words[before]) before--
+      const after = words.findIndex((w, j) => j > i && w.length > 0)
+      const around = [before, after].filter(j => j >= 0)
+      const lookalike = !mixed && !isLatin[i] && [...letters].every(c => LOOKALIKE.has(c)) && around.length > 0 && around.every(j => isLatin[j])
+      const latin = spellings(core, CYRILLIC, TO_LATIN) ?? []
+      // A word of look-alikes no list knows, while a Latin spelling of it is a word: "соттіт" → "commit".
+      if (!mixed && !lookalike) {
+        const plain = letters.length >= 3 && !isLatin[i] && !isKnown(core, known) ? latin.find(s => isKnown(s, known)) : undefined
+        return plain === undefined ? token : token.replace(core, plain)
+      }
+      const cyrillic = mixed ? (spellings(core, /\p{Script=Latin}/u, TO_CYRILLIC) ?? []) : []
+      const found = [...latin, ...cyrillic].find(s => isKnown(s, known))
+      const latinCount = [...letters].filter(c => LATIN.test(c)).length
+      const choice = found ?? (mixed ? ((latinCount * 2 >= [...letters].length ? latin[0] : cyrillic[0]) ?? latin[0]) : latin[0])
+      return choice === undefined ? token : token.replace(core, choice)
+    })
+    .join('')
 }

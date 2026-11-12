@@ -17,8 +17,6 @@ import type { ShotsAction, ShotsItem, ToHost, ToView } from './protocol'
 import type { Box, Shape, ShotStyle, Tool } from './shotmodel'
 import { clampBox, shotFileName } from './shotmodel'
 import type { KeptShot } from './shotwindow'
-import { handleOf } from './winclip'
-import { showMinimized } from './winkbd'
 
 /** More than this many is no longer a handful to pick from; the oldest one already saved or copied makes room. */
 export const MOST_SHOTS = 50
@@ -100,7 +98,7 @@ export class ShotsEditor {
     return this.items.filter(item => !item.handled).length
   }
 
-  /** From the frame: the newest at the top, the window in the taskbar, blinking, unless it is in front already. */
+  /** From the frame (Editor, Ctrl+E): the newest at the top, open, the window in front (the owner, 2026-11-12). */
   add(shot: KeptShot): void {
     const image = nativeImage.createFromBuffer(shot.png)
     const { width, height } = image.getSize()
@@ -133,14 +131,11 @@ export class ShotsEditor {
     this.items.unshift(item)
     this.open = item.id
     this.o.say(`shots: one added, ${this.items.length} held`)
-    const win = this.window()
     if (this.ready) {
       this.sendList()
       this.sendPicture(item.id)
     }
-    if (!win.isVisible() && !showMinimized(handleOf(win))) win.minimize()
-    if (!win.isFocused()) win.flashFrame(true)
-    this.o.badge(t('shots.added', { n: this.items.length }))
+    this.show()
     this.o.changed()
   }
 
