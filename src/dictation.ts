@@ -32,6 +32,8 @@ import { foreground, putOnTop, sightOf, windowRect, type Sight } from './winkbd'
 const BADGE = { width: 360, min: 64, max: 180 }
 /** How soon after it shows, then how often while it is up, the badge asks whether Windows shows it too. */
 const LOOK_MS = { first: 500, every: 2000 }
+/** How long a phrase waits at most for the card to be made ready for its model (main.ts cardForDictation); the sound is recorded meanwhile. */
+export const ROOM_WAIT_MS = 1500
 const NOTE_WAIT_MS = 5 * 60_000
 /** How long the badge says something of a phrase it typed (Fast translated it). */
 const NOTE_SHOWN_MS = 3000
@@ -56,8 +58,8 @@ export type DictationOptions = {
   edit: (text: string, signal: AbortSignal) => Promise<{ text: string; note?: string }>
   /** Whether a phrase goes through text editing now. */
   editing: () => boolean
-  /** A phrase is starting: the model loads while it is spoken. */
-  warm: () => void
+  /** A phrase is starting: the card made ready for its speech model (and the model for text editing warmed). Waited for, `ROOM_WAIT_MS` at most. */
+  warm: () => Promise<void>
   /** Practice: a phrase spoken in English, shown checked (Check my English) instead of typed. */
   check: (text: string) => void
   /** The languages the person uses (their own, English, the others they named): a phrase is taken as one of them, never another. */
@@ -138,7 +140,7 @@ export class Dictation {
       return
     }
     this.mode = mode
-    if (mode === 'type' || mode === 'english') this.o.warm()
+    const room = mode === 'type' || mode === 'english' ? this.o.warm().catch(() => undefined) : undefined
     // The screen to show on is the one with the window the text goes into, taken now, while it is in front.
     this.area = this.workArea()
     this.set('recording')
@@ -148,6 +150,8 @@ export class Dictation {
       // Heard while it is spoken (the engine loads its model meanwhile); an engine without sessions gets the phrase whole.
       this.opening = true
       try {
+        // The card made ready first (Kryakl's resting language model let go of), so the engine finds it free; the badge records meanwhile.
+        if (room) await Promise.race([room, new Promise(resolve => setTimeout(resolve, ROOM_WAIT_MS))])
         const r = await this.o.speech.call<{ id: string }>('POST', '/dictate/sessions', { expected, strict: true })
         if (r.ok) session = r.data.id
         else void this.o.speech.call('POST', '/dictate/prepare')

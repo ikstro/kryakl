@@ -18,6 +18,17 @@ export function cardRoom(free: number, need: number): boolean {
 }
 
 /**
+ * A piece of work never run twice at once: a call while it runs gets the same
+ * answer (2026-11-12: the key's warming and the job both asked the speech engine
+ * to let go of the card; the second heard "nothing to let go of" and decided by
+ * the reading from before, so Fast translated on a card that was free).
+ */
+export function oneAtATime<T>(work: () => Promise<T>): () => Promise<T> {
+  let pending: Promise<T> | undefined
+  return () => (pending ??= work().finally(() => (pending = undefined)))
+}
+
+/**
  * One reading shared by everyone asking within `ttlMs` (nvidia-smi is a
  * process of its own: a key press and the job after it read it once), and a
  * reading under way is waited for, never started twice.

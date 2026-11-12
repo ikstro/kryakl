@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { CARD_HEADROOM_MB, cardRoom, sharedReading } from './resources'
+import { CARD_HEADROOM_MB, cardRoom, oneAtATime, sharedReading } from './resources'
 
 describe('Kryakl, a guest on the graphics card', () => {
   test('a model goes on the card whole, with room left for the programs around it', () => {
@@ -32,5 +32,21 @@ describe('Kryakl, a guest on the graphics card', () => {
     clock = 5000
     expect(await read()).toBe(1000)
     expect(reads).toBe(2)
+  })
+
+  test('a release under way is waited for, not asked again', async () => {
+    let runs = 0
+    let finish = (_free: number) => {}
+    const release = oneAtATime(() => {
+      runs++
+      return new Promise<number>(resolve => (finish = resolve))
+    })
+    const warm = release()
+    const job = release()
+    finish(5287)
+    expect([await warm, await job, runs]).toEqual([5287, 5287, 1])
+    const later = release()
+    finish(5300)
+    expect([await later, runs]).toEqual([5300, 2])
   })
 })

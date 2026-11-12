@@ -569,7 +569,7 @@ describe('the fix key', () => {
     desk.mouse('left-down', 0)
     desk.mouse('left-up', 80)
     desk.tap(VK_PAUSE)
-    expect(desk.sent).toContainEqual({ type: 'selection', cycle: ['en', 'ru'], layout: 'en' })
+    expect(desk.sent).toContainEqual({ type: 'selection', cycle: ['en', 'ru'], layout: 'en', again: false })
   })
 
   test('words typed, then selected with Shift and an arrow: the selection goes to the main process, nothing is retyped', () => {
@@ -580,7 +580,7 @@ describe('the fix key', () => {
     desk.event(VK_LSHIFT, false)
     desk.tap(VK_PAUSE)
     expect(desk.text).toBe('ghbdtn vbh')
-    expect(desk.sent).toContainEqual({ type: 'selection', cycle: ['en', 'ru'], layout: 'en' })
+    expect(desk.sent).toContainEqual({ type: 'selection', cycle: ['en', 'ru'], layout: 'en', again: false })
   })
 
   test('a selection made with Ctrl+Shift and an arrow, or the fix key pressed with Shift still down, goes to the main process', () => {
@@ -603,25 +603,48 @@ describe('the fix key', () => {
     expect(held.sent.filter(m => m.type === 'selection')).toHaveLength(1)
   })
 
-  test('pressed again while the selection is converted, the fix key goes on once it is selected again', () => {
+  test('pressed again while the selection is converted, the fix key goes on with that text once it is done', () => {
     const desk = new Desk({ keys: { fix: 'Pause' } })
-    const asked = () => desk.sent.filter(m => m.type === 'selection').length
+    const asked = () => desk.sent.filter(m => m.type === 'selection')
     desk.mouse('left-down', 0)
     desk.mouse('left-up', 80)
     desk.tap(VK_PAUSE)
     desk.tap(VK_PAUSE)
-    expect(asked()).toBe(1)
+    expect(asked()).toHaveLength(1)
     desk.typist.converted(true)
-    expect(asked()).toBe(2)
+    expect(asked()).toHaveLength(2)
+    expect(asked()[1]).toMatchObject({ again: true })
     desk.typist.converted(true)
-    expect(asked()).toBe(2)
+    expect(asked()).toHaveLength(2)
     desk.tap(VK_PAUSE)
-    expect(asked()).toBe(3)
-    // Not selected again: a press made meanwhile is dropped, and so is the next.
+    expect(asked()).toHaveLength(3)
+    expect(asked()[2]).toMatchObject({ again: true })
+    // Not done: a press made meanwhile is dropped, and so is the next.
     desk.tap(VK_PAUSE)
     desk.typist.converted(false)
     desk.tap(VK_PAUSE)
-    expect(asked()).toBe(3)
+    expect(asked()).toHaveLength(3)
+  })
+
+  test('the text just converted is gone on with until anything is typed or clicked', () => {
+    const desk = new Desk({ keys: { fix: 'Pause' } })
+    const asked = () => desk.sent.filter(m => m.type === 'selection')
+    desk.mouse('left-down', 0)
+    desk.mouse('left-up', 80)
+    desk.tap(VK_PAUSE)
+    desk.typist.converted(true)
+    desk.mouse('left-down', 200)
+    desk.mouse('left-up', 200)
+    desk.tap(VK_PAUSE)
+    expect(asked()).toHaveLength(1)
+    desk.mouse('left-down', 0)
+    desk.mouse('left-up', 80)
+    desk.tap(VK_PAUSE)
+    desk.typist.converted(true)
+    desk.keys('a')
+    desk.tap(VK_PAUSE)
+    expect(asked()).toHaveLength(2)
+    expect(asked().every(m => m.type === 'selection' && !m.again)).toBe(true)
   })
 
   test('right after a fix by itself, it takes the fix back', () => {

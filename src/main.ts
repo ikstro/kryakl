@@ -66,7 +66,7 @@ import { LlamaServer } from './llama'
 import { createLlmFiles, LLM_MODELS, llmPaths, type LlmFiles } from './llmfiles'
 import { createLlmTranslators, ModelSlow, type LlmTranslators } from './llmtranslator'
 import { BUSY_MS, busyName, slowAfter, tryAgain, type ModelBusy } from './modelbusy'
-import { cardRoom, sharedReading } from './resources'
+import { cardRoom, oneAtATime, sharedReading } from './resources'
 import { MistakeStore } from './mistakes'
 import { log, logTo } from './log'
 import { NATURAL_PREFIX, systemVoiceName, type NaturalState } from './natural'
@@ -152,8 +152,17 @@ const COPY_WAIT_MS = 2000
 const UIA_WAIT_MS = 600
 /** How long after Kryakl's own write to the clipboard a change is still taken for that write. */
 const OWN_CLIPBOARD_MS = 300
-/** A selection converted into another layout is selected again up to this long. */
+/** A converted text is selected again by the fix key's next press up to this long (a line break one step). */
 const RESELECT_MOST = 400
+/**
+ * The keyboard thread hears a conversion is done only once its paste has landed: the paste's program reading the
+ * text is the sign (`ClipboardGuard.whenRead`, this long at most), and a moment more for it to put the text in; a
+ * next press selecting it again before then would be pasted over (VS Code's chat, 2026-11-12).
+ */
+const PASTE_READ_WAIT_MS = 600
+const PASTE_SETTLE_MS = 120
+/** The fix key goes on with the text it just converted only this long after, in the same window. */
+const CONVERTED_KEEP_MS = 60_000
 /** Layout switchers that would fix words a second time, by their .exe name. */
 const RIVALS: Record<string, string> = { 'everylang.exe': 'EveryLang', 'punto.exe': 'Punto Switcher' }
 /** Other programs that watch the keyboard, by their .exe name: no harm, named on the Keyboard page. */
@@ -1320,6 +1329,7 @@ function appView(): AppView {
     shotApps,
     shotsHeld: shotsEditor?.count ?? 0,
     videoDir: videoFolder(),
+    shotDir: shotFolder(),
     keyboardApps,
     foreignKeys,
     speech: speech.view(speechKeysOk),
@@ -1975,7 +1985,7 @@ const CARD_SETTLE_MS = 300
  * phrase, a job or the speed test needs it, and the card is read again. Its
  * free memory then, else nothing when nothing went.
  */
-async function freeOwnSpeech(): Promise<number | undefined> {
+const freeOwnSpeech = oneAtATime(async (): Promise<number | undefined> => {
   if (!speech?.service.health?.loaded?.some(m => m.device === 'cuda')) return undefined
   const answer = await speech.call<{ freed?: string[] }>('POST', '/card/release')
   const freed = answer.ok ? (answer.data?.freed ?? []) : []
@@ -1985,6 +1995,32 @@ async function freeOwnSpeech(): Promise<number | undefined> {
   const free = await cardFree()
   log(`model: the speech engine let go of the graphics card (${freed.join(', ')}): ${free ?? '?'} MB free now`)
   return free
+})
+
+/**
+ * The other way round (2026-11-12: after a translation, Accurate rested on the
+ * 8 GB card and three phrases went to the processor, 12–14 s each, the speech
+ * model 600 MB short): the card goes to what the person does now. A phrase
+ * whose model is planned on the card, not loaded there, and does not fit even
+ * compact beside Kryakl's language model resting there, has that model stopped
+ * first; the next translation loads it again, Fast's draft shown meanwhile.
+ * Not while it answers, and not where both are wanted at once: text editing
+ * (it warms the model itself) and Talk.
+ */
+async function cardForDictation(): Promise<void> {
+  if (llmFiles.server.restingFor === undefined || talkWin?.isVisible()) return
+  const plan = speech?.plan
+  const entry = plan?.device === 'cuda' ? plan.engine.cuda?.dictation : undefined
+  const model = entry && SPEECH_MODELS.find(m => m.name === entry.model)
+  if (!model?.devices.includes('cuda')) return
+  if (speech?.service.health?.loaded?.some(m => m.model === model.name && m.device === 'cuda')) return
+  const free = await cardFree()
+  const need = model.vramMb.int8_float16
+  if (free === undefined || cardRoom(free, need)) return
+  log(`model: stopped for dictation: the graphics card has ${free} MB free, ${model.name} needs ${need} at the least`)
+  await llmFiles.server.stop()
+  await new Promise(resolve => setTimeout(resolve, CARD_SETTLE_MS))
+  cardFree = sharedReading(cardMemoryFree, 5000)
 }
 
 /**
@@ -3124,7 +3160,7 @@ function afterShotCopy(): void {
 }
 
 /** A finished screenshot: on the clipboard for the person to paste (nothing of theirs comes back over it), in a file, or read in the Translate card. */
-async function finishShot(action: ShotAction, png: Buffer, win: BrowserWindow): Promise<ShotOutcome> {
+async function finishShot(action: ShotAction, png: Buffer, _win: BrowserWindow): Promise<ShotOutcome> {
   if (action === 'text') {
     const quick = quickShot
     quickShot = undefined
@@ -3141,13 +3177,43 @@ async function finishShot(action: ShotAction, png: Buffer, win: BrowserWindow): 
     }
     return { close: true, after: () => keyboard.say(t('shot.copied'), SHOT_SAY_MS) }
   }
+  // Windows' own Save As, once the frame is gone (2026-11-12, the owner: "обыкновенное, не поверх"): over the frame it
+  // froze the screen, as the frame covers every monitor and the taskbar, and Windows took it for a game, which keeps Kryakl's keys quiet.
+  return { close: true, refocus: false, after: giveBack => void saveShotAs(png, giveBack) }
+}
+
+/** The frame's Save: Windows' Save As in the screenshots' folder, a name of Kryakl's offered; cancelled, nothing is saved. Then the program in front before gets the keyboard back. */
+async function saveShotAs(png: Buffer, giveBack: () => void): Promise<void> {
   try {
-    if (!(await saveShots([{ name: shotFileName(new Date()), png }], win))) return { close: false }
+    const target = await askShotPath(shotFileName(new Date()))
+    if (!target) return
+    fs.writeFileSync(target, png)
+    keyboard.say(t('shot.saved'), SHOT_SAY_MS)
   } catch (error) {
     log(`shot: could not save: ${(error as NodeJS.ErrnoException).code ?? messageOf(error)}`)
-    return { close: false, message: t('shot.saveFailed', { why: messageOf(error) }) }
+    keyboard.say(t('shot.saveFailed', { why: messageOf(error) }), SHOT_SAY_MS)
+  } finally {
+    giveBack()
   }
-  return { close: true, after: () => keyboard.say(t('shot.saved'), SHOT_SAY_MS) }
+}
+
+/** Where a screenshot goes, by Windows' Save As starting in the screenshots' folder; nothing when cancelled. With `win`, the dialog belongs to it. */
+async function askShotPath(name: string, win?: BrowserWindow): Promise<string | undefined> {
+  const folder = shotFolder()
+  fs.mkdirSync(folder, { recursive: true })
+  const options: Electron.SaveDialogOptions = { title: t('shot.saveAs'), defaultPath: path.join(folder, name), filters: [{ name: 'PNG', extensions: ['png'] }] }
+  const { canceled, filePath } = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options)
+  return canceled || !filePath ? undefined : path.extname(filePath) ? filePath : `${filePath}.png`
+}
+
+/** The folder screenshots are saved in by default: the one chosen on the Screenshots page, else Pictures\Kryakl (as recordings go to Videos\Kryakl). */
+function shotFolder(): string {
+  if (settings.shotFolder) return settings.shotFolder
+  try {
+    return path.join(app.getPath('pictures'), 'Kryakl')
+  } catch {
+    return path.join(app.getPath('home'), 'Pictures', 'Kryakl')
+  }
 }
 
 /** A screenshot on the clipboard as the person's own copy: a PNG and a bitmap, so every program can paste it. */
@@ -3158,16 +3224,19 @@ async function copyShotImage(png: Buffer): Promise<void> {
   await ownClipboard(() => clipGuard.own(() => writeClipboardImage(clipboardOwner(), png, dib)))
 }
 
-/** Into the screenshots' folder, asked for the first time; a name taken there gets (2), (3). False when no folder was picked. */
+/** The Screenshots window's Save: one by Save As, several into a folder picked (the screenshots' folder first), a name taken there getting (2), (3). False when cancelled. */
 async function saveShots(files: { name: string; png: Buffer }[], win: BrowserWindow): Promise<boolean> {
-  let folder = settings.shotFolder
-  if (!folder) {
-    const picked = await dialog.showOpenDialog(win, { title: t('shot.pickFolder'), properties: ['openDirectory', 'createDirectory'] })
-    if (picked.canceled || !picked.filePaths[0]) return false
-    folder = picked.filePaths[0]
-    saveSettings({ shotFolder: folder })
+  if (files.length === 1) {
+    const target = await askShotPath(files[0]!.name, win)
+    if (!target) return false
+    fs.writeFileSync(target, files[0]!.png)
+    return true
   }
-  fs.mkdirSync(folder, { recursive: true })
+  const start = shotFolder()
+  fs.mkdirSync(start, { recursive: true })
+  const picked = await dialog.showOpenDialog(win, { title: t('shot.saveMany'), defaultPath: start, properties: ['openDirectory', 'createDirectory'] })
+  const folder = picked.canceled ? undefined : picked.filePaths[0]
+  if (!folder) return false
   for (const file of files) {
     const { name, ext } = path.parse(file.name)
     let target = path.join(folder, file.name)
@@ -3188,32 +3257,46 @@ async function ownClipboard<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
+/** The text the fix key converted last, before the cursor: its length in arrow steps, its window, when. */
+let lastConverted: { steps: number; hwnd: bigint; at: number } | undefined
+
 /**
  * The fix key with a selection: Kryakl copies it, types it again in the
  * next layout of `cycle` (the one after the layout it was typed in), pastes
- * it over the selection, selects it again (a second press goes on to the
- * next layout), switches the layout and puts the clipboard back. Signs
- * alone ("&&&&") go into the first layout that reads them otherwise; `now`,
- * the window's layout, says where signs both layouts have were typed. The
- * keyboard thread is told when it is done, and whether it is selected again,
- * so the fix key pressed meanwhile goes on with it.
+ * it over the selection, switches the layout and puts the clipboard back;
+ * nothing stays selected, the cursor after the text (the owner, 2026-11-12).
+ * Pressed again (`again`, nothing typed or clicked since), it selects that
+ * text back first and goes on to the next layout. Signs alone ("&&&&") go
+ * into the first layout that reads them otherwise; `now`, the window's
+ * layout, says where signs both layouts have were typed. The keyboard thread
+ * is told when it is done, so the fix key pressed meanwhile goes on with it.
  */
-async function convertSelection(cycle: string[], now: string): Promise<void> {
-  let selected = false
+async function convertSelection(cycle: string[], now: string, again: boolean): Promise<void> {
+  let done = false
   try {
     // Nothing pasted (or a failure): the clipboard goes back at once.
-    const done = await borrowClipboard(
-      () => convertOver(cycle, now),
+    const result = await borrowClipboard(
+      () => convertOver(cycle, now, again),
       result => (result?.pasted ? undefined : 0),
     )
-    selected = done.selected
+    done = result.done
   } finally {
-    keyboard.converted(selected)
+    keyboard.converted(done)
   }
 }
 
-/** Copies the selection and pastes it converted: whether anything was pasted (the clipboard then goes back once it is read), and whether it is selected again. */
-async function convertOver(cycle: string[], now: string): Promise<{ pasted: boolean; selected: boolean }> {
+/** Copies the selection and pastes it converted: whether anything was pasted (the clipboard then goes back once it is read), and whether the fix key may go on with it. */
+async function convertOver(cycle: string[], now: string, again: boolean): Promise<{ pasted: boolean; done: boolean }> {
+  const before = again ? lastConverted : undefined
+  lastConverted = undefined
+  const window = foreground().hwnd
+  if (again) {
+    if (!before || before.hwnd !== window || Date.now() - before.at > CONVERTED_KEEP_MS) {
+      log('convert: the text converted last is not before the cursor any more')
+      return { pasted: false, done: false }
+    }
+    await pressSelectBack(before.steps)
+  }
   const marker = `Kryakl ${Date.now()}`
   const field = focusedField()
   await clipGuard.write(marker)
@@ -3238,7 +3321,13 @@ async function convertOver(cycle: string[], now: string): Promise<{ pasted: bool
   if (copied) clipGuard.claim()
   if (!text) {
     log(`convert: nothing copied in ${COPY_WAIT_MS} ms`)
-    return { pasted: false, selected: false }
+    return { pasted: false, done: false }
+  }
+  // Selected back, it must be the same length: a program that did not select it copies its whole line (VS Code).
+  const copiedSteps = [...text.replace(/\r\n/g, '\n')].length
+  if (before && copiedSteps !== before.steps) {
+    log(`convert: the text converted last was not selected again (${copiedSteps} chars copied, ${before.steps} expected)`)
+    return { pasted: false, done: false }
   }
   const layouts = cycle.map(id => ({ id, table: tableFor(id) })).filter((l): l is { id: string; table: KeyTable } => !!l.table)
   const from = sourceLayout(text, layouts, now)
@@ -3252,23 +3341,27 @@ async function convertOver(cycle: string[], now: string): Promise<{ pasted: bool
   const toTable = to ? tableFor(to) : undefined
   if (!fromTable || !toTable || !to || from === to) {
     log(`convert: ${[...text].length} chars, no other layout of ${cycle.join(', ')} reads them`)
-    return { pasted: false, selected: false }
+    return { pasted: false, done: false }
   }
   const converted = convertText(text, fromTable, toTable)
   await pasteText(converted)
   keyboard.switchTo(to)
-  // Selected again, the cursor at its end; a line break is one step (\r\n too), unless it is long.
+  // The paste lands first, so a next press selecting the text back does not come before it; the keyboard thread has seen
+  // Kryakl's Ctrl+V by then (another program's key to it, which ends what came before).
+  const began = Date.now()
+  const read = await clipGuard.whenRead(PASTE_READ_WAIT_MS)
+  const readIn = Date.now() - began
+  await new Promise(resolve => setTimeout(resolve, read ? PASTE_SETTLE_MS : 60))
+  const where = `${exeOf(foreground().pid) || '?'} (${read ? `the paste read in ${readIn} ms` : `the paste not seen read in ${PASTE_READ_WAIT_MS} ms`})`
+  // A line break is one step (\r\n too).
   const steps = [...converted.replace(/\r\n/g, '\n')].length
   if (steps > RESELECT_MOST) {
-    log(`convert: ${steps} chars ${from} → ${to}, too long to select again`)
-    return { pasted: true, selected: false }
+    log(`convert: ${steps} chars ${from} → ${to} in ${where}, too long to go on with`)
+    return { pasted: true, done: false }
   }
-  await new Promise(resolve => setTimeout(resolve, 60))
-  await pressSelectBack(steps)
-  // Once the keyboard thread has seen those keys (another program's to it), it is told the selection is back.
-  await new Promise(resolve => setTimeout(resolve, 150))
-  log(`convert: ${steps} chars ${from} → ${to}, selected again`)
-  return { pasted: true, selected: true }
+  lastConverted = { steps, hwnd: window, at: Date.now() }
+  log(`convert: ${steps} chars ${from} → ${to}${before ? ', again' : ''}, the cursor after it in ${where}`)
+  return { pasted: true, done: true }
 }
 
 /** Other layout switchers running now, for the settings' warning, and the other programs that watch the keyboard. */
@@ -3698,8 +3791,9 @@ function setUpSpeechEngine(): void {
     },
     edit: editPhrase,
     editing: () => settings.dictateEdit,
-    warm: () => {
+    warm: async () => {
       if (settings.dictateEdit && llmFiles.state(settings.model).status === 'ready') warmWhole(settings.model)
+      else await cardForDictation()
     },
     check: practice,
     expected: () => myLanguages(settings),
@@ -3914,7 +4008,7 @@ function start(): void {
     notLearned: why =>
       log(why === 'field' ? 'learn: a word fixed by hand, not learned: the field said it is a password, or would not say' : 'learn: a word fixed by hand, not learned: it made no word of a word'),
     switchMissed: (exe, field) => log(`switch: did not take in ${exe} (${field})`),
-    selection: (cycle, layout) => void convertSelection(cycle, layout).catch(error => console.warn('Kryakl: could not convert the selection', error)),
+    selection: (cycle, layout, again) => void convertSelection(cycle, layout, again).catch(error => console.warn('Kryakl: could not convert the selection', error)),
     hotkey: action => {
       if (action === 'pause') return togglePause()
       if (action === 'video' && recorder?.active) return recorder.stopByKey()

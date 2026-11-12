@@ -37,6 +37,8 @@ export class ClipboardGuard<S> {
   private paste: { pressed: boolean; read: boolean; watchers: Set<number> } | undefined
   /** The putting back waits for that read. */
   private awaitingRead = false
+  /** Waiting for the paste's program to read the text (`whenRead`). */
+  private readWaiters: (() => void)[] = []
 
   constructor(
     private readonly backend: ClipboardBackend<S>,
@@ -97,8 +99,31 @@ export class ClipboardGuard<S> {
     if (!p.read) {
       p.read = true
       if (this.awaitingRead && this.timer) this.schedule(AFTER_READ_MS)
+      for (const waiter of this.readWaiters.splice(0)) waiter()
     }
     return true
+  }
+
+  /**
+   * Resolves once the paste's program has read the text written to paste
+   * (true), or after `maxMs` (false); at once when nothing is waiting to be
+   * pasted. What comes after a paste waits for it: a program that pastes late
+   * (VS Code's chat) took the arrows selecting the text again first (2026-11-12).
+   */
+  whenRead(maxMs: number): Promise<boolean> {
+    const p = this.paste
+    if (!p?.pressed || p.read) return Promise.resolve(!!p?.read)
+    return new Promise(resolve => {
+      const waiter = () => {
+        clearTimeout(timer)
+        resolve(true)
+      }
+      const timer = setTimeout(() => {
+        this.readWaiters = this.readWaiters.filter(w => w !== waiter)
+        resolve(false)
+      }, maxMs)
+      this.readWaiters.push(waiter)
+    })
   }
 
   /** The clipboard as it is now is Kryakl's doing: a copy it pressed in another program. */

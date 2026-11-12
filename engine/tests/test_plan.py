@@ -315,6 +315,13 @@ def test_busy_dictation_keeps_the_same_model_compact_on_the_card(s, monkeypatch)
     s.update({"plan": {"cuda": {"dictation": {"model": "large-v3-turbo", "compute": "float16", "beam": 5}, "transcripts": {"model": "large-v3", "compute": "float16"}}, "cpu": {"dictation": {"model": "large-v3-turbo", "beam": 2}}}})
     t, entry = w.dictation_model()
     assert t.loaded_with[:3] == ("large-v3-turbo", "cuda", "int8_float16") and entry["beam"] == 5
+    # 2026-11-12: the next piece took it back to float16, as the plan names it, beside Kryakl's language model it no longer fitted.
+    loads = []
+    real = t.load
+    t.load = lambda *a, **k: (loads.append(a), real(*a, **k))
+    t, entry = w.dictation_model()
+    assert loads == [] and t.loaded_with[:3] == ("large-v3-turbo", "cuda", "int8_float16")
+    assert entry["compute"] == "int8_float16" and entry["beam"] == 5 and w.gave_way["dictation"] == "compact"
 
 
 def test_the_plans_lighter_model_is_for_the_card_and_known(s):

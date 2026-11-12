@@ -33,8 +33,12 @@ export type KeptShot = { png: Buffer; flat: Buffer; shapes: Shape[]; ink: number
 
 const isPng = (bytes: Buffer) => PNG.every((byte, i) => bytes[i] === byte)
 
-/** What is left to do once a picture is handed over: go (and then something), or stay on the screen, saying why. */
-export type ShotOutcome = { close: true; after?: () => void } | { close: false; message?: string }
+/**
+ * What is left to do once a picture is handed over: go (and then something), or stay on the screen, saying why.
+ * `refocus: false`: the program in front before is not given the keyboard back as the frame goes, as a window of
+ * Kryakl's (Save As) comes next; `after` gives it back once done.
+ */
+export type ShotOutcome = { close: true; after?: (giveBack: () => void) => void; refocus?: false } | { close: false; message?: string }
 
 export type ShotOptions = {
   page: string
@@ -209,8 +213,8 @@ export class ShotOverlay {
     pane.frame = undefined
   }
 
-  /** The window in front before comes back while Kryakl is still in front, which Windows requires; the picture goes from the pages. */
-  close(): void {
+  /** The window in front before comes back while Kryakl is still in front, which Windows requires (unless a window of Kryakl's comes next, `refocus` false); the picture goes from the pages. */
+  close(refocus = true): void {
     if (this.state === 'idle') return
     this.state = 'idle'
     this.finishing = false
@@ -218,7 +222,7 @@ export class ShotOverlay {
     this.next = undefined
     if (this.asked.count) this.o.say(`shot: parts asked ${this.asked.count} times, ${this.asked.slowest} ms at the slowest, ${this.asked.most} at most`)
     this.asked = { count: 0, slowest: 0, most: 0 }
-    if (this.before) focusWindow(this.before)
+    if (refocus && this.before) focusWindow(this.before)
     for (const pane of this.panes.values()) {
       if (pane.win.isDestroyed()) continue
       pane.frame = undefined
@@ -357,8 +361,9 @@ export class ShotOverlay {
     }
     this.finishing = false
     if (outcome.close) {
-      this.close()
-      outcome.after?.()
+      const before = this.before
+      this.close(outcome.refocus !== false)
+      outcome.after?.(() => before && focusWindow(before))
     } else if (!pane.win.isDestroyed()) {
       pane.win.webContents.send('to-view', { type: 'shotResume', ...(outcome.message ? { message: outcome.message } : {}) } satisfies ToView)
     }

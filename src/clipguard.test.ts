@@ -139,6 +139,28 @@ describe('ClipboardGuard', () => {
     expect(clip.state.text).toBe('mine')
   })
 
+  test('what comes after a paste waits for its program to read it, or for a limit', async () => {
+    const clip = fakeClipboard()
+    const guard = new ClipboardGuard(clip.backend, noWait)
+    guard.hold()
+    await guard.write('привет мир', true)
+    // Not pasted yet: nothing to wait for.
+    expect(await guard.whenRead(500)).toBe(false)
+    guard.pasted()
+    const read = guard.whenRead(500)
+    await vi.advanceTimersByTimeAsync(80)
+    guard.read()
+    expect(await read).toBe(true)
+    // Read already: at once.
+    expect(await guard.whenRead(500)).toBe(true)
+    // Never read (the paste went nowhere): the limit.
+    await guard.write('hello world', true)
+    guard.pasted()
+    const late = guard.whenRead(500)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(await late).toBe(false)
+  })
+
   test('never read: back after the longest wait; read before Ctrl+V (a clipboard program) does not count', async () => {
     const clip = fakeClipboard()
     const guard = new ClipboardGuard(clip.backend, noWait)

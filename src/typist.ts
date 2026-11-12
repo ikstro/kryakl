@@ -163,8 +163,8 @@ export type KbdConfig = {
 export type KbdIn =
   | { type: 'config'; config: KbdConfig }
   | { type: 'switchTo'; layout: string }
-  /** The main process is done with the selection: converted and selected again (`selected`), the fix key goes on with it. */
-  | { type: 'converted'; selected: boolean }
+  /** The main process is done with the selection: converted, the cursor right after it (`done`), so the fix key goes on with it. */
+  | { type: 'converted'; done: boolean }
   /** A dictation started or ended: while it runs, its keys work on the full screen too, so it can always be stopped. */
   | { type: 'dictating'; on: boolean }
   /** The screenshot frame opened or closed: while it is open nothing typed is fixed or learned, and no key of Kryakl's acts. */
@@ -201,8 +201,11 @@ export type KbdOut =
   | { type: 'notLearned'; why: 'field' | 'noWord' }
   /** A layout switch the window never took, for the log, once per program and kind of field: no text, only their names. */
   | { type: 'switchMissed'; exe: string; field: string }
-  /** The fix key with a selection: the main process copies it, converts it into the next layout and pastes it; `layout` is the window's now. */
-  | { type: 'selection'; cycle: string[]; layout: string }
+  /**
+   * The fix key with a selection: the main process copies it, converts it into the next layout and pastes it;
+   * `layout` is the window's now; `again`: nothing is selected, the text it just pasted, right before the cursor, goes on.
+   */
+  | { type: 'selection'; cycle: string[]; layout: string; again: boolean }
   /** The program in front, by its .exe name, when it changes; `elevated`: it runs as administrator, so its keys never reach the hooks. */
   | { type: 'app'; exe: string; elevated: boolean }
   /** A key of the main process's was pressed. */
@@ -376,13 +379,13 @@ export class Typist {
   private lastLayout: { hwnd: bigint; layout: string } | undefined
   /** The layout Kryakl switched to by itself, until the next key: a change to it is not the person's. */
   private ownSwitch: string | undefined
-  /** What was done last: typing (the fix key fixes it), selecting (it converts the selection), or something else. */
-  private last: 'typed' | 'selected' | 'none' = 'none'
+  /** What was done last: typing (the fix key fixes it), selecting (it converts the selection), a selection converted (it goes on with that text), or something else. */
+  private last: 'typed' | 'selected' | 'converted' | 'none' = 'none'
   /** The last word fixed by itself, taken back by the fix key right after. */
   private autoFixed: { start: number; end: number; from: string; word: string; typed: Typed[]; capsOff: boolean } | undefined
   /** The fix key's last conversion of typed keys: pressed again, it goes on to the next layout; typing on, it is learned. */
   private cycling: { start: number; end: number; to: string; from: string; words: Span[] } | undefined
-  /** The main process is converting the selection, since when; the fix key pressed meanwhile goes on with it once it is selected again (`again` times). */
+  /** The main process is converting the selection, since when; the fix key pressed meanwhile goes on with it once it is done (`again` times). */
   private converting: { since: number; again: number } | undefined
   /** A fix waiting to be typed; keys pressed meanwhile wait for it, then are pressed again. */
   private pending: Fix | undefined
@@ -778,23 +781,29 @@ export class Typist {
   }
 
   /**
-   * The main process is done with the selection: converted and selected
-   * again, the fix key goes on with it, and a press made meanwhile goes on at
-   * once; not selected again, such a press is dropped.
+   * The main process is done with the selection: converted, nothing left
+   * selected, the cursor right after it (the owner, 2026-11-12); the fix key
+   * goes on with that text until anything else is typed or clicked, and a
+   * press made meanwhile goes on at once. Not done (nothing pasted, or too
+   * long to select again), such a press is dropped.
    */
-  converted(selected: boolean): void {
+  converted(done: boolean): void {
     const again = this.converting?.again ?? 0
     this.converting = undefined
-    if (!selected) return
-    this.last = 'selected'
-    if (again > 0) this.convertSelection(again - 1)
+    if (!done) return
+    this.last = 'converted'
+    if (again > 0) this.convertSelection(again - 1, true)
   }
 
-  /** Asks the main process to convert the selection into the next layout; `again`: presses still to follow. */
-  private convertSelection(again = 0): void {
+  /**
+   * Asks the main process to convert the selection into the next layout;
+   * `pending`: presses still to follow; `again`: the text it just converted,
+   * selected no longer, goes on.
+   */
+  private convertSelection(pending = 0, again = false): void {
     this.last = 'none'
-    this.converting = { since: this.env.now(), again }
-    this.env.send({ type: 'selection', cycle: this.cycle(), layout: this.layoutNow(this.env.foreground()) })
+    this.converting = { since: this.env.now(), again: pending }
+    this.env.send({ type: 'selection', cycle: this.cycle(), layout: this.layoutNow(this.env.foreground()), again })
   }
 
   /** The fix key pressed with Shift still down from selecting with Shift (Shift+End, then Pause): it is still the fix key. */
@@ -1216,13 +1225,14 @@ export class Typist {
   private fixKey(): void {
     const c = this.converting
     if (c && this.env.now() - c.since < CONVERT_MS) {
-      // Pressed again before the last conversion was selected again: it goes on once it is.
+      // Pressed again before the last conversion is done: it goes on once it is.
       c.again = Math.min(c.again + 1, AGAIN_MOST)
       return
     }
     this.converting = undefined
     if (this.autoFixed && this.autoFixed.end === this.run.length) return this.takeBack(this.autoFixed)
     if (this.last === 'selected') return this.convertSelection()
+    if (this.last === 'converted') return this.convertSelection(0, true)
     if (this.last !== 'typed' || this.run.length === 0 || this.env.foreground().hwnd !== this.runWindow) return
     this.candidate = undefined
     let start: number

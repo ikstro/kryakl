@@ -57,7 +57,7 @@ vi.mock('./dwm', () => ({ frameWindow: vi.fn() }))
 vi.mock('./winclip', () => ({ handleOf: vi.fn() }))
 vi.mock('./winkbd', () => ({ foreground: () => ({ hwnd: 0 }), putOnTop: vi.fn(), sightOf: vi.fn(), windowRect: vi.fn() }))
 
-import { Dictation, type DictationOptions } from './dictation'
+import { Dictation, type DictationOptions, ROOM_WAIT_MS } from './dictation'
 import type { DictationMode, ToView } from './protocol'
 
 type Inside = {
@@ -167,7 +167,7 @@ describe('the panel while a phrase is dictated', () => {
       editing: () => false,
       languageOf: () => 'ru',
       expected: () => ['ru', 'en'],
-      warm: vi.fn(),
+      warm: vi.fn(async () => {}),
       offset: () => ({ dx: 0, dy: 0 }),
       panel: () => true,
       trayPoint: () => ({ x: 1900, y: 1060 }),
@@ -186,6 +186,41 @@ describe('the panel while a phrase is dictated', () => {
     const heard = (text: string) => (d as unknown as Inside).typeHeard('type', text, 'ru', 0.9)
     return { d, badge, typed, phrase, heard }
   }
+
+  it('opens its session once the card is made ready for it', async () => {
+    const order: string[] = []
+    let ready = () => {}
+    const d = await started({
+      warm: () => new Promise<void>(resolve => (ready = () => (order.push('room'), resolve()))),
+      speech: { installed: true, ready: true, call: async (_m: string, p: string) => (order.push(p), { ok: true, data: { id: 'session' } }) },
+    } as unknown as Partial<DictationOptions>)
+    expect(order).toEqual([])
+    ready()
+    await new Promise(resolve => setTimeout(resolve))
+    expect(order).toEqual(['room', '/dictate/sessions'])
+    void d
+  })
+
+  it('waits for the card no longer than its limit', async () => {
+    vi.useFakeTimers()
+    const paths: string[] = []
+    const d = new Dictation({
+      page: 'dictation.html',
+      preload: 'preload.js',
+      query: () => ({}),
+      speech: { installed: true, ready: true, call: async (_m: string, p: string) => (paths.push(p), { ok: true, data: { id: 'session' } }) },
+      expected: () => ['ru', 'en'],
+      warm: () => new Promise<void>(() => {}),
+      offset: () => ({ dx: 0, dy: 0 }),
+      panel: () => true,
+      onChange: vi.fn(),
+    } as unknown as DictationOptions)
+    d.press('type', 'Control+Alt+D')
+    await vi.advanceTimersByTimeAsync(ROOM_WAIT_MS - 1)
+    expect(paths).toEqual([])
+    await vi.advanceTimersByTimeAsync(1)
+    expect(paths).toEqual(['/dictate/sessions'])
+  })
 
   it('shows it for a phrase', async () => {
     const { badge } = await started()

@@ -2791,7 +2791,7 @@ function askRunningApps(): void {
 function shotsPage(v: AppView): HTMLElement[] {
   const s = v.settings
   const pick = async () => {
-    const folder = (await window.tutorHost.call({ call: 'pickFolder', title: t('shot.pickFolder'), current: s.shotFolder })) as string | null
+    const folder = (await window.tutorHost.call({ call: 'pickFolder', title: t('shot.pickFolder'), current: v.shotDir })) as string | null
     if (folder) save({ shotFolder: folder })
   }
   const pickVideo = async () => {
@@ -2811,7 +2811,8 @@ function shotsPage(v: AppView): HTMLElement[] {
     v.shotApps.length ? warn(t('shot.others', { names: v.shotApps.join(` ${t('common.and')} `) })) : null,
     toggleCard('camera', t('shot.shutter'), s.shotShutter, shotShutter => save({ shotShutter }), t('shot.shutterNote')),
     toggleCard('mouse-pointer-2', t('shot.cursor'), s.shotCursor, shotCursor => save({ shotCursor }), t('shot.cursorNote')),
-    card('folder', t('shot.folder'), [s.shotFolder ? pathNote(s.shotFolder) : t('shot.folderNone')], linkBtn(s.shotFolder ? t('dictate.change') : t('dictate.choose'), () => void pick())),
+    // Where Save As opens; the person may save anywhere from there.
+    card('folder', t('shot.folder'), [pathNote(v.shotDir)], linkBtn(t('dictate.change'), () => void pick())),
     el('p', { class: 'privacy' }, lucide('lock', 's'), t('shot.privacy')),
     grp(t('video.group')),
     keyRow('videoKey', t('video.keyTitle'), t('video.keyNote')),

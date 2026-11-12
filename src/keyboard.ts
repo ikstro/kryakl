@@ -48,8 +48,8 @@ export type KeyboardEvents = {
   notLearned(why: 'field' | 'noWord'): void
   /** A layout switch a window never took: its program and the kind of field. */
   switchMissed(exe: string, field: string): void
-  /** The fix key with a selection: convert it into the next of `cycle`; `layout` is the window's now. */
-  selection(cycle: string[], layout: string): void
+  /** The fix key with a selection: convert it into the next of `cycle`; `layout` is the window's now; `again`: the text just converted, before the cursor, goes on. */
+  selection(cycle: string[], layout: string, again: boolean): void
   /** A key Electron's shortcuts cannot hold, for selecting, snipping or a snip's text, was pressed. */
   hotkey(action: MainAction): void
   /** The program in front lately; whether it runs as administrator. */
@@ -204,9 +204,9 @@ export class KeyboardHelper {
 
   private videoNow = false
 
-  /** The main process is done with the selection: selected again, the fix key goes on with it. */
-  converted(selected: boolean): void {
-    this.post({ type: 'converted', selected })
+  /** The main process is done with the selection: converted, the cursor after it, the fix key goes on with it. */
+  converted(done: boolean): void {
+    this.post({ type: 'converted', done })
   }
 
   /** A dictation started or ended: its keys then work in full screen too. */
@@ -329,7 +329,7 @@ export class KeyboardHelper {
         this.events.switchMissed(message.exe, message.field)
         return
       case 'selection':
-        this.events.selection(message.cycle, message.layout)
+        this.events.selection(message.cycle, message.layout, message.again)
         return
       case 'hotkey':
         this.events.hotkey(message.action)

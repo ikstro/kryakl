@@ -199,6 +199,10 @@ class Worker:
 
     def _load(self, t: Transcriber, feature: str) -> tuple[str, dict]:
         device, entry = self.entry(feature)
+        # The same model already on that device stays as it was loaded, compact or not (2026-11-12: turbo loaded compact beside
+        # Kryakl's language model went back to float16 at the next piece, as the plan names float16, and no longer fitted beside it).
+        if t.loaded and t.device == device and t.name == entry["model"]:
+            return device, {**entry, "compute": t.compute}
         why = ""
         # The card is the person's programs' (2026-10-31): too little of it free, a smaller model on it, else the processor.
         full = self._card_full(t, entry) if device == "cuda" else None

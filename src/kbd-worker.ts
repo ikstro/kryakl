@@ -157,7 +157,7 @@ function drainPort(): void {
     const message = m.message as KbdIn
     if (message.type === 'quit') running = false
     else if (message.type === 'switchTo') typist.switchTo(message.layout)
-    else if (message.type === 'converted') typist.converted(message.selected)
+    else if (message.type === 'converted') typist.converted(message.done)
     else if (message.type === 'dictating') typist.setDictating(message.on)
     else if (message.type === 'shooting') typist.setShooting(message.on)
     else if (message.type === 'videoRecording') typist.setVideoRecording(message.on)

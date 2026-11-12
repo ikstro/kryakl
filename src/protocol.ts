@@ -281,6 +281,8 @@ export type AppView = {
   shotsHeld: number
   /** Where recordings of the screen go, the default when none was chosen. */
   videoDir: string
+  /** Where a screenshot's Save As opens: the folder chosen, else Pictures/Kryakl. */
+  shotDir: string
   /** Other programs known to watch the keyboard, running now (AutoHotkey, WhisperTyping…): no harm, named so the person knows. */
   keyboardApps: string[]
   /** Some program pressed keys by itself since the keyboard helper started; Kryakl ignores those. */

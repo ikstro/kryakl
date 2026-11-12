@@ -113,7 +113,6 @@ export function pressEnter(): void {
 }
 
 const VK_LEFT = 0x25
-const VK_RIGHT = 0x27
 const KEYEVENTF_EXTENDEDKEY = 0x0001
 
 /**
@@ -128,15 +127,13 @@ function pressArrow(vk: number, times: number): void {
 }
 
 /**
- * The text just pasted, `chars` before the cursor, selected again: Left to
- * its start, then Shift+Right to its end, so the cursor ends where it was,
- * after the text, as in a selection made left to right.
+ * The text Kryakl just pasted, `chars` before the cursor, selected again by
+ * Shift+Left, so a paste over it leaves the cursor after it, where it was.
  */
 export async function pressSelectBack(chars: number, maxWaitMs = 1500): Promise<void> {
   await letGo(MODIFIERS, maxWaitMs)
-  pressArrow(VK_LEFT, chars)
   keybd_event(VK_SHIFT, 0, 0, MAIN_KEYS)
-  pressArrow(VK_RIGHT, chars)
+  pressArrow(VK_LEFT, chars)
   keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, MAIN_KEYS)
 }
 

@@ -880,6 +880,8 @@
     "shot.saved": "Saved",
     "shot.pickFolder": "Where to save screenshots",
     "shot.saveFailed": "Could not save: {why}",
+    "shot.saveAs": "Save the screenshot",
+    "shot.saveMany": "Where to save the screenshots",
     "shot.copyFailed": "Could not copy: {why}",
     "shot.keyTitle": "Take a screenshot",
     "shot.keyNote": "The screen freezes: frame a part, draw on it, Ctrl+C copies it",
@@ -888,8 +890,7 @@
     "shot.offerUse": "Use Print Screen",
     "shot.shutter": "Shutter sound",
     "shot.shutterNote": "A click when the frame is set.",
-    "shot.folder": "Folder for saved screenshots",
-    "shot.folderNone": "Asked the first time you save",
+    "shot.folder": "Default folder for screenshots",
     "shot.others": "{names} is running and may hold the same key",
     "shot.privacy": "A screenshot stays on this computer. It is kept only if you save it.",
     "shot.mode.photo": "Photo",
@@ -2417,6 +2418,8 @@
     "shot.saved": "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E",
     "shot.pickFolder": "\u041A\u0443\u0434\u0430 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0442\u044C \u0441\u043D\u0438\u043C\u043A\u0438",
     "shot.saveFailed": "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C: {why}",
+    "shot.saveAs": "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0441\u043D\u0438\u043C\u043E\u043A",
+    "shot.saveMany": "\u041A\u0443\u0434\u0430 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0441\u043D\u0438\u043C\u043A\u0438",
     "shot.copyFailed": "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u0442\u044C: {why}",
     "shot.keyTitle": "\u0421\u0434\u0435\u043B\u0430\u0442\u044C \u0441\u043D\u0438\u043C\u043E\u043A \u044D\u043A\u0440\u0430\u043D\u0430",
     "shot.keyNote": "\u042D\u043A\u0440\u0430\u043D \u0437\u0430\u043C\u0438\u0440\u0430\u0435\u0442: \u043E\u0431\u0432\u0435\u0434\u0438\u0442\u0435 \u043A\u0443\u0441\u043E\u043A, \u043D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435, Ctrl+C \u043A\u043E\u043F\u0438\u0440\u0443\u0435\u0442",
@@ -2425,8 +2428,7 @@
     "shot.offerUse": "\u0412\u0437\u044F\u0442\u044C Print Screen",
     "shot.shutter": "\u0417\u0432\u0443\u043A \u0437\u0430\u0442\u0432\u043E\u0440\u0430",
     "shot.shutterNote": "\u0429\u0435\u043B\u0447\u043E\u043A, \u043A\u043E\u0433\u0434\u0430 \u0440\u0430\u043C\u043A\u0430 \u0432\u044B\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u0430.",
-    "shot.folder": "\u041F\u0430\u043F\u043A\u0430 \u0434\u043B\u044F \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u044B\u0445 \u0441\u043D\u0438\u043C\u043A\u043E\u0432",
-    "shot.folderNone": "\u0421\u043F\u0440\u043E\u0441\u0438\u043C \u043F\u0440\u0438 \u043F\u0435\u0440\u0432\u043E\u043C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0438",
+    "shot.folder": "\u041F\u0430\u043F\u043A\u0430 \u0434\u043B\u044F \u0441\u043D\u0438\u043C\u043A\u043E\u0432 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E",
     "shot.others": "{names}: \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u043E, \u043C\u043E\u0436\u0435\u0442 \u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0442\u0443 \u0436\u0435 \u043A\u043B\u0430\u0432\u0438\u0448\u0443",
     "shot.privacy": "\u0421\u043D\u0438\u043C\u043E\u043A \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435. \u0425\u0440\u0430\u043D\u0438\u0442\u0441\u044F, \u0442\u043E\u043B\u044C\u043A\u043E \u0435\u0441\u043B\u0438 \u0432\u044B \u0435\u0433\u043E \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u0435.",
     "shot.mode.photo": "\u0421\u043D\u0438\u043C\u043E\u043A",
@@ -3954,6 +3956,8 @@
     "shot.saved": "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E",
     "shot.pickFolder": "\u041A\u0443\u0434\u0438 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438 \u0437\u043D\u0456\u043C\u043A\u0438",
     "shot.saveFailed": "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: {why}",
+    "shot.saveAs": "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0437\u043D\u0456\u043C\u043E\u043A",
+    "shot.saveMany": "\u041A\u0443\u0434\u0438 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0437\u043D\u0456\u043C\u043A\u0438",
     "shot.copyFailed": "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438: {why}",
     "shot.keyTitle": "\u0417\u0440\u043E\u0431\u0438\u0442\u0438 \u0437\u043D\u0456\u043C\u043E\u043A \u0435\u043A\u0440\u0430\u043D\u0430",
     "shot.keyNote": "\u0415\u043A\u0440\u0430\u043D \u0437\u0430\u0432\u043C\u0438\u0440\u0430\u0454: \u043E\u0431\u0432\u0435\u0434\u0456\u0442\u044C \u0447\u0430\u0441\u0442\u0438\u043D\u0443, \u043D\u0430\u043C\u0430\u043B\u044E\u0439\u0442\u0435, Ctrl+C \u043A\u043E\u043F\u0456\u044E\u0454",
@@ -3962,8 +3966,7 @@
     "shot.offerUse": "\u0423\u0437\u044F\u0442\u0438 Print Screen",
     "shot.shutter": "\u0417\u0432\u0443\u043A \u0437\u0430\u0442\u0432\u043E\u0440\u0430",
     "shot.shutterNote": "\u041A\u043B\u0430\u0446\u0430\u043D\u043D\u044F, \u043A\u043E\u043B\u0438 \u0440\u0430\u043C\u043A\u0443 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E.",
-    "shot.folder": "\u041F\u0430\u043F\u043A\u0430 \u0434\u043B\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u0437\u043D\u0456\u043C\u043A\u0456\u0432",
-    "shot.folderNone": "\u0417\u0430\u043F\u0438\u0442\u0430\u0454\u043C\u043E \u043F\u0456\u0434 \u0447\u0430\u0441 \u043F\u0435\u0440\u0448\u043E\u0433\u043E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F",
+    "shot.folder": "\u041F\u0430\u043F\u043A\u0430 \u0434\u043B\u044F \u0437\u043D\u0456\u043C\u043A\u0456\u0432 \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C",
     "shot.others": "{names}: \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u043E, \u043C\u043E\u0436\u0435 \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0442\u0443 \u0441\u0430\u043C\u0443 \u043A\u043B\u0430\u0432\u0456\u0448\u0443",
     "shot.privacy": "\u0417\u043D\u0456\u043C\u043E\u043A \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456. \u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F, \u043B\u0438\u0448\u0435 \u044F\u043A\u0449\u043E \u0432\u0438 \u0439\u043E\u0433\u043E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u0442\u0435.",
     "shot.mode.photo": "\u0417\u043D\u0456\u043C\u043E\u043A",
@@ -10245,7 +10248,7 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
   function shotsPage(v) {
     const s = v.settings;
     const pick = async () => {
-      const folder = await window.tutorHost.call({ call: "pickFolder", title: t("shot.pickFolder"), current: s.shotFolder });
+      const folder = await window.tutorHost.call({ call: "pickFolder", title: t("shot.pickFolder"), current: v.shotDir });
       if (folder) save({ shotFolder: folder });
     };
     const pickVideo = async () => {
@@ -10262,7 +10265,8 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
       v.shotApps.length ? warn(t("shot.others", { names: v.shotApps.join(` ${t("common.and")} `) })) : null,
       toggleCard("camera", t("shot.shutter"), s.shotShutter, (shotShutter) => save({ shotShutter }), t("shot.shutterNote")),
       toggleCard("mouse-pointer-2", t("shot.cursor"), s.shotCursor, (shotCursor) => save({ shotCursor }), t("shot.cursorNote")),
-      card("folder", t("shot.folder"), [s.shotFolder ? pathNote(s.shotFolder) : t("shot.folderNone")], linkBtn(s.shotFolder ? t("dictate.change") : t("dictate.choose"), () => void pick())),
+      // Where Save As opens; the person may save anywhere from there.
+      card("folder", t("shot.folder"), [pathNote(v.shotDir)], linkBtn(t("dictate.change"), () => void pick())),
       el("p", { class: "privacy" }, lucide("lock", "s"), t("shot.privacy")),
       grp(t("video.group")),
       keyRow("videoKey", t("video.keyTitle"), t("video.keyNote")),
