@@ -67,6 +67,9 @@ html, body {
 
 .bar.inside { cursor: move; }
 
+/* A pressed button: a grey a step stronger than the theme's selected grey, which vanished on the bar (2026-11-11, the owner). */
+.bar { --bar-on: color-mix(in srgb, var(--text) 16%, transparent); }
+
 .row {
   display: flex;
   align-items: center;
@@ -96,7 +99,9 @@ html, body {
 
 .b:hover { background: var(--hover); }
 .b:disabled { opacity: 0.35; background: transparent; }
-.b.on { background: var(--selected); color: var(--accent-text); box-shadow: inset 0 0 0 1px var(--mark); }
+.b.on { background: var(--bar-on); color: var(--strong); }
+/* The tool in hand: its icon in the colour it draws with (the page sets --ink, unless that colour would vanish on the grey). */
+.b.tool.on svg { color: var(--ink, currentColor); }
 
 .b.lab {
   display: inline-flex;
@@ -152,7 +157,16 @@ html, body {
 
 .push { flex: 1; }
 
-/* The second row: a color, a size, dashed. */
+/* The button that opens the second row: a circle in the colour in use. */
+.swatch .ring {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(128, 128, 128, 0.55);
+  border-radius: 50%;
+}
+
+/* The second row, opened by the swatch: a color, a size, dashed. */
 .sw {
   width: 20px;
   height: 20px;
@@ -162,7 +176,7 @@ html, body {
   border-radius: 50%;
 }
 
-.sw.on { outline: 2px solid var(--focus); outline-offset: 1px; }
+.sw.on { outline: 2px solid var(--strong); outline-offset: 1px; }
 
 .dot {
   display: block;

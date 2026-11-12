@@ -800,6 +800,7 @@ export const uk: Record<Key, Phrase> = {
   'shot.size.1': 'Середньо',
   'shot.size.2': 'Товсто',
   'shot.dashed': 'Пунктир',
+  'shot.style': 'Колір і розмір',
   'shot.copied': 'Скопійовано',
   'shot.saved': 'Збережено',
   'shot.pickFolder': 'Куди зберігати знімки',

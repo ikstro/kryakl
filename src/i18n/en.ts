@@ -805,6 +805,7 @@ export const en = {
   'shot.size.1': 'Medium',
   'shot.size.2': 'Thick',
   'shot.dashed': 'Dashed',
+  'shot.style': 'Color and size',
   'shot.copied': 'Copied',
   'shot.saved': 'Saved',
   'shot.pickFolder': 'Where to save screenshots',

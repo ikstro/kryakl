@@ -561,13 +561,19 @@ function drawBar(): void {
   }
   const tools = SHOT_TOOLS.map(item => {
     const name = t(`shot.tool.${item.id}`)
-    return button(TOOL_ICONS[item.id], `${name} · ${item.letter}`, () => pickTool(item.id), { on: tool === item.id })
+    const made = button(TOOL_ICONS[item.id], `${name} · ${item.letter}`, () => pickTool(item.id), { on: tool === item.id, cls: 'tool' })
+    // The tool in hand shows the colour it draws with, unless that colour would vanish on the bar.
+    if (tool === item.id && optionsOf(item.id).color && readable(style.color)) made.style.setProperty('--ink', style.color)
+    return made
   })
+  const options = optionsRow()
+  if (!options) optionsOpen = false
   const row = el(
     'div',
     { class: 'row' },
     ...(editor ? [] : [modeSwitch(), separator()]),
     ...tools,
+    ...(options ? [swatchButton()] : []),
     ...(pointerPatch && !editor ? [separator(), button('mouse-pointer-2', t('shot.cursor'), toggleCursor, { on: cursorOn })] : []),
     separator(),
     button('undo-2', `${t('shot.undo')} · Ctrl+Z`, stepBack, { off: history.past.length === 0 }),
@@ -584,15 +590,59 @@ function drawBar(): void {
           button('copy', 'Ctrl+C', () => void finish('copy'), { label: t('shot.copy'), cls: 'copy' }),
         ]),
   )
-  bar.replaceChildren(row, ...optionsRow())
+  bar.replaceChildren(row, ...(options && optionsOpen ? [options] : []))
   placeBar()
 }
 
-function optionsRow(): HTMLElement[] {
+/** The second row (a colour, a size, dashed) is open: asked for by the swatch, closed by it again or by starting to draw (2026-11-11, the owner: not always shown). */
+let optionsOpen = false
+
+/** The circle in the colour in use that opens and closes the second row. */
+function swatchButton(): HTMLButtonElement {
   const kind = tool ?? history?.now.shapes.find(s => s.id === selected)?.kind
-  if (!kind) return []
+  const ring = el('span', { class: 'ring' })
+  if (kind && optionsOf(kind).color) ring.style.background = style.color
+  const made = el('button', { class: `b swatch${optionsOpen ? ' on' : ''}`, title: t('shot.style'), 'aria-label': t('shot.style'), 'aria-expanded': String(optionsOpen) }, ring)
+  made.onclick = () => {
+    optionsOpen = !optionsOpen
+    drawBar()
+  }
+  return made
+}
+
+/** A colour that stands out on the bar's ground enough to colour an icon: 2:1 at least. */
+function readable(color: string): boolean {
+  const ground = rgbOf(getComputedStyle(bar).backgroundColor)
+  const ink = rgbOf(color)
+  if (!ground || !ink) return true
+  const one = luminance(ground)
+  const two = luminance(ink)
+  return (Math.max(one, two) + 0.05) / (Math.min(one, two) + 0.05) >= 2
+}
+
+function rgbOf(color: string): [number, number, number] | undefined {
+  const hex = /^#([0-9a-f]{6})$/i.exec(color)
+  if (hex) {
+    const digits = hex[1] ?? ''
+    return [0, 2, 4].map(i => parseInt(digits.slice(i, i + 2), 16)) as [number, number, number]
+  }
+  const rgb = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(color)
+  return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : undefined
+}
+
+function luminance([r, g, b]: [number, number, number]): number {
+  const lin = (v: number) => {
+    const c = v / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  }
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+}
+
+function optionsRow(): HTMLElement | undefined {
+  const kind = tool ?? history?.now.shapes.find(s => s.id === selected)?.kind
+  if (!kind) return undefined
   const can = optionsOf(kind)
-  if (!can.color && !can.size && !can.dashed) return []
+  if (!can.color && !can.size && !can.dashed) return undefined
   const row = el('div', { class: 'row opts' })
   if (can.color) {
     for (const color of SHOT_COLORS) {
@@ -608,7 +658,7 @@ function optionsRow(): HTMLElement[] {
   if (can.dashed) {
     row.append(separator(), el('button', { class: `b${style.dashed ? ' on' : ''}`, title: t('shot.dashed'), onclick: () => setStyle({ dashed: !style.dashed }) }, el('span', { class: 'dash' })))
   }
-  return [row]
+  return row
 }
 
 function placeBar(): void {
@@ -824,6 +874,11 @@ function select(id: number | undefined): void {
 
 function startDraw(chosen: Tool, p: Point): void {
   const id = nextId++
+  // Drawing is what the second row was opened for: it goes, and comes back by the swatch.
+  if (optionsOpen) {
+    optionsOpen = false
+    drawBar()
+  }
   switch (chosen) {
     case 'text':
       openWriting(p)
@@ -1257,6 +1312,7 @@ function receive(frame: Extract<ToView, { type: 'shotFrame' }>): void {
   cursorOn = frame.cursorOn
   loupeAt = undefined
   here = false
+  optionsOpen = false
   // A frame taken over this one (Print Screen again) comes into the same page: nothing of the last one stays.
   if (probeLater !== undefined) clearTimeout(probeLater)
   probeLater = undefined

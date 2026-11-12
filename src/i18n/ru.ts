@@ -800,6 +800,7 @@ export const ru: Record<Key, Phrase> = {
   'shot.size.1': 'Средне',
   'shot.size.2': 'Толсто',
   'shot.dashed': 'Пунктир',
+  'shot.style': 'Цвет и размер',
   'shot.copied': 'Скопировано',
   'shot.saved': 'Сохранено',
   'shot.pickFolder': 'Куда сохранять снимки',
