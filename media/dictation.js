@@ -272,6 +272,7 @@
     "mic.denied": "No access to the microphone: allow it in Windows Settings \u2192 Privacy \u2192 Microphone",
     "mic.none": "No microphone found",
     "mic.busy": "Another program holds the microphone",
+    "mic.captureFailed": "Could not finish capturing the sound. Please dictate the phrase again.",
     "dict.type": "Type by voice",
     "dict.english": "Type by voice into English",
     "dict.note": "Voice note",
@@ -1810,6 +1811,7 @@
     "mic.denied": "\u041D\u0435\u0442 \u0434\u043E\u0441\u0442\u0443\u043F\u0430 \u043A \u043C\u0438\u043A\u0440\u043E\u0444\u043E\u043D\u0443: \u0440\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u0435 \u0435\u0433\u043E \u0432 \u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u0430\u0445 Windows \u2192 \u041A\u043E\u043D\u0444\u0438\u0434\u0435\u043D\u0446\u0438\u0430\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u2192 \u041C\u0438\u043A\u0440\u043E\u0444\u043E\u043D",
     "mic.none": "\u041C\u0438\u043A\u0440\u043E\u0444\u043E\u043D \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D",
     "mic.busy": "\u041C\u0438\u043A\u0440\u043E\u0444\u043E\u043D \u0437\u0430\u043D\u044F\u0442 \u0434\u0440\u0443\u0433\u043E\u0439 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u043E\u0439",
+    "mic.captureFailed": "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C \u0437\u0430\u043F\u0438\u0441\u044C \u0437\u0432\u0443\u043A\u0430. \u041F\u0440\u043E\u0434\u0438\u043A\u0442\u0443\u0439\u0442\u0435 \u0444\u0440\u0430\u0437\u0443 \u0435\u0449\u0451 \u0440\u0430\u0437.",
     "dict.type": "\u041F\u0435\u0447\u0430\u0442\u0430\u0442\u044C \u0433\u043E\u043B\u043E\u0441\u043E\u043C",
     "dict.english": "\u041F\u0435\u0447\u0430\u0442\u0430\u0442\u044C \u0433\u043E\u043B\u043E\u0441\u043E\u043C \u0441 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u043E\u043C",
     "dict.note": "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u0433\u043E\u043B\u043E\u0441\u043E\u043C",
@@ -3348,6 +3350,7 @@
     "mic.denied": "\u041D\u0435\u043C\u0430\u0454 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u0434\u043E \u043C\u0456\u043A\u0440\u043E\u0444\u043E\u043D\u0430: \u0434\u043E\u0437\u0432\u043E\u043B\u044C\u0442\u0435 \u0439\u043E\u0433\u043E \u0432 \u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u0430\u0445 Windows \u2192 \u041A\u043E\u043D\u0444\u0456\u0434\u0435\u043D\u0446\u0456\u0439\u043D\u0456\u0441\u0442\u044C \u2192 \u041C\u0456\u043A\u0440\u043E\u0444\u043E\u043D",
     "mic.none": "\u041C\u0456\u043A\u0440\u043E\u0444\u043E\u043D \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E",
     "mic.busy": "\u041C\u0456\u043A\u0440\u043E\u0444\u043E\u043D \u0437\u0430\u0439\u043D\u044F\u0442\u0438\u0439 \u0456\u043D\u0448\u043E\u044E \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043E\u044E",
+    "mic.captureFailed": "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438 \u0437\u0430\u043F\u0438\u0441 \u0437\u0432\u0443\u043A\u0443. \u041F\u0440\u043E\u0434\u0438\u043A\u0442\u0443\u0439\u0442\u0435 \u0444\u0440\u0430\u0437\u0443 \u0449\u0435 \u0440\u0430\u0437.",
     "dict.type": "\u0414\u0440\u0443\u043A\u0443\u0432\u0430\u0442\u0438 \u0433\u043E\u043B\u043E\u0441\u043E\u043C",
     "dict.english": "\u0414\u0440\u0443\u043A\u0443\u0432\u0430\u0442\u0438 \u0433\u043E\u043B\u043E\u0441\u043E\u043C \u0437 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434\u043E\u043C",
     "dict.note": "\u041D\u043E\u0442\u0430\u0442\u043A\u0430 \u0433\u043E\u043B\u043E\u0441\u043E\u043C",
@@ -4936,6 +4939,7 @@
   var STREAM_CHUNK = 4e3;
   var LEVEL_SPAN = 800;
   var LEVELS_KEPT = 60;
+  var FLUSH_WAIT_MS = 1500;
   var StreamRecorder = class {
     constructor(call, session, expected, onStatus2) {
       this.call = call;
@@ -4946,6 +4950,20 @@
     startedAt = 0;
     stream;
     context;
+    tap;
+    source;
+    flushed;
+    flushFailed;
+    captureError;
+    cancelled = false;
+    accepting = true;
+    finishing;
+    captured = 0;
+    ready;
+    startFailed;
+    get capturedSamples() {
+      return this.captured;
+    }
     kept = [];
     waiting = new Int16Array(STREAM_CHUNK);
     filled = 0;
@@ -4961,18 +4979,58 @@
       return this.call({ call: "speech", method, route, body });
     }
     async start() {
-      this.stream = await microphone(true);
-      this.startedAt = Date.now();
-      this.context = new AudioContext({ sampleRate: 16e3 });
-      await this.context.audioWorklet.addModule("pcm-worklet.js");
-      const source = this.context.createMediaStreamSource(this.stream);
-      const tap = new AudioWorkletNode(this.context, "pcm-tap");
-      tap.port.onmessage = (event) => this.take(event.data);
-      const mute = this.context.createGain();
-      mute.gain.value = 0;
-      source.connect(tap).connect(mute).connect(this.context.destination);
+      try {
+        this.stream = await microphone(true);
+        if (this.cancelled) return this.release();
+        this.context = new AudioContext({ sampleRate: 16e3 });
+        await this.context.audioWorklet.addModule("pcm-worklet.js");
+        if (this.cancelled) return this.release();
+        this.source = this.context.createMediaStreamSource(this.stream);
+        this.tap = new AudioWorkletNode(this.context, "pcm-tap");
+        const started = new Promise((resolve, reject) => {
+          const timer2 = setTimeout(() => reject(new Error(t("mic.captureFailed"))), 5e3);
+          this.ready = () => {
+            clearTimeout(timer2);
+            resolve();
+          };
+          this.startFailed = (error) => {
+            clearTimeout(timer2);
+            reject(error);
+          };
+        });
+        void started.catch(() => void 0);
+        this.tap.port.onmessage = (event) => {
+          if (!this.accepting) return;
+          if (event.data instanceof Float32Array) this.take(event.data);
+          else if (event.data?.type === "ready") this.ready?.();
+          else if (event.data?.type === "flushed") {
+            if (event.data.samples === this.captured) this.flushed?.();
+            else this.flushFailed?.(new Error(t("mic.captureFailed")));
+          }
+        };
+        this.tap.onprocessorerror = () => {
+          this.captureError = new Error(t("mic.captureFailed"));
+          this.startFailed?.(this.captureError);
+          this.flushFailed?.(this.captureError);
+        };
+        const mute = this.context.createGain();
+        mute.gain.value = 0;
+        this.source.connect(this.tap).connect(mute).connect(this.context.destination);
+        await this.context.resume();
+        await started.finally(() => {
+          this.ready = void 0;
+          this.startFailed = void 0;
+        });
+        if (this.cancelled) return this.release();
+        this.startedAt = Date.now();
+      } catch (error) {
+        this.startFailed?.(error instanceof Error ? error : new Error(String(error)));
+        this.release();
+        throw error;
+      }
     }
     take(samples) {
+      this.captured += samples.length;
       for (let i = 0; i < samples.length; i++) {
         const v = samples[i];
         this.spanSum += v * v;
@@ -4999,10 +5057,12 @@
         const bytes = new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength);
         for (let attempt = 0; attempt < RETRIES; attempt++) {
           const r = await this.speech("PUT", `/dictate/sessions/${this.session}/${seq}`, bytes);
-          if (r.ok) return this.onStatus(r.data);
+          if (r.ok) return this.cancelled ? void 0 : this.onStatus(r.data);
           if (r.status === 404) break;
           await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
         }
+        this.broken = true;
+      }).catch(() => {
         this.broken = true;
       });
     }
@@ -5020,13 +5080,45 @@
       return this.startedAt ? (Date.now() - this.startedAt) / 1e3 : 0;
     }
     /** Stops, sends the tail, and waits for the whole text. */
-    async finish() {
+    finish() {
+      return this.finishing ??= this.finishOnce().finally(() => this.release());
+    }
+    checkCancelled() {
+      if (this.cancelled) throw new DOMException("Recording cancelled", "AbortError");
+    }
+    async drain() {
+      this.checkCancelled();
+      if (this.captureError) throw this.captureError;
+      if (!this.tap) throw new Error(t("mic.captureFailed"));
+      this.source?.disconnect();
+      await new Promise((resolve, reject) => {
+        const timer2 = setTimeout(() => reject(new Error(t("mic.captureFailed"))), FLUSH_WAIT_MS);
+        this.flushed = () => {
+          clearTimeout(timer2);
+          resolve();
+        };
+        this.flushFailed = (error) => {
+          clearTimeout(timer2);
+          reject(error);
+        };
+        this.tap.port.postMessage("flush");
+      }).finally(() => {
+        this.flushed = void 0;
+        this.flushFailed = void 0;
+      });
+      this.checkCancelled();
       this.release();
+    }
+    async finishOnce() {
+      await this.drain();
       const tail = this.waiting.slice(0, this.filled);
+      this.filled = 0;
       this.kept.push(tail);
       await this.uploads;
+      this.checkCancelled();
       if (!this.broken) {
         const r2 = await this.speech("POST", `/dictate/sessions/${this.session}/finish`, new Uint8Array(tail.buffer));
+        this.checkCancelled();
         if (r2.ok) return r2.data;
       }
       const all = new Int16Array(this.kept.reduce((n, c) => n + c.length, 0));
@@ -5034,17 +5126,31 @@
       for (const c of this.kept) all.set(c, at), at += c.length;
       const expected = this.expected.map(encodeURIComponent).join(",");
       const r = await this.speech("POST", `/dictate?language=auto&expected=${expected}&strict=1&format=pcm16`, new Uint8Array(all.buffer));
+      this.checkCancelled();
       if (!r.ok) throw new Error(r.error);
       return r.data;
     }
     async cancel() {
-      this.release();
+      this.cancelled = true;
       this.broken = true;
+      this.startFailed?.(new DOMException("Recording cancelled", "AbortError"));
+      this.flushFailed?.(new DOMException("Recording cancelled", "AbortError"));
+      this.release();
+      this.kept = [];
       await this.speech("DELETE", `/dictate/sessions/${this.session}`);
     }
     release() {
+      this.accepting = false;
+      if (this.tap) {
+        this.tap.port.onmessage = null;
+        this.tap.onprocessorerror = null;
+        this.tap.port.close();
+      }
+      this.tap = void 0;
+      this.source?.disconnect();
+      this.source = void 0;
       for (const track of this.stream?.getTracks() ?? []) track.stop();
-      void this.context?.close();
+      void this.context?.close().catch(() => void 0);
       this.stream = void 0;
       this.context = void 0;
     }
@@ -5204,14 +5310,22 @@
     mode = next;
     dropped = false;
     recorder = mode === "note" ? new ChunkRecorder(host.call, { source: "note", slice: 2e3 }) : session ? new StreamRecorder(host.call, session, expected, onStatus) : new PhraseRecorder();
-    recording();
+    said = "";
+    fetching = false;
+    quiet();
+    show("busy", wordsOf("", t("talk.startingMic")), el("span", { class: "spin" }), el("span", { class: "what" }, t(TITLES[mode])));
+    postHeight(true);
+    const pending = recorder;
     try {
-      starting = recorder.start();
+      starting = pending.start();
       await starting;
+      if (!dropped && recorder === pending) recording();
     } catch (error) {
-      recorder = void 0;
-      quiet();
-      host.post({ type: "dictationFailed", message: micTrouble(error) });
+      if (recorder === pending) {
+        recorder = void 0;
+        quiet();
+        if (!dropped) host.post({ type: "dictationFailed", message: micTrouble(error) });
+      }
     }
   }
   async function stop() {
@@ -5237,6 +5351,16 @@
   }
   var busy;
   async function cancel() {
+    dropped = true;
+    quiet();
+    if (recorder instanceof StreamRecorder) {
+      const pending = recorder;
+      recorder = void 0;
+      busy = void 0;
+      await pending.cancel();
+      host.post({ type: "dictationCancelled" });
+      return;
+    }
     await starting.catch(() => void 0);
     quiet();
     const r = recorder ?? busy;

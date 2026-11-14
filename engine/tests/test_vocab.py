@@ -49,6 +49,24 @@ def test_an_empty_vocabulary_changes_nothing():
     assert vocab.correct_segments(segments, []) is segments
 
 
+@pytest.mark.parametrize("text,term", [
+    ("The coder fixed the bug.", "Codex"),
+    ("gamma rays", "Gemma"),
+    ("The coders fixed the bug.", "Codex"),
+])
+def test_ordinary_words_are_not_fuzzy_names(text, term):
+    assert vocab.correct(text, [{"word": term, "heard": []}]) == text
+
+
+def test_explicit_heard_form_wins_even_when_it_is_an_ordinary_word():
+    assert vocab.correct("open coder", [{"word": "Codex", "heard": ["coder"]}]) == "open Codex"
+
+
+def test_timed_ordinary_words_are_protected_too():
+    words = [{"start": 0, "end": 1, "word": " gamma"}, {"start": 1, "end": 2, "word": " rays"}]
+    assert vocab.correct_words(words, [{"word": "Gemma", "heard": []}]) == words
+
+
 def test_distance_counts_a_swap_as_one():
     assert vocab.distance("paxmiizer", "paximizer", 2) == 1
     assert vocab.distance("abcdef", "uvwxyz", 2) == 3

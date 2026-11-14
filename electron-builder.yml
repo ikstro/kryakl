@@ -43,6 +43,8 @@ asarUnpack:
   - media/fix.wav
   - media/switch/**
   - engine/**
+  # Python's vocabulary guard reads the same ordinary-word lists as the keyboard helper.
+  - media/layout/*.txt
   - extension/**
 # koffi ships prebuilt for Node-API; nothing to rebuild for Electron.
 npmRebuild: false

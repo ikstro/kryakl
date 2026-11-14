@@ -218,6 +218,7 @@ const STREAM_CHUNK = 4000
 const LEVEL_SPAN = 800
 /** Levels kept for a page that has not taken them: three seconds. */
 const LEVELS_KEPT = 60
+const FLUSH_WAIT_MS = 1500
 
 export type StreamStatus = { pending: number; heard: string; model?: { state: string; progress?: number } }
 export type Heard = { text: string; language: string; sure: number }
@@ -232,6 +233,19 @@ export class StreamRecorder {
   startedAt = 0
   private stream: MediaStream | undefined
   private context: AudioContext | undefined
+  private tap: AudioWorkletNode | undefined
+  private source: MediaStreamAudioSourceNode | undefined
+  private flushed: (() => void) | undefined
+  private flushFailed: ((error: Error) => void) | undefined
+  private captureError: Error | undefined
+  private cancelled = false
+  private accepting = true
+  private finishing: Promise<Heard> | undefined
+  private captured = 0
+  private ready: (() => void) | undefined
+  private startFailed: ((error: Error) => void) | undefined
+
+  get capturedSamples(): number { return this.captured }
   private kept: Int16Array[] = []
   private waiting = new Int16Array(STREAM_CHUNK)
   private filled = 0
@@ -256,20 +270,50 @@ export class StreamRecorder {
   }
 
   async start(): Promise<void> {
-    this.stream = await microphone(true)
-    this.startedAt = Date.now()
-    this.context = new AudioContext({ sampleRate: 16000 })
-    await this.context.audioWorklet.addModule('pcm-worklet.js')
-    const source = this.context.createMediaStreamSource(this.stream)
-    const tap = new AudioWorkletNode(this.context, 'pcm-tap')
-    tap.port.onmessage = (event: MessageEvent<Float32Array>) => this.take(event.data)
-    // A node is run only when something listens to it: a silent gain to the speakers does.
-    const mute = this.context.createGain()
-    mute.gain.value = 0
-    source.connect(tap).connect(mute).connect(this.context.destination)
+    try {
+      this.stream = await microphone(true)
+      if (this.cancelled) return this.release()
+      this.context = new AudioContext({ sampleRate: 16000 })
+      await this.context.audioWorklet.addModule('pcm-worklet.js')
+      if (this.cancelled) return this.release()
+      this.source = this.context.createMediaStreamSource(this.stream)
+      this.tap = new AudioWorkletNode(this.context, 'pcm-tap')
+      const started = new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(t('mic.captureFailed'))), 5000)
+        this.ready = () => { clearTimeout(timer); resolve() }
+        this.startFailed = error => { clearTimeout(timer); reject(error) }
+      })
+      void started.catch(() => undefined)
+      this.tap.port.onmessage = (event: MessageEvent<Float32Array | { type: string; samples: number }>) => {
+        if (!this.accepting) return
+        if (event.data instanceof Float32Array) this.take(event.data)
+        else if (event.data?.type === 'ready') this.ready?.()
+        else if (event.data?.type === 'flushed') {
+          if (event.data.samples === this.captured) this.flushed?.()
+          else this.flushFailed?.(new Error(t('mic.captureFailed')))
+        }
+      }
+      this.tap.onprocessorerror = () => {
+        this.captureError = new Error(t('mic.captureFailed'))
+        this.startFailed?.(this.captureError)
+        this.flushFailed?.(this.captureError)
+      }
+      const mute = this.context.createGain()
+      mute.gain.value = 0
+      this.source.connect(this.tap).connect(mute).connect(this.context.destination)
+      await this.context.resume()
+      await started.finally(() => { this.ready = undefined; this.startFailed = undefined })
+      if (this.cancelled) return this.release()
+      this.startedAt = Date.now()
+    } catch (error) {
+      this.startFailed?.(error instanceof Error ? error : new Error(String(error)))
+      this.release()
+      throw error
+    }
   }
 
   private take(samples: Float32Array): void {
+    this.captured += samples.length
     for (let i = 0; i < samples.length; i++) {
       const v = samples[i]!
       this.spanSum += v * v
@@ -298,12 +342,12 @@ export class StreamRecorder {
       const bytes = new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength)
       for (let attempt = 0; attempt < RETRIES; attempt++) {
         const r = await this.speech<StreamStatus>('PUT', `/dictate/sessions/${this.session}/${seq}`, bytes)
-        if (r.ok) return this.onStatus(r.data)
+        if (r.ok) return this.cancelled ? undefined : this.onStatus(r.data)
         if (r.status === 404) break
         await new Promise(resolve => setTimeout(resolve, 300 * (attempt + 1)))
       }
       this.broken = true
-    })
+    }).catch(() => { this.broken = true })
   }
 
   /** How loud the latest 50 ms were, 0…1. */
@@ -323,13 +367,39 @@ export class StreamRecorder {
   }
 
   /** Stops, sends the tail, and waits for the whole text. */
-  async finish(): Promise<Heard> {
+  finish(): Promise<Heard> {
+    return this.finishing ??= this.finishOnce().finally(() => this.release())
+  }
+
+  private checkCancelled(): void {
+    if (this.cancelled) throw new DOMException('Recording cancelled', 'AbortError')
+  }
+
+  private async drain(): Promise<void> {
+    this.checkCancelled()
+    if (this.captureError) throw this.captureError
+    if (!this.tap) throw new Error(t('mic.captureFailed'))
+    this.source?.disconnect()
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(t('mic.captureFailed'))), FLUSH_WAIT_MS)
+      this.flushed = () => { clearTimeout(timer); resolve() }
+      this.flushFailed = error => { clearTimeout(timer); reject(error) }
+      this.tap!.port.postMessage('flush')
+    }).finally(() => { this.flushed = undefined; this.flushFailed = undefined })
+    this.checkCancelled()
     this.release()
+  }
+
+  private async finishOnce(): Promise<Heard> {
+    await this.drain()
     const tail = this.waiting.slice(0, this.filled)
+    this.filled = 0
     this.kept.push(tail)
     await this.uploads
+    this.checkCancelled()
     if (!this.broken) {
       const r = await this.speech<Heard>('POST', `/dictate/sessions/${this.session}/finish`, new Uint8Array(tail.buffer))
+      this.checkCancelled()
       if (r.ok) return r.data
     }
     // The session failed: the whole sound at once, as before sessions.
@@ -338,19 +408,29 @@ export class StreamRecorder {
     for (const c of this.kept) (all.set(c, at), (at += c.length))
     const expected = this.expected.map(encodeURIComponent).join(',')
     const r = await this.speech<Heard>('POST', `/dictate?language=auto&expected=${expected}&strict=1&format=pcm16`, new Uint8Array(all.buffer))
+    this.checkCancelled()
     if (!r.ok) throw new Error(r.error)
     return r.data
   }
 
   async cancel(): Promise<void> {
-    this.release()
+    this.cancelled = true
     this.broken = true
+    this.startFailed?.(new DOMException('Recording cancelled', 'AbortError'))
+    this.flushFailed?.(new DOMException('Recording cancelled', 'AbortError'))
+    this.release()
+    this.kept = []
     await this.speech('DELETE', `/dictate/sessions/${this.session}`)
   }
 
   private release(): void {
+    this.accepting = false
+    if (this.tap) { this.tap.port.onmessage = null; this.tap.onprocessorerror = null; this.tap.port.close() }
+    this.tap = undefined
+    this.source?.disconnect()
+    this.source = undefined
     for (const track of this.stream?.getTracks() ?? []) track.stop()
-    void this.context?.close()
+    void this.context?.close().catch(() => undefined)
     this.stream = undefined
     this.context = undefined
   }

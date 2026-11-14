@@ -326,7 +326,18 @@ async def dictate(request: Request, language: str = "auto", expected: str = "", 
     return {"text": text, "language": spoken, "sure": round(sure, 3), "seconds": round(seconds, 2), "took": round(time.perf_counter() - started, 2)}
 
 
-def _piece(sound: np.ndarray, language: str | None, expected: list, before: str, strict: bool = False) -> tuple[str, str, float]:
+def _execution(transcriber) -> dict:
+    return {"name": transcriber.name, "backend": asr.backend(transcriber.name), "device": transcriber.device, "compute": transcriber.compute, "state": "ready"}
+
+
+def _prepare_session() -> dict:
+    with _dictating:
+        transcriber, _ = worker.dictation_model()
+        transcriber.warm()
+        return _execution(transcriber)
+
+
+def _piece(sound: np.ndarray, language: str | None, expected: list, before: str, strict: bool = False) -> tuple:
     """One piece of a dictation heard while it is spoken (stream.py), by dictation's model.
 
     Its text stays as recognized: the vocabulary is applied to the whole text at the finish."""
@@ -337,7 +348,7 @@ def _piece(sound: np.ndarray, language: str | None, expected: list, before: str,
         started = time.perf_counter()
         out = transcriber.dictate(sound, language, expected, hotwords(), beam, before, strict=strict)
         worker.bench.phrase(transcriber.name, transcriber.device, transcriber.compute, audio.duration(sound), time.perf_counter() - started)
-        return out
+        return (*out, _execution(transcriber))
 
 
 def session_or_404(id: str) -> Session:
@@ -356,8 +367,7 @@ def open_session(body: dict = Body(default={})):
     kind = (asr.backend(entry["model"]) or "whisper", device)
     # stream.py calls a recognizer with (sound, language, expected, before) only; strictness rides along here.
     recognize = functools.partial(_piece, strict=body.get("strict") is True)
-    session = sessions.open(Session(recognize, kind, expected, language))
-    threading.Thread(target=_prepare, name="kryakl-prepare", daemon=True).start()
+    session = sessions.open(Session(recognize, kind, expected, language, prepare=_prepare_session))
     return {"id": session.id, "model": planned("dictation")}
 
 
@@ -365,7 +375,7 @@ def open_session(body: dict = Body(default={})):
 async def session_chunk(id: str, seq: int, request: Request):
     s = session_or_404(id)
     s.add(seq, await request.body())
-    return {**s.status(), "model": planned("dictation")}
+    return {**s.status(), "model": s.execution or planned("dictation")}
 
 
 @app.post("/dictate/sessions/{id}/finish")
@@ -388,7 +398,7 @@ async def session_finish(id: str, request: Request):
         "dictation: %.1f s of sound by %s on %s (%s), %.2f s after the key (%.1f s of sound still waiting then), "
         "recognizing %.2f s in all, the slowest piece %.2f s; pieces %d, guesses %d (%d kept), previews %d",
         # The plan's model, then what this phrase really ran on: the card busy gives way to a compact model or the processor (jobs.py _load).
-        result["seconds"], planned("dictation") or "?", s.kind[1], f"ran: {worker.gave_way.get('dictation') or 'as planned'}", t.get("wait", 0.0), t.get("behind", 0.0),
+        result["seconds"], result.get("executions") or planned("dictation") or "?", s.kind[1], f"ran: {worker.gave_way.get('dictation') or 'as planned'}", t.get("wait", 0.0), t.get("behind", 0.0),
         result["took"], t.get("slowest", 0.0), t.get("piece", 0), t.get("guess", 0), t.get("kept", 0), t.get("preview", 0),
     )
     return result

@@ -198,6 +198,32 @@ def test_parakeet_takes_short_pieces():
     assert out["language"] == "" and out["sure"] == 0
 
 
+def test_real_cpu_fallback_configures_the_session_before_cutting():
+    r = Recognizer(language="")
+    execution = {"name": "parakeet-tdt-0.6b-v3", "backend": "parakeet", "device": "cpu", "compute": "int8", "state": "ready"}
+    s = stream.Session(r, ("whisper", "cuda"), ["ru", "en"], speech=fake_speech, prepare=lambda: execution)
+    assert wait(lambda: s.kind == ("parakeet", "cpu"))
+    send(s, np.concatenate([tone(2), silence(0.8), tone(2), silence(0.8), tone(1)]), pace=0.025)
+    out = s.finish(b"")
+    assert len(out["text"].split()) == 3
+    assert out["executions"] == [execution]
+    assert s.shortest == 1.5 and s.preview_every == 2
+
+
+def test_actual_execution_changes_are_recorded_without_losing_text():
+    cpu = {"name": "small", "backend": "whisper", "device": "cpu", "compute": "int8", "state": "ready"}
+
+    def recognize(sound, language, expected, before):
+        return "Фраза.", "ru", 0.9, cpu
+
+    s = make(recognize, kind=("whisper", "cuda"))
+    send(s, np.concatenate([tone(2), silence(0.8)]))
+    out = s.finish(b"")
+    assert out["text"] == "Фраза."
+    assert out["executions"] == [cpu]
+    assert s.kind == ("whisper", "cpu") and s.preview_every is None
+
+
 def test_talking_without_pauses_still_shows_the_words_where_it_is_cheap():
     r = Recognizer(language="")
     s = make(r, kind=("parakeet", "cpu"))

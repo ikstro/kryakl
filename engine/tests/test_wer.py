@@ -1,4 +1,6 @@
-from quality.wer import edits, normalize, score, wrong_language
+import pytest
+
+from quality.wer import edits, format_errors, normalize, score, wrong_language
 
 
 def test_normalize_ignores_case_punctuation_yo_and_apostrophes():
@@ -18,6 +20,20 @@ def test_edits_counts_each_kind_once():
 def test_score_is_errors_over_words_said():
     assert score("Привет, мир.", "привет мир") == (0, 2)
     assert score("hello world", "") == (2, 2)
+
+
+@pytest.mark.parametrize("ref,hyp,errors", [
+    ("Привет, мир.", "привет мир", (1, 1)),
+    ("Як справи?", "Як справи.", (0, 1)),
+    ("How are you?", "How are you?", (0, 0)),
+    ("«Готово!»", '"Готово!"', (0, 0)),
+    ("Ещё…", "Ещё.", (0, 1)),
+    ("имя файла", "Имя файла.", (1, 1)),
+    ("Новая фраза.", "", (1, 1)),
+    ("", "", (0, 0)),
+])
+def test_format_errors_catch_what_word_errors_ignore(ref, hyp, errors):
+    assert format_errors(ref, hyp) == errors
 
 
 def test_wrong_language_catches_a_translation_not_a_word():

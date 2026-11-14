@@ -47,6 +47,26 @@ describe('tidyEdit', () => {
 describe('guardEdit', () => {
   const said = 'ну в общем давай наверное созвонимся завтра в среду нет в четверг'
 
+  it('rejects changed numbers, account details, dates and negations', () => {
+    expect(guardEdit('Отправь 1500 гривен на счёт 12345', 'Отправь 1500 гривен на счёт 12346.', 'clean')).toBe('number')
+    expect(guardEdit('Встреча 15.11.2026 в 10:30', 'Встреча 16.11.2026 в 10:30.', 'business')).toBe('number')
+    expect(guardEdit('Пожалуйста не удаляй резервную копию проекта', 'Пожалуйста удаляй резервную копию проекта.', 'clean')).toBe('negation')
+    expect(guardEdit('Do not remove the backup', 'Do remove the backup.', 'aiTask')).toBe('negation')
+    expect(guardEdit("Don't remove the backup", 'Do not remove the backup.', 'clean')).toBe('')
+  })
+
+  it('allows an explicit numeric correction, but not invented or removed values', () => {
+    expect(guardEdit('Отправь 1500, нет, 1600 гривен', 'Отправь 1600 гривен.', 'clean')).toBe('')
+    expect(guardEdit('Send 1500, no, 1600 dollars', 'Send 1600 dollars.', 'clean')).toBe('')
+    expect(guardEdit('Send 1500 dollars', 'Send 1600 dollars.', 'own')).toBe('number')
+  })
+
+  it('keeps paths, URLs and command flags', () => {
+    expect(guardEdit('Открой C:\\work\\draft.md и прочитай файл', 'Открой C:\\work\\done.md и прочитай файл', 'clean')).toBe('literal')
+    expect(guardEdit('Use --no-cache for this command', 'Use --cache for this command', 'clean')).toBe('literal')
+    expect(guardEdit('Open https://example.com/draft please', 'Open https://example.com/done please', 'clean')).toBe('literal')
+  })
+
   it('takes an edit that stays the phrase', () => {
     expect(guardEdit(said, 'Давай созвонимся завтра в четверг.', 'clean')).toBe('')
   })

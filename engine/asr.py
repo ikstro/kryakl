@@ -232,6 +232,27 @@ def _said(segments, speech: np.ndarray) -> str:
     return phantoms.clean(text, sound, dictation=True)
 
 
+def dictation_context(before: str, hotwords: str, encode, budget: int = 216) -> tuple[str | None, str | None]:
+    """Share Whisper's previous-text token space; keep whole words and whole names."""
+    tail: list[str] = []
+    for word in reversed(before.split()):
+        candidate = " ".join([word, *tail])
+        if len(candidate) > 150 or len(encode(" " + candidate)) > min(96, budget):
+            break
+        tail.insert(0, word)
+    prompt = " ".join(tail)
+    remaining = budget - len(encode(" " + prompt)) if prompt else budget
+    names = hotwords.split(",") if hotwords else []
+    while names and len(encode(" " + ",".join(names))) > remaining:
+        names.pop()
+    hint = ",".join(names).strip()
+    if hint and hotwords.rstrip().endswith(".") and not hint.endswith("."):
+        hint += "."
+        if len(encode(" " + hint)) > remaining:
+            hint = ""
+    return prompt or None, hint or None
+
+
 class Transcriber:
     def __init__(self, workers: int = 1):
         self._model = None
@@ -358,6 +379,16 @@ class Transcriber:
         speech = _speech_only(samples)
         if speech is None:
             return "", language or "", 0.0
+        # faster-whisper puts hotwords in the previous-text prompt. An unfinished list
+        # makes dictation follow its style: with the owner's eight terms, only 9 of 27
+        # Russian phrases ended in punctuation; closing the hint made that 27 of 27.
+        # Punctuate the hint, never the recognized text. This is enabled for turbo
+        # only: a wider model/noise sweep found worse word accuracy for tiny/base;
+        # other models need their own acceptance check (docs/dictation-research-2026-11-14.md).
+        if self.name == "large-v3-turbo":
+            hotwords = hotwords.strip()
+            if hotwords and hotwords[-1] not in ".!?…":
+                hotwords += "."
         try:
             return self._one_pass(speech, language, expected, hotwords, beam, before, strict)
         except (AttributeError, TypeError, KeyError) as error:  # faster-whisper changed underneath
@@ -383,7 +414,8 @@ class Transcriber:
                 language = "en"
         # The options as faster-whisper fills them (thresholds, suppressed tokens…), from a call
         # that only prepares: its segments are a generator that is never run.
-        prompt = before[-150:].strip() or None
+        tokenizer = Tokenizer(model.hf_tokenizer, model.model.is_multilingual, task="transcribe", language=language)
+        prompt, hint = dictation_context(before, hotwords, tokenizer.encode, max(1, model.max_length // 2 - 8))
         _, info = model.transcribe(
             speech[:RATE],
             language=language,
@@ -392,9 +424,8 @@ class Transcriber:
             without_timestamps=True,
             condition_on_previous_text=False,
             vad_filter=False,
-            hotwords=hotwords or None,
+            hotwords=hint,
         )
-        tokenizer = Tokenizer(model.hf_tokenizer, model.model.is_multilingual, task="transcribe", language=language)
         segments = model.generate_segments(features, tokenizer, info.transcription_options, False, encoded)
         return _said(segments, speech), language, sure
 

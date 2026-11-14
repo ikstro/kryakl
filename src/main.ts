@@ -515,8 +515,8 @@ function saveSettings(patch: Partial<Settings>): void {
 }
 
 function applyLoginItem(): void {
-  // A development run would register electron.exe itself.
-  if (!app.isPackaged) return
+  // A development run would register electron.exe; an isolated test must leave the installed app's entry alone.
+  if (!app.isPackaged || TEST_HOME) return
   // Registered under the app's id, the one 2Talker used too: this replaces its entry.
   app.setLoginItemSettings({ openAtLogin: settings.startWithWindows })
   // tu-talk's entry had its own name and points at a program long gone.

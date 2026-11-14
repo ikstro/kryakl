@@ -1,8 +1,9 @@
-"""Scoring a recognized text against what was said: word errors and a wrong language.
+"""Scoring recognized words, language, initial case and the final sentence mark.
 
 Both sides are normalized alike first (lower case, no punctuation, ё as е, one kind of
-apostrophe), so capitals and commas never count as mistakes: dictation is judged by its
-words. Numbers are not spelled out: the bench's phrases have none (sets.py).
+apostrophe), so word errors alone do not measure formatting. Initial case and the
+final sentence mark are scored separately by format_errors. Numbers are not spelled
+out: the bench's phrases have none (sets.py).
 """
 
 from __future__ import annotations
@@ -75,3 +76,19 @@ def score(ref: str, hyp: str) -> tuple[int, int]:
     """(word errors, words said)."""
     r = normalize(ref)
     return edits(r, normalize(hyp)), len(r)
+
+
+def format_errors(ref: str, hyp: str) -> tuple[int, int]:
+    """(initial-case error, final-mark error), each 0 or 1; not internal punctuation.
+
+    A question changed into a statement and a fragment given a full stop are errors
+    too. Closing quotes and brackets do not hide a sentence's final mark.
+    """
+    def first(text: str) -> str:
+        return next((c for c in text if c.isalpha()), "")
+
+    def ending(text: str) -> str:
+        tail = text.rstrip().rstrip("\"'”’»)]}").rstrip()
+        return tail[-1] if tail and tail[-1] in ".!?…" else ""
+
+    return int(first(ref).isupper() != first(hyp).isupper()), int(ending(ref) != ending(hyp))

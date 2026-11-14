@@ -16,12 +16,42 @@ from __future__ import annotations
 import re
 import unicodedata
 from functools import lru_cache
+from pathlib import Path
 
 TOKEN = re.compile(r"\w+(?:['’-]\w+)*")
 SUFFIXES = ("'s", "’s")
 LONGEST_RUN = 3  # tokens in the longest thing a word may be heard as
 WORD_GAP = 1.0  # seconds: two words further apart than this are never one heard name
 FUZZY_SHORTEST = 5  # letters: a shorter word is too easily another word to be guessed at
+LEXICONS = Path(__file__).resolve().parent.parent / "media" / "layout"
+
+
+@lru_cache(maxsize=1)
+def common_words() -> frozenset[str]:
+    """The app's existing word lists, also unpacked beside the packaged engine."""
+    words = set()
+    for code in ("en", "ru", "uk"):
+        file = LEXICONS / f"{code}.txt"
+        if file.is_file():
+            words.update(_norm(w.strip()) for w in file.read_text("utf-8").splitlines() if w.strip())
+    return frozenset(words)
+
+
+def ordinary_word(stem: str) -> bool:
+    words = common_words()
+    if not words:
+        return True  # Without the protection data, explicit aliases still work; guesses wait.
+    if stem in words:
+        return True
+    # Frequent-word lists miss ordinary derived words (coder -> code). This is
+    # protection only, not stemming for replacements: a false match leaves text alone.
+    if stem.isascii() and stem.isalpha():
+        for ending in ("ers", "er", "ing", "ed", "s"):
+            if stem.endswith(ending) and len(stem) > len(ending) + 2:
+                base = stem[:-len(ending)]
+                if base in words or base + "e" in words:
+                    return True
+    return False
 
 
 def _norm(token: str) -> str:
@@ -126,7 +156,7 @@ class Matcher:
 
     def guess(self, stem: str) -> str | None:
         """The one spelling this word is a near miss of, or None (none near, or two equally near)."""
-        if len(stem) < FUZZY_SHORTEST or stem in self.known:
+        if len(stem) < FUZZY_SHORTEST or stem in self.known or ordinary_word(stem):
             return None
         script = _script(stem)
         if script is None:

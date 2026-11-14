@@ -141,14 +141,22 @@ async function start(next: DictationMode, session?: string, expected: string[] =
       : session
         ? new StreamRecorder(host.call, session, expected, onStatus)
         : new PhraseRecorder()
-  recording()
+  said = ''
+  fetching = false
+  quiet()
+  show('busy', wordsOf('', t('talk.startingMic')), el('span', { class: 'spin' }), el('span', { class: 'what' }, t(TITLES[mode])))
+  postHeight(true)
+  const pending = recorder
   try {
-    starting = recorder.start()
+    starting = pending.start()
     await starting
+    if (!dropped && recorder === pending) recording()
   } catch (error) {
-    recorder = undefined
-    quiet()
-    host.post({ type: 'dictationFailed', message: micTrouble(error) })
+    if (recorder === pending) {
+      recorder = undefined
+      quiet()
+      if (!dropped) host.post({ type: 'dictationFailed', message: micTrouble(error) })
+    }
   }
 }
 
@@ -178,6 +186,16 @@ async function stop(): Promise<void> {
 let busy: Recorder | undefined
 
 async function cancel(): Promise<void> {
+  dropped = true
+  quiet()
+  if (recorder instanceof StreamRecorder) {
+    const pending = recorder
+    recorder = undefined
+    busy = undefined
+    await pending.cancel()
+    host.post({ type: 'dictationCancelled' })
+    return
+  }
   await starting.catch(() => undefined)
   quiet()
   const r = recorder ?? busy

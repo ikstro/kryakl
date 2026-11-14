@@ -919,9 +919,22 @@ async function badgeShots(theme: 'dark' | 'light'): Promise<void> {
     if (h) w.setSize(360, Math.max(64, Math.min(180, h)))
     await sleep(250)
   }
+  // Hold the fake microphone so the real startup state can be inspected in every language.
+  await js(w, `(() => {
+    const get = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
+    navigator.mediaDevices.getUserMedia = options => new Promise((resolve, reject) => {
+      window.releaseTestMic = () => get(options).then(resolve, reject)
+    })
+  })()`)
   send(w, { type: 'dictation', command: 'start', mode: 'type', key: 'Control+Alt+D', session: 's1', expected: ['ru'] })
+  await fit()
+  if (!await js(w, `document.querySelector('#badge').classList.contains('busy')`)) throw new Error('Microphone startup must stay busy')
+  await sleep(400)
+  await shot(w, `badge-${theme}-starting`)
+  await js(w, `window.releaseTestMic()`)
   await sleep(900)
   await fit()
+  if (!await js(w, `document.querySelector('#badge').classList.contains('rec')`)) throw new Error('Microphone did not become ready')
   await shot(w, `badge-${theme}-listening`)
   // Half a second on: the dot blinks, so one of the two has it off.
   await sleep(500)
@@ -946,12 +959,15 @@ async function badgeShots(theme: 'dark' | 'light'): Promise<void> {
 
 app.whenReady().then(async () => {
   try {
-    if (process.env.SHOTS !== 'shot') {
+    if (process.env.SHOTS !== 'shot' && process.env.SHOTS !== 'dictation') {
       await cardShots('dark')
       await cardShots('light')
     }
     // SHOTS=card: the card alone; SHOTS=tray: the tray panel; SHOTS=menu: the menu on one key; SHOTS=shot: a screenshot's page alone; SHOTS=daily: the card, the tray panel, the menu, the badge, the talk window and the setup.
-    if (process.env.SHOTS === 'shot') {
+    if (process.env.SHOTS === 'dictation') {
+      await badgeShots('dark')
+      await badgeShots('light')
+    } else if (process.env.SHOTS === 'shot') {
       await editorShots('dark')
       await editorShots('light')
       await shotShots('dark')

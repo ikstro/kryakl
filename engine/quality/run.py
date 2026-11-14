@@ -47,7 +47,7 @@ import asr  # noqa: E402
 import settings  # noqa: E402
 from audio import RATE  # noqa: E402
 from quality import conditions  # noqa: E402
-from quality.wer import score, wrong_language  # noqa: E402
+from quality.wer import format_errors, score, wrong_language  # noqa: E402
 
 REPORT = ENGINE.parent / "docs" / "speech-quality.md"
 REAL_MODELS = settings.MODELS_DIR
@@ -201,7 +201,7 @@ def _label(key) -> str:
 def table(items: list[dict]) -> str:
     langs = [lang for lang in ("ru", "uk", "en") if any(i["lang"] == lang for i in items)]
     conds = [c for c in conditions.CONDITIONS if any(i["cond"] == c for i in items)]
-    head = ["Model"] + langs + conds + ["all", "wrong lang", "s / phrase", "p90 s"]
+    head = ["Model"] + langs + conds + ["all", "wrong lang", "case errors", "end errors", "s / phrase", "p90 s"]
     if any(i["mode"] == "stream" for i in items):
         head += ["tail s", "tail max"]
     lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
@@ -211,6 +211,8 @@ def table(items: list[dict]) -> str:
         cells += [f"{_wer([i for i in group if i['lang'] == lang]):.1f}" for lang in langs]
         cells += [f"{_wer([i for i in group if i['cond'] == c]):.1f}" for c in conds]
         cells += [f"**{_wer(group):.1f}**", f"{sum(1 for i in group if i['wrong'])} / {len(group)}",
+                  f"{sum(format_errors(i['ref'], i['hyp'])[0] for i in group)} / {len(group)}",
+                  f"{sum(format_errors(i['ref'], i['hyp'])[1] for i in group)} / {len(group)}",
                   f"{statistics.mean(took):.2f}", f"{took[int(0.9 * (len(took) - 1))]:.2f}"]
         if "tail s" in head:
             tails = [i["tail"] for i in group if "tail" in i]

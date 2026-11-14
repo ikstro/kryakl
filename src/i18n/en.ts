@@ -284,6 +284,7 @@ export const en = {
   'mic.denied': 'No access to the microphone: allow it in Windows Settings → Privacy → Microphone',
   'mic.none': 'No microphone found',
   'mic.busy': 'Another program holds the microphone',
+  'mic.captureFailed': 'Could not finish capturing the sound. Please dictate the phrase again.',
   'dict.type': 'Type by voice',
   'dict.english': 'Type by voice into English',
   'dict.note': 'Voice note',

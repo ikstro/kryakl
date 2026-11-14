@@ -53,7 +53,7 @@ PREVIEW_SPAN = 6.0
 # on the card the same 37.9 % either way), so the pieces' texts are the phrase.
 
 # (sound, language or None, expected languages, text before) -> (text, language, how sure)
-Recognize = Callable[[np.ndarray, "str | None", list, str], "tuple[str, str, float]"]
+Recognize = Callable[[np.ndarray, "str | None", list, str], "tuple[str, str, float] | tuple[str, str, float, dict]"]
 
 
 def speech_in(samples: np.ndarray) -> list[tuple[int, int]]:
@@ -81,11 +81,14 @@ def quietest(samples: np.ndarray, start: int, end: int) -> int:
 class Session:
     """One dictation: chunks in, pieces recognized in order, the whole text out."""
 
-    def __init__(self, recognize: Recognize, kind: tuple[str, str], expected: list[str], language: str | None = None, speech=speech_in):
+    def __init__(self, recognize: Recognize, kind: tuple[str, str], expected: list[str], language: str | None = None, speech=speech_in, prepare=None):
         self.id = secrets.token_hex(6)
         self._recognize = recognize
         self._speech = speech
         self.kind = kind
+        self._prepare = prepare
+        self.execution: dict | None = None
+        self.executions: list[dict] = []
         self.shortest, self.longest = PIECES.get(kind, (4.0, 25.0))
         self.preview_every = PREVIEW_EVERY.get(kind)
         self._preview: tuple[int, str] | None = None  # (where the open sound ended, its last words) shown meanwhile
@@ -208,6 +211,19 @@ class Session:
 
     # ---------------------------------------------------------------- recognizing
 
+    def _configure(self, execution: dict) -> None:
+        """The recognizer actually loaded, not the plan before a busy-card fallback (lock held)."""
+        kind = (execution["backend"], execution["device"])
+        if kind not in PIECES:
+            raise ValueError("Unknown dictation execution")
+        if self.execution != execution:
+            self.execution = dict(execution)
+            self.executions.append(dict(execution))
+            self._guess = self._preview = None
+        self.kind = kind
+        self.shortest, self.longest = PIECES[kind]
+        self.preview_every = PREVIEW_EVERY.get(kind)
+
     def _next(self) -> tuple[str, int, int] | None:
         """What to recognize now, None when the session is over (lock held; waits)."""
         while True:
@@ -244,6 +260,21 @@ class Session:
     def _run(self) -> None:
         while True:
             with self._lock:
+                if self.over:
+                    return
+            if self._prepare:
+                try:
+                    execution = self._prepare()
+                    with self._lock:
+                        if self.over:
+                            return
+                        self._configure(execution)
+                except Exception as error:
+                    with self._lock:
+                        self.state, self.error = "failed", str(error) or type(error).__name__
+                        self._lock.notify_all()
+                    return
+            with self._lock:
                 job = self._next()
                 if job is None:
                     return
@@ -252,7 +283,8 @@ class Session:
                 before = " ".join(self._texts)
             try:
                 started = time.perf_counter()
-                text, language, sure = self._recognize(sound, self.language, self.expected, before)
+                heard = self._recognize(sound, self.language, self.expected, before)
+                text, language, sure = heard[:3]
                 spent = time.perf_counter() - started
             except Exception as error:
                 log.exception("a piece of dictation failed")
@@ -263,6 +295,8 @@ class Session:
                     self._lock.notify_all()
                 return
             with self._lock:
+                if len(heard) == 4:
+                    self._configure(heard[3])
                 self.took += spent
                 self.runs[job[0]] += 1
                 self.slowest = max(self.slowest, spent)
@@ -324,6 +358,7 @@ class Session:
                 "sure": round(self.sure, 3),
                 "seconds": round(self._length / RATE, 2),
                 "took": round(self.took, 2),
+                **({"executions": self.executions} if self.executions else {}),
             }
             timing = {**self.runs, "behind": round(behind, 2), "slowest": round(self.slowest, 2)}
         out["timing"] = {**timing, "wait": round(time.perf_counter() - pressed, 2)}

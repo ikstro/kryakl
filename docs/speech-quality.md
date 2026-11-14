@@ -14,6 +14,31 @@ What each speech model gets right when Kryakl dictates, measured by `engine/qual
 
 **The numbers**: word errors in percent (substitutions, deletions and insertions over the words said; lower case, no punctuation, ё as е, so only words count); "wrong lang": phrases that came out in another language (another script, or Ukrainian for Russian and back); seconds a phrase, as `/dictate` takes it, with the model loaded and warm. "cpu 8t": the processor with 8 threads (an i9-9900K); "card": an RTX 2080 SUPER, shared with Kryakl running. Raw results with the texts are in `.cache/speech-quality/runs/`, out of git.
 
+Since 2026-11-14, new tables also show **case errors** (the first letter's case differs from the reference) and **end errors** (the final sentence mark differs, including missing punctuation, a question turned into a statement, or a fragment given a full stop). Closing quotes and brackets are ignored. These are counts of phrases, separate from WER; they do not measure punctuation or capitalization inside a phrase. The older tables below measured neither. Always include a nonempty vocabulary when testing dictation formatting: in faster-whisper, it is part of the previous-text prompt and can change the output's style.
+
+## Vocabulary hint: a missing full stop (2026-11-14)
+
+The installed app used Whisper turbo on CUDA with eight vocabulary entries and text editing off. The vocabulary was sent as a comma-separated list with no final mark. After the style sentence was removed on 2026-11-12, that list could be the only previous-text context. In the last 30 unedited type phrases inspected on 2026-11-14, 24 had no terminal mark. This is an observation of current use, not a before/after comparison.
+
+**Controlled test:** the same model, audio, vocabulary and decode settings, changing only whether the vocabulary hint ends in a full stop. 56 clean cases: the owner's 27 Russian and 3 English clips, 8 cached FLEURS clips per language (ru, uk, en), and 2 three-sentence takes joined from the owner's Russian clips. Processing is local; no downloads, app settings or installed files were changed. Raw outputs remain outside git in `.cache/speech-quality/punctuation-ab.json`.
+
+| Measurement | Unfinished vocabulary hint | Hint closed with a full stop |
+| --- | --- | --- |
+| Final sentence mark matches the reference | 31 / 56 | 56 / 56 |
+| First letter uppercase (not a reference-based case score) | 53 / 56 | 55 / 56 |
+| Owner's Russian clips with final marks | 9 / 27 | 27 / 27 |
+| Owner's Russian clips starting uppercase | 25 / 27 | 27 / 27 |
+| Questions kept as questions | 3 / 3 | 3 / 3 |
+| Word errors, all cases | 4.70 % | 4.57 % |
+| Word errors, ru / uk / en | 4.61 / 6.72 / 3.54 % | 4.39 / 6.72 / 3.54 % |
+| Median recognition, warm model | 0.241 s | 0.241 s |
+
+Also compared on those cases: separating every name with a full stop, a punctuation-only initial prompt, the previous style sentence, and no vocabulary. All restored final marks on this set; the old style sentence had more word errors (5.08 %). The chosen change only closes the existing hint: it retains names and adds no example words that a recognizer might reproduce. `Transcriber.dictate` applies it to **large-v3-turbo only**, before both recognition paths; it never appends punctuation to the result, alters the actual previous dictated text, enables text editing, or changes Parakeet. Unit tests cover questions and fragments returned unchanged, empty hints and the fallback path. A subsequent six-model sweep found word regressions for tiny/base, so this is not a global Whisper setting; see [the wider research](dictation-research-2026-11-14.md).
+
+**Stream check:** 10 three-phrase takes from the owner's ru/en clips, through `stream.Session`, fed at 4× real time, with the same eight terms. Final-mark errors 4 → 0 of 10; initial-case errors 0 → 0. Word errors were 11 → 12 over 289 reference words (3.81 → 4.15 %), one additional error in `own-ru-18+3`, so this check does not establish a word-accuracy improvement. Feeding faster than real time also changes recognition/guess scheduling. Raw outputs: `.cache/speech-quality/punctuation-stream-ab.json`. All 249 engine tests passed, including the new hint and formatting regressions.
+
+This test establishes the vocabulary interaction on these recordings; it does not establish perfect punctuation in arbitrary live speech, inside sentences, on every model or under all five noise conditions.
+
 ## What came of it (2026-11-11)
 
 Kept: no style sentence in dictation, quiet sound raised, Parakeet's floor, lone murmurs cut (CLAUDE.md, "Since 2026-11-12: dictation quality"). Words wrong in a hundred, all five conditions, before → after:

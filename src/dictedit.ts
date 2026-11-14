@@ -96,7 +96,36 @@ export function tidyEdit(text: string, style: EditStyle): string {
   return style === 'list' && !edited.includes('\n') ? edited.replace(/^[-–—•]\s+/, '') : edited
 }
 
-export type Doubt = '' | 'empty' | 'length' | 'lost' | 'alphabet' | 'question' | 'term'
+export type Doubt = '' | 'empty' | 'length' | 'lost' | 'alphabet' | 'question' | 'term' | 'number' | 'negation' | 'literal'
+
+/** Explicit corrections with an unambiguous replacement; not a guess about the speaker's intent. */
+function safetySource(text: string): string {
+  const number = String.raw`[+-]?\d+(?:[.,]\d+)*`
+  text = text.replace(new RegExp(`(${number})\\s*[,;—-]?\\s*(?:нет|ні|no|точнее|точніше|rather|sorry)\\s*[,;—-]?\\s*(${number})`, 'giu'), '$2')
+  const days = 'понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье|понеділок|вівторок|серед[ау]|четвер|п’ятниц[яю]|субот[ау]|неділ[яю]|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday'
+  return text.replace(new RegExp(`(${days})\\s*[,;—-]?\\s*(?:нет|ні|no)\\s*[,;—-]?\\s*(?:(?:в|на|on)\\s+)?(${days})`, 'giu'), '$2')
+}
+
+function numbers(text: string): string {
+  return JSON.stringify((text.match(/[+-]?\d+(?:[.,:/-]\d+)*/g) ?? []).map(n => n.replace(',', '.')))
+}
+
+function negations(text: string): string {
+  const tokens = text.toLowerCase().replaceAll('’', "'").match(/\p{L}+(?:'\p{L}+)?/gu) ?? []
+  return tokens.flatMap(w => {
+    if (['не', 'not', 'cannot'].includes(w) || w.endsWith("n't")) return ['not']
+    if (['никогда', 'ніколи', 'never'].includes(w)) return ['never']
+    if (['нет', 'ні', 'no', 'neither'].includes(w)) return ['no']
+    if (['без', 'without'].includes(w)) return ['without']
+    return []
+  }).join('|')
+}
+
+function literals(text: string): string[] {
+  return (text.match(/`[^`]+`|https?:\/\/[^\s<>]+|[\p{L}\d_.+-]+@[\p{L}\d.-]+\.[a-z]+|[a-z]:[\\/][^\s]+|\.{1,2}[\\/][^\s]+|--[\w-]+/giu) ?? [])
+    .map(s => s.replace(/^`|`$/g, '').replace(/[),;!?»”]+$/g, ''))
+    .sort()
+}
 
 /** Why an edit is not taken, '' when it is: an answer in place of the phrase is longer, in other letters, or no longer asks; an edit that lost a part is shorter. */
 export function guardEdit(said: string, edited: string, style: EditStyle, terms: readonly string[] = []): Doubt {
@@ -107,6 +136,11 @@ export function guardEdit(said: string, edited: string, style: EditStyle, terms:
   if (m > most * n + SLACK || m < least * n) return 'length'
   // The person's own instruction may shorten or translate, never answer ("what is the capital of France?" → "Paris").
   if (style !== 'aiTask' && said.includes('?') && !edited.includes('?')) return 'question'
+  const source = style === 'list' ? said : safetySource(said)
+  if (numbers(source) !== numbers(edited)) return 'number'
+  if (JSON.stringify(literals(source)) !== JSON.stringify(literals(edited))) return 'literal'
+  // My own instruction may translate; an English negation need not stay Russian.
+  if (style !== 'own' && negations(source) !== negations(edited)) return 'negation'
   if (style === 'own') return ''
   if (Math.abs(latinShare(said) - latinShare(edited)) > 0.5) return 'alphabet'
   if (keptShare(said, edited) < kept) return 'lost'

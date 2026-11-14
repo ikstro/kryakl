@@ -216,12 +216,14 @@ class Worker:
                 device, entry = self.entry(feature, "cpu")
                 why = "processor"
         try:
-            t.load(entry["model"], device, entry.get("compute"), self.threads())
+            target = self.parakeet if feature == "dictation" and asr.backend(entry["model"]) == "parakeet" else t
+            target.load(entry["model"], device, entry.get("compute"), self.threads())
         except CudaFailed as error:
             self.fallback = str(error)
             log.warning("the card would not take %s; the processor's plan from now on", entry["model"])
             device, entry = self.entry(feature, "cpu")
-            t.load(entry["model"], device, None, self.threads())
+            target = self.parakeet if feature == "dictation" and asr.backend(entry["model"]) == "parakeet" else t
+            target.load(entry["model"], device, None, self.threads())
             why = "processor"
         self.gave_way[feature] = why
         return device, entry
@@ -241,7 +243,7 @@ class Worker:
         same = words["model"] == entry["model"] and words.get("compute") == entry.get("compute")
         t = self.transcriber if same else self.dictator
         _, entry = self._load(t, "dictation")
-        return t, entry
+        return (self.parakeet if asr.backend(entry["model"]) == "parakeet" else t), entry
 
     def unload_all(self) -> None:
         self.transcriber.unload()
