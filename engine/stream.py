@@ -214,14 +214,13 @@ class Session:
     def _configure(self, execution: dict) -> None:
         """The recognizer actually loaded, not the plan before a busy-card fallback (lock held)."""
         kind = (execution["backend"], execution["device"])
-        if kind not in PIECES:
-            raise ValueError("Unknown dictation execution")
         if self.execution != execution:
             self.execution = dict(execution)
             self.executions.append(dict(execution))
             self._guess = self._preview = None
         self.kind = kind
-        self.shortest, self.longest = PIECES[kind]
+        # A recognizer this table does not know is cut as the session was opened: never a failed phrase for it.
+        self.shortest, self.longest = PIECES.get(kind, (4.0, 25.0))
         self.preview_every = PREVIEW_EVERY.get(kind)
 
     def _next(self) -> tuple[str, int, int] | None:
@@ -258,22 +257,23 @@ class Session:
         return max(self._cut, self._length - int(PREVIEW_SPAN * RATE)), self._length
 
     def _run(self) -> None:
+        # The model is loaded once, before the first piece is cut: the pieces' lengths are the loaded
+        # recognizer's. Each piece then says what it ran on (a card that fills meanwhile), so nothing
+        # is asked again here: on a fallback every ask is a look at the card (nvidia-smi).
+        if self._prepare:
+            try:
+                execution = self._prepare()
+                with self._lock:
+                    if self.over:
+                        return
+                    self._configure(execution)
+            except Exception as error:
+                log.exception("the dictation model would not load")
+                with self._lock:
+                    self.state, self.error = "failed", str(error) or type(error).__name__
+                    self._lock.notify_all()
+                return
         while True:
-            with self._lock:
-                if self.over:
-                    return
-            if self._prepare:
-                try:
-                    execution = self._prepare()
-                    with self._lock:
-                        if self.over:
-                            return
-                        self._configure(execution)
-                except Exception as error:
-                    with self._lock:
-                        self.state, self.error = "failed", str(error) or type(error).__name__
-                        self._lock.notify_all()
-                    return
             with self._lock:
                 job = self._next()
                 if job is None:

@@ -3,7 +3,7 @@ import { StreamRecorder } from './recorder'
 import type { HostCall } from '../protocol'
 type SpeechCall = Extract<HostCall, { call: 'speech' }>
 
-afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); vi.restoreAllMocks() })
 
 function setup(options: { broken?: boolean; ack?: boolean; ackDelta?: number; ready?: boolean; tail?: Float32Array; start?: Promise<MediaStream> } = {}) {
   const stop = vi.fn()
@@ -78,15 +78,17 @@ it('sends the same complete sound to the fallback when a session is gone', async
   expect(bytes(fallback.body)).toEqual([...pcm(head), ...pcm(tail)])
 })
 
-it('fails visibly rather than submitting truncated sound when the worklet does not acknowledge', async () => {
+it('types the phrase with what was captured when the worklet does not acknowledge', async () => {
   vi.useFakeTimers()
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+  const head = new Float32Array(123).fill(0.5)
   const s = setup({ ack: false })
   await s.recorder.start()
-  s.send(new Float32Array(123).fill(0.5))
-  const failed = expect(s.recorder.finish()).rejects.toThrow('capturing')
+  s.send(head)
+  const finished = s.recorder.finish()
   await vi.advanceTimersByTimeAsync(1500)
-  await failed
-  expect(s.audio()).toEqual([])
+  expect(await finished).toEqual({ text: 'Done.', language: 'en', sure: 1 })
+  expect(s.audio().flatMap(r => bytes(r.body))).toEqual(pcm(head))
   expect(s.close).toHaveBeenCalledOnce()
 })
 
@@ -121,16 +123,29 @@ it('does not report recording ready without input from the worklet', async () =>
   expect(s.audio()).toEqual([])
 })
 
-it('rejects a mismatching sample count instead of accepting a missing tail', async () => {
+it('types the phrase when the worklet counted more samples than arrived', async () => {
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+  const head = new Float32Array(123).fill(0.25)
   const s = setup({ ackDelta: 128 })
   await s.recorder.start()
-  s.send(new Float32Array(123))
-  await expect(s.recorder.finish()).rejects.toThrow('capturing')
-  expect(s.audio()).toEqual([])
+  s.send(head)
+  expect(await s.recorder.finish()).toEqual({ text: 'Done.', language: 'en', sure: 1 })
+  expect(s.audio().flatMap(r => bytes(r.body))).toEqual(pcm(head))
   expect(s.stop).toHaveBeenCalledOnce()
 })
 
-it('does not submit audio after a processor error', async () => {
+it('types what was captured before a processor error', async () => {
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+  const head = new Float32Array(4096).fill(0.25)
+  const s = setup()
+  await s.recorder.start()
+  s.send(head)
+  s.failProcessor()
+  expect(await s.recorder.finish()).toEqual({ text: 'Done.', language: 'en', sure: 1 })
+  expect(s.audio().flatMap(r => bytes(r.body))).toEqual(pcm(head))
+})
+
+it('fails when the processor gave no sound at all', async () => {
   const s = setup()
   await s.recorder.start()
   s.failProcessor()

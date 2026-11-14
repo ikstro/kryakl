@@ -13,6 +13,7 @@ Parakeet takes no hotwords, so for it the correction is all there is.
 
 from __future__ import annotations
 
+import logging
 import re
 import unicodedata
 from functools import lru_cache
@@ -34,6 +35,9 @@ def common_words() -> frozenset[str]:
         file = LEXICONS / f"{code}.txt"
         if file.is_file():
             words.update(_norm(w.strip()) for w in file.read_text("utf-8").splitlines() if w.strip())
+    if not words:
+        # Said once (the result is cached): near misses of names are then left alone, only what a name is heard as is set right.
+        logging.getLogger("kryakl.vocab").warning("no word lists in %s: names are not guessed from near misses", LEXICONS)
     return frozenset(words)
 
 

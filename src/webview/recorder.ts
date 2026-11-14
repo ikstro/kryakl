@@ -375,17 +375,28 @@ export class StreamRecorder {
     if (this.cancelled) throw new DOMException('Recording cancelled', 'AbortError')
   }
 
+  /**
+   * Takes the worklet's last samples, a tenth of a second at most. A phrase is never lost for them:
+   * should the worklet not hand them over (no answer in time, another count, a processor that
+   * failed), the phrase goes with what was captured. Only a recording with no sound at all fails.
+   */
   private async drain(): Promise<void> {
     this.checkCancelled()
-    if (this.captureError) throw this.captureError
-    if (!this.tap) throw new Error(t('mic.captureFailed'))
     this.source?.disconnect()
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(t('mic.captureFailed'))), FLUSH_WAIT_MS)
-      this.flushed = () => { clearTimeout(timer); resolve() }
-      this.flushFailed = error => { clearTimeout(timer); reject(error) }
-      this.tap!.port.postMessage('flush')
-    }).finally(() => { this.flushed = undefined; this.flushFailed = undefined })
+    try {
+      if (this.captureError) throw this.captureError
+      if (!this.tap) throw new Error(t('mic.captureFailed'))
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(t('mic.captureFailed'))), FLUSH_WAIT_MS)
+        this.flushed = () => { clearTimeout(timer); resolve() }
+        this.flushFailed = error => { clearTimeout(timer); reject(error) }
+        this.tap!.port.postMessage('flush')
+      }).finally(() => { this.flushed = undefined; this.flushFailed = undefined })
+    } catch (error) {
+      this.checkCancelled()
+      if (!this.captured) throw error
+      console.warn(`dictation: the last samples were not handed over; the phrase goes with the ${(this.captured / 16000).toFixed(1)} s captured`)
+    }
     this.checkCancelled()
     this.release()
   }

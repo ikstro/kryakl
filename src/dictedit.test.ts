@@ -61,6 +61,14 @@ describe('guardEdit', () => {
     expect(guardEdit('Send 1500 dollars', 'Send 1600 dollars.', 'own')).toBe('number')
   })
 
+  it('takes a word taken back, and a number set in another form', () => {
+    expect(guardEdit('Позвони завтра Пете, нет, Васе, и скажи про встречу', 'Позвони завтра Васе и скажи про встречу.', 'clean')).toBe('')
+    expect(guardEdit('Call Peter tomorrow, no, call Michael about the meeting', 'Call Michael tomorrow about the meeting.', 'clean')).toBe('')
+    expect(guardEdit('Встреча завтра в 15 30 в большом зале', 'Встреча завтра в 15:30 в большом зале.', 'clean')).toBe('')
+    expect(guardEdit('Переведи 1 500 гривен до пятницы', 'Переведи 1500 гривен до пятницы.', 'clean')).toBe('')
+    expect(guardEdit('Не звони завтра Пете, позвони Васе', 'Звони завтра Пете, позвони Васе.', 'clean')).toBe('negation')
+  })
+
   it('keeps paths, URLs and command flags', () => {
     expect(guardEdit('Открой C:\\work\\draft.md и прочитай файл', 'Открой C:\\work\\done.md и прочитай файл', 'clean')).toBe('literal')
     expect(guardEdit('Use --no-cache for this command', 'Use --cache for this command', 'clean')).toBe('literal')

@@ -224,6 +224,30 @@ def test_actual_execution_changes_are_recorded_without_losing_text():
     assert s.kind == ("whisper", "cpu") and s.preview_every is None
 
 
+def test_the_model_is_prepared_once_for_a_session_however_many_pieces():
+    asked = []
+    execution = {"name": "small", "backend": "whisper", "device": "cpu", "compute": "int8", "state": "ready"}
+    r = Recognizer()
+    s = stream.Session(r, ("whisper", "cpu"), ["ru"], speech=fake_speech, prepare=lambda: asked.append(1) or execution)
+    send(s, np.concatenate([tone(5), silence(0.8), tone(5), silence(0.8), tone(5)]), pace=0.01)
+    out = s.finish(b"")
+    assert len(r.calls) >= 2 and out["text"]
+    assert asked == [1]
+
+
+def test_a_recognizer_the_table_does_not_know_is_cut_by_the_defaults():
+    unknown = {"name": "new", "backend": "new", "device": "npu", "compute": "int8", "state": "ready"}
+
+    def recognize(sound, language, expected, before):
+        return "Фраза.", "ru", 0.9, unknown
+
+    s = stream.Session(recognize, ("whisper", "cuda"), ["ru"], speech=fake_speech, prepare=lambda: unknown)
+    send(s, np.concatenate([tone(2), silence(0.8)]))
+    out = s.finish(b"")
+    assert out["text"] == "Фраза."
+    assert (s.shortest, s.longest) == (4.0, 25.0) and s.preview_every is None
+
+
 def test_talking_without_pauses_still_shows_the_words_where_it_is_cheap():
     r = Recognizer(language="")
     s = make(r, kind=("parakeet", "cpu"))

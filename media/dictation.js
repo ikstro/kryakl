@@ -5086,26 +5086,37 @@
     checkCancelled() {
       if (this.cancelled) throw new DOMException("Recording cancelled", "AbortError");
     }
+    /**
+     * Takes the worklet's last samples, a tenth of a second at most. A phrase is never lost for them:
+     * should the worklet not hand them over (no answer in time, another count, a processor that
+     * failed), the phrase goes with what was captured. Only a recording with no sound at all fails.
+     */
     async drain() {
       this.checkCancelled();
-      if (this.captureError) throw this.captureError;
-      if (!this.tap) throw new Error(t("mic.captureFailed"));
       this.source?.disconnect();
-      await new Promise((resolve, reject) => {
-        const timer2 = setTimeout(() => reject(new Error(t("mic.captureFailed"))), FLUSH_WAIT_MS);
-        this.flushed = () => {
-          clearTimeout(timer2);
-          resolve();
-        };
-        this.flushFailed = (error) => {
-          clearTimeout(timer2);
-          reject(error);
-        };
-        this.tap.port.postMessage("flush");
-      }).finally(() => {
-        this.flushed = void 0;
-        this.flushFailed = void 0;
-      });
+      try {
+        if (this.captureError) throw this.captureError;
+        if (!this.tap) throw new Error(t("mic.captureFailed"));
+        await new Promise((resolve, reject) => {
+          const timer2 = setTimeout(() => reject(new Error(t("mic.captureFailed"))), FLUSH_WAIT_MS);
+          this.flushed = () => {
+            clearTimeout(timer2);
+            resolve();
+          };
+          this.flushFailed = (error) => {
+            clearTimeout(timer2);
+            reject(error);
+          };
+          this.tap.port.postMessage("flush");
+        }).finally(() => {
+          this.flushed = void 0;
+          this.flushFailed = void 0;
+        });
+      } catch (error) {
+        this.checkCancelled();
+        if (!this.captured) throw error;
+        console.warn(`dictation: the last samples were not handed over; the phrase goes with the ${(this.captured / 16e3).toFixed(1)} s captured`);
+      }
       this.checkCancelled();
       this.release();
     }

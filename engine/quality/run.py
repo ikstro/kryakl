@@ -53,6 +53,11 @@ REPORT = ENGINE.parent / "docs" / "speech-quality.md"
 REAL_MODELS = settings.MODELS_DIR
 BENCH_MODELS = ROOT / "models"
 ALIASES = {"parakeet": "parakeet-tdt-0.6b-v3", "turbo": "large-v3-turbo", "large": "large-v3"}
+# A person who dictates has names in Names and terms, and Whisper reads them as the text before the
+# phrase. The bench ran with none until 2026-11-14, so it never saw what they do to a phrase: a list
+# with no full stop taught turbo to end sentences without one (9 of the owner's 27 Russian phrases
+# ended in a mark). Made-up product names, in the form vocab.hotwords gives: no mark at the end.
+NAMES = "Kryakl, Claude, Gemma, Parakeet, Visual Studio, GitHub, Figma, Total Commander"
 
 
 def _use(models_dir: Path) -> None:
@@ -285,13 +290,15 @@ def main(argv: list[str]) -> None:
     p.add_argument("--beam", type=int, default=0, help="Whisper's beam (0: the plan's)")
     p.add_argument("--expected", default="", help="the languages expected, for every phrase (default: the phrase's own and English)")
     p.add_argument("--sets", default="fleurs", help="fleurs, own (the owner's reading in .cache/speech-quality/own), or fleurs,own")
-    p.add_argument("--hotwords", default="")
+    p.add_argument("--hotwords", default=NAMES, help='the names Whisper is told beforehand, as vocab.hotwords gives them; "none" for a person with no names')
     p.add_argument("--set", action="append", default=[], help="module.NAME=value")
     p.add_argument("--label", default="baseline")
     p.add_argument("--report", action="store_true", help="append the table to docs/speech-quality.md")
     p.add_argument("--detail", action="store_true")
     a = p.parse_args(argv)
 
+    if a.hotwords.strip().lower() == "none":
+        a.hotwords = ""
     levers = apply_levers(a.set)
     langs = a.langs.split(",")
     conds = a.conditions.split(",")

@@ -98,24 +98,27 @@ export function tidyEdit(text: string, style: EditStyle): string {
 
 export type Doubt = '' | 'empty' | 'length' | 'lost' | 'alphabet' | 'question' | 'term' | 'number' | 'negation' | 'literal'
 
-/** Explicit corrections with an unambiguous replacement; not a guess about the speaker's intent. */
+/** A number the speaker corrected aloud ("1500, no, 1600") is the corrected one: the edit keeps only that, as it is told to. */
 function safetySource(text: string): string {
   const number = String.raw`[+-]?\d+(?:[.,]\d+)*`
-  text = text.replace(new RegExp(`(${number})\\s*[,;—-]?\\s*(?:нет|ні|no|точнее|точніше|rather|sorry)\\s*[,;—-]?\\s*(${number})`, 'giu'), '$2')
-  const days = 'понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье|понеділок|вівторок|серед[ау]|четвер|п’ятниц[яю]|субот[ау]|неділ[яю]|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday'
-  return text.replace(new RegExp(`(${days})\\s*[,;—-]?\\s*(?:нет|ні|no)\\s*[,;—-]?\\s*(?:(?:в|на|on)\\s+)?(${days})`, 'giu'), '$2')
+  return text.replace(new RegExp(`(${number})\\s*[,;—-]?\\s*(?:нет|ні|no|точнее|точніше|rather|sorry)\\s*[,;—-]?\\s*(${number})`, 'giu'), '$2')
 }
 
+/** The digits said, in order: "15 30" set as "15:30", or "1 500" as "1500", is the same number. */
 function numbers(text: string): string {
-  return JSON.stringify((text.match(/[+-]?\d+(?:[.,:/-]\d+)*/g) ?? []).map(n => n.replace(',', '.')))
+  return text.replace(/\D+/g, '')
 }
 
+/**
+ * The words that turn a sentence round: "не удаляй" must not become "удаляй". "Нет", "ні" and "no" are
+ * not among them: they are how a speaker takes a word back ("Пете, нет, Васе"), which the edit is told
+ * to set right, so an edit without them is what was asked for.
+ */
 function negations(text: string): string {
   const tokens = text.toLowerCase().replaceAll('’', "'").match(/\p{L}+(?:'\p{L}+)?/gu) ?? []
   return tokens.flatMap(w => {
     if (['не', 'not', 'cannot'].includes(w) || w.endsWith("n't")) return ['not']
     if (['никогда', 'ніколи', 'never'].includes(w)) return ['never']
-    if (['нет', 'ні', 'no', 'neither'].includes(w)) return ['no']
     if (['без', 'without'].includes(w)) return ['without']
     return []
   }).join('|')
