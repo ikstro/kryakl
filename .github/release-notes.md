@@ -1,17 +1,28 @@
-## What's new in 0.17.3
+## Dictation test release: 0.17.4-dictation.2
 
-**Saving a screenshot.** Save on the frame's bar now opens Windows' usual Save As window once the frame is gone: type a name and pick a folder. Before, a folder picker opened over the frame, and the whole computer seemed stuck. Save As starts in the folder set on the Screenshots page, Pictures\Kryakl by default. In the Screenshots window, one screenshot is saved the same way, and several go into a folder you pick.
+**Experimental prerelease for testing the dictation changes.** This build has known text-integrity issues listed below and is not ready to replace the normal release for everyday use.
 
-**Dictation and translation share the graphics card.** After a translation with Accurate, dictated phrases no longer move to the processor and take 12–14 seconds. When the card has too little room for the speech model, Kryakl lets go of the resting translation model first. The next translation loads it again, and Fast's translation shows meanwhile. Accurate is no longer called busy on a free graphics card.
+### Changes
 
-**The fix key on selected text.** After the fix key changes the layout of selected text, nothing stays selected, and the cursor is at the end of the text. Press the key again right away to go on to the next layout.
+- Dictation flushes the final audio buffer before stopping, handles cancellation during microphone startup, and finishes only once on repeated Stop.
+- The panel says the microphone is starting until sound reaches the audio processor.
+- Punctuation hints are closed for Whisper turbo and small. GPU Whisper sessions use shorter pieces; the new piece lengths were measured on turbo.
+- Streaming sessions track the model and device actually used, including the Parakeet fallback. Initial model preparation runs once per session.
+- Fuzzy name correction protects ordinary English, Ukrainian and Russian words while preserving explicit pronunciation aliases.
+- Whisper context has a shared token budget. The optional local text editor accepts spoken corrections and number formatting.
 
-## Install and update
+### Known issues
 
-**Install:** download `Kryakl-Setup-<version>.exe` and run it. The installer is not signed, so Windows warns: **More info → Run anyway**. Kryakl starts with Windows and lives in the tray.
+- Long English dictation can still omit complete sentences.
+- **Text editing:** the current experimental checks can accept changes to decimal points, number signs and negations such as "no". Text editing is off by default; check edited results carefully if you enable it.
+- **Audio capture failure:** dictation can return only the sound captured before a processor failure, with no visible warning that the recording is incomplete. The missing part is not necessarily limited to the final 100 ms.
+- The small punctuation change was measured on CPU, and shorter GPU pieces were measured on turbo. Other affected model/device combinations still need acceptance testing.
+- Live microphone testing in the packaged app, installation/rollback, noisy or quiet microphones and behavior under the user's normal workload remain open.
 
-**Update:** Kryakl does not update itself. Download the new installer from here and run it: it installs over the old version, and your settings, words and downloads stay.
+### Download and test
 
-**Krya is now Kryakl (0.15):** install over Krya as usual. At its first start Kryakl moves Krya's settings, words, models and transcripts into its own folders; nothing downloads again. Quit Krya first if it still runs. 0.15.1 fixes 0.15.0, whose speech engine did not start after the move (dictation said "The speech engine is starting" at every press): it sets itself right at the first start, and nothing downloads again.
+For an isolated test, extract `Kryakl-Dictation-Test-0.17.4-dictation.2.zip` completely, quit the installed Kryakl from its tray menu, then run `Start-Isolated-Test.cmd`. It uses separate settings and downloads in `%LOCALAPPDATA%\Kryakl-Dictation-Test`, with speech port 8797. Engine and model downloads may be needed. The normal and test versions cannot run together.
 
-**Updating from 0.11.0 or earlier, with Chrome's meeting recorder:** the extension now has a fixed id, and Kryakl takes recordings only from it. Once: on `chrome://extensions` press **Remove** on the meeting recorder, then **Load unpacked** from Kryakl's folder again (the Google Meet page in Kryakl shows the steps).
+The ZIP includes `TESTING.md`. Starting `Kryakl.exe` directly uses normal application data. **The installer replaces the installed Kryakl** and keeps its settings and downloads; use the ZIP launcher for a separate test. The installer is unsigned.
+
+The source, measurements and remaining checks are in [`docs/dictation-test-plan.md`](https://github.com/ikstro/kryakl/blob/v0.17.4-dictation.2/docs/dictation-test-plan.md) and [`docs/speech-quality.md`](https://github.com/ikstro/kryakl/blob/v0.17.4-dictation.2/docs/speech-quality.md). Kryakl processes dictated audio and text locally. Updates are installed manually.
