@@ -1,9 +1,9 @@
 // npm run build, then this script: a local installer and ZIP, never installed or published.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const version = '0.17.4-dictation.2'
+const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
 const folder = resolve('.cache/dictation-package')
 mkdirSync(folder, { recursive: true })
 const config = {
@@ -13,7 +13,7 @@ const config = {
   extraFiles: [{ from: 'build/dictation-test', to: '.', filter: ['**/*'] }],
   win: {
     target: [{ target: 'nsis', arch: ['x64'] }, { target: 'zip', arch: ['x64'] }],
-    artifactName: 'Kryakl-Dictation-Test-${version}.${ext}',
+    artifactName: 'Kryakl-${version}.${ext}',
   },
   nsis: { runAfterFinish: false },
 }

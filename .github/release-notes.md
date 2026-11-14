@@ -1,4 +1,4 @@
-## Dictation test release: 0.17.4-dictation.2
+## Kryakl 0.17.4
 
 **Experimental prerelease for testing the dictation changes.** This build has known text-integrity issues listed below and is not ready to replace the normal release for everyday use.
 
@@ -21,8 +21,8 @@
 
 ### Download and test
 
-For an isolated test, extract `Kryakl-Dictation-Test-0.17.4-dictation.2.zip` completely, quit the installed Kryakl from its tray menu, then run `Start-Isolated-Test.cmd`. It uses separate settings and downloads in `%LOCALAPPDATA%\Kryakl-Dictation-Test`, with speech port 8797. Engine and model downloads may be needed. The normal and test versions cannot run together.
+For an isolated test, extract `Kryakl-0.17.4.zip` completely, quit the installed Kryakl from its tray menu, then run `Start-Isolated-Test.cmd`. It uses separate settings and downloads in `%LOCALAPPDATA%\Kryakl-Dictation-Test`, with speech port 8797. Engine and model downloads may be needed. The normal and test versions cannot run together.
 
 The ZIP includes `TESTING.md`. Starting `Kryakl.exe` directly uses normal application data. **The installer replaces the installed Kryakl** and keeps its settings and downloads; use the ZIP launcher for a separate test. The installer is unsigned.
 
-The source, measurements and remaining checks are in [`docs/dictation-test-plan.md`](https://github.com/ikstro/kryakl/blob/v0.17.4-dictation.2/docs/dictation-test-plan.md) and [`docs/speech-quality.md`](https://github.com/ikstro/kryakl/blob/v0.17.4-dictation.2/docs/speech-quality.md). Kryakl processes dictated audio and text locally. Updates are installed manually.
+The source, measurements and remaining checks are in [`docs/dictation-test-plan.md`](https://github.com/ikstro/kryakl/blob/v0.17.4/docs/dictation-test-plan.md) and [`docs/speech-quality.md`](https://github.com/ikstro/kryakl/blob/v0.17.4/docs/speech-quality.md). Kryakl processes dictated audio and text locally. Updates are installed manually.
