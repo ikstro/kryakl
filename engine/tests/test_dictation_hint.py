@@ -31,11 +31,12 @@ def test_empty_context_stays_empty():
     ("   ", ""),
 ])
 @pytest.mark.parametrize("fallback", [False, True])
-def test_hint_is_closed_on_both_paths_without_formatting_the_result(monkeypatch, hint, expected, fallback):
+@pytest.mark.parametrize("name", ["large-v3-turbo", "small"])
+def test_hint_is_closed_on_both_paths_without_formatting_the_result(monkeypatch, hint, expected, fallback, name):
     samples = np.ones(1600, dtype=np.float32)
     monkeypatch.setattr(asr, "_speech_only", lambda sound: sound)
     transcriber = asr.Transcriber()
-    transcriber.name = "large-v3-turbo"
+    transcriber.name = name
     calls = []
 
     def one_pass(sound, language, languages, hotwords, beam, before, strict):
@@ -56,7 +57,7 @@ def test_hint_is_closed_on_both_paths_without_formatting_the_result(monkeypatch,
     assert result[0] == ("Это вопрос?" if fallback else "фрагмент текста")
 
 
-@pytest.mark.parametrize("name", ["tiny", "base", "small", "large-v3", None])
+@pytest.mark.parametrize("name", ["tiny", "base", "large-v3", None])
 def test_other_models_keep_their_hint_until_the_change_is_validated(monkeypatch, name):
     monkeypatch.setattr(asr, "_speech_only", lambda sound: sound)
     transcriber = asr.Transcriber()

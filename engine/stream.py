@@ -41,8 +41,11 @@ SCAN_EVERY = 0.5  # seconds of new sound between two looks at what is not recogn
 GUESS_AFTER = 0.3  # seconds of silence after speech before the open tail is recognized ahead
 QUIET_TAIL = 3.0  # seconds before the longest piece where a cut is looked for when nobody pauses
 STALE = 30.0  # seconds without a chunk before a session is thrown away
-# (shortest piece, longest piece) in seconds, per recognizer and device.
-PIECES = {("whisper", "cpu"): (4.0, 25.0), ("whisper", "cuda"): (10.0, 25.0), ("parakeet", "cpu"): (1.5, 20.0)}
+# (shortest piece, longest piece) in seconds, per recognizer and device. Whisper on the card had
+# 10–25 until 2026-11-14: turbo left whole sentences out of long pieces, English most. Measured
+# on 30 dictations of three sentences in real time (FLEURS, 1709 words): 248 words wrong with
+# 10–25, 158 with 6–20 (English 151 → 85, Ukrainian 70 → 45, Russian 27 → 28), as quick.
+PIECES = {("whisper", "cpu"): (4.0, 25.0), ("whisper", "cuda"): (6.0, 20.0), ("parakeet", "cpu"): (1.5, 20.0)}
 # Someone who talks without pausing still sees the words: every so many seconds of new speech, the
 # last few seconds are recognized only to be shown. Only where that is cheap (Whisper on the
 # processor pays a whole window each time, so it shows words at the pauses only).

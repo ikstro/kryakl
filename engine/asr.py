@@ -232,6 +232,10 @@ def _said(segments, speech: np.ndarray) -> str:
     return phantoms.clean(text, sound, dictation=True)
 
 
+# The Whisper models whose names hint is closed with a full stop (`Transcriber.dictate`).
+CLOSED_HINT = frozenset({"large-v3-turbo", "small"})
+
+
 def dictation_context(before: str, hotwords: str, encode, budget: int = 216) -> tuple[str | None, str | None]:
     """Share Whisper's previous-text token space; keep whole words and whole names."""
     tail: list[str] = []
@@ -382,10 +386,13 @@ class Transcriber:
         # faster-whisper puts hotwords in the previous-text prompt. An unfinished list
         # makes dictation follow its style: with the owner's eight terms, only 9 of 27
         # Russian phrases ended in punctuation; closing the hint made that 27 of 27.
-        # Punctuate the hint, never the recognized text. This is enabled for turbo
-        # only: a wider model/noise sweep found worse word accuracy for tiny/base;
-        # other models need their own acceptance check (docs/dictation-research-2026-11-14.md).
-        if self.name == "large-v3-turbo":
+        # Punctuate the hint, never the recognized text. For turbo and small, where
+        # it costs no words: small on the processor, 180 phrases with eight names,
+        # 21 phrases with a wrong end mark became none, wrong words 16.6 and 16.3 %.
+        # Not for tiny and base: on the card they lost words with it (base on the
+        # processor did not, 31.5 and 31.4 %, but had only 4 wrong end marks to win),
+        # nor large-v3, not measured as it runs (docs/speech-quality.md, 2026-11-14).
+        if self.name in CLOSED_HINT:
             hotwords = hotwords.strip()
             if hotwords and hotwords[-1] not in ".!?…":
                 hotwords += "."

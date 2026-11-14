@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const version = '0.17.4-dictation.1'
+const version = '0.17.4-dictation.2'
 const folder = resolve('.cache/dictation-package')
 mkdirSync(folder, { recursive: true })
 const config = {
