@@ -34,8 +34,8 @@ export type SpeechHealth = {
   downloaded?: string[]
   /** The models in memory now and where ("speakers" for who spoke when). */
   loaded?: { model: string; device: 'cuda' | 'cpu' }[]
-  /** The Chrome extension last seen (it pings every 15 min; `seen` is Unix seconds). */
-  extension?: { id: string; version: string; seen: number } | null
+  /** The Chrome extension last seen (it pings every 15 min; `seen` is Unix seconds; `home`: loaded from Kryakl's own folder, from 0.7.0). */
+  extension?: { id: string; version: string; seen: number; home?: boolean } | null
   /** Why the card is not used though it is there. */
   fallback?: string | null
   /** The speed test. */

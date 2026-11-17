@@ -3,7 +3,7 @@
     "message": "Kryakl: meeting recorder"
   },
   "description": {
-    "message": "Records a tab's sound (Google Meet or any other) and your microphone. Kryakl makes the transcript on this computer."
+    "message": "Records a tab's sound (Google Meet, Teams, Zoom or any other) and your microphone, and offers it when a call starts. Kryakl makes the transcript on this computer."
   },
   "actionTitle": {
     "message": "Kryakl: record this tab"
@@ -36,10 +36,7 @@
     "message": "Record this tab"
   },
   "orKey": {
-    "message": "Or Alt+Shift+M on the meeting tab. The tab and your microphone are recorded as two tracks."
-  },
-  "startKrya": {
-    "message": "Start Kryakl and turn on Transcribe: it makes the text on this computer."
+    "message": "Or $1 on the meeting tab. The tab and your microphone are recorded as two tracks."
   },
   "micBlocked": {
     "message": "The microphone is not allowed: your voice will be missing."
@@ -94,5 +91,44 @@
   },
   "errNoStop": {
     "message": "The recording did not stop"
+  },
+  "startKryakl": {
+    "message": "Start Kryakl and turn on Transcribe: it makes the text on this computer."
+  },
+  "noKey": {
+    "message": "No key is set for it: set one on chrome://extensions/shortcuts. The tab and your microphone are recorded as two tracks."
+  },
+  "offers": {
+    "message": "Offer to record when a call starts (Meet, Teams, Zoom, Jitsi, Whereby)"
+  },
+  "offerTitle": {
+    "message": "Record this meeting?"
+  },
+  "offerPress": {
+    "message": "Press"
+  },
+  "offerOrIcon": {
+    "message": "or click Kryakl's icon on Chrome's bar."
+  },
+  "offerIcon": {
+    "message": "Click Kryakl's icon on Chrome's bar (under the puzzle piece if it is hidden)."
+  },
+  "offerNoEngine": {
+    "message": "Kryakl is not running"
+  },
+  "offerStartKryakl": {
+    "message": "Start Kryakl to record this meeting: it makes the transcript on this computer."
+  },
+  "offerNotNow": {
+    "message": "Not now"
+  },
+  "actionRecordMeeting": {
+    "message": "Kryakl: record this meeting"
+  },
+  "actionRecordMeetingKey": {
+    "message": "Kryakl: record this meeting ($1)"
+  },
+  "errEngine": {
+    "message": "Kryakl's speech engine is not running: open Kryakl → Recordings and meetings to install or start it"
   }
 }

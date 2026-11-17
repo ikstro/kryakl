@@ -68,6 +68,18 @@ Telling speakers apart in a transcript uses pyannote's model, which Hugging Face
 3. Open [Access Tokens](https://huggingface.co/settings/tokens) → **Create new token** → type **Read** → copy the `hf_…` key.
 4. Paste it into Kryakl and press **Save**. The model downloads once; after that everything works offline, and the key is no longer needed. Kryakl keeps it only on your computer and never shows it again.
 
+## Meetings in Chrome: the extension
+
+Kryakl records calls in Chrome with its own extension, loaded by hand once (Recordings and meetings › Meetings in Chrome shows the same steps, with buttons):
+
+1. Open `chrome://extensions` and turn on **Developer mode** at the top right. Chrome turns off hand-loaded extensions while it is off.
+2. Press **Load unpacked** and pick `%LOCALAPPDATA%\Kryakl\chrome-extension`. Kryakl keeps its copy there: no update or reinstall touches that folder, and the extension takes a new version by itself.
+3. Allow the microphone once, on the page Kryakl opens; without it only the others' voices are recorded.
+
+On Google Meet, Microsoft Teams, Zoom, Jitsi and Whereby in Chrome, a plate in the page offers to record once the call connects: press **Alt+Shift+M** or the duck icon on Chrome's toolbar. The recording stops 15 s after you leave the call, and the transcript appears in Kryakl. Any other tab: the icon › **Record**. The extension's own window has a switch to turn the offers off. Calls in desktop apps (Zoom, Teams, Telegram) are not recorded yet.
+
+The page also reads Chrome's own files and says, per profile, what is wrong: Developer mode off, an old copy (its ID does not start with `phokhlmn`), the key held by another extension, a copy loaded from a folder that updates wipe.
+
 ## Languages
 
 English is the language you learn. Your own language: one of 31 with a Firefox translator in both directions (Russian, Ukrainian, German, French, Spanish, Italian, Portuguese, Polish, Czech, Dutch, Swedish, Norwegian, Danish, Finnish, Greek, Turkish, Romanian, Hungarian, Bulgarian, Serbian, Croatian, Arabic, Hebrew, Persian, Hindi, Chinese, Japanese, Korean, Vietnamese, Thai, Indonesian). Word meanings: English → Russian ships inside; most others download on first use.

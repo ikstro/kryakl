@@ -13,7 +13,7 @@ import * as path from 'node:path'
 import { system32 } from './system32'
 
 /** Kryakl's extension, fixed by the key in extension/manifest.json (engine/auth.py EXTENSION_ID). */
-const EXTENSION_ID = 'phokhlmnodckgejnaogjgpmfjnjkefpa'
+export const EXTENSION_ID = 'phokhlmnodckgejnaogjgpmfjnjkefpa'
 
 /**
  * The only pages a page of Kryakl may open in Chrome: the extensions, their keys, one extension's card, and

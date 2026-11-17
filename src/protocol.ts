@@ -1,5 +1,6 @@
 // Messages between the main process and the card, the small window that
 // shows one picked text or one snipped piece of the screen at a time.
+import type { ChromeProfileCheck } from './chromecheck'
 import type { DictationEntry } from './dictationlog'
 import type { DeviceProfile } from './hardware'
 import type { WordTime } from './kokoro'
@@ -313,6 +314,8 @@ export type AppView = {
   talk?: TalkSummary
   /** What Kryakl keeps on this computer, measured once the Storage page was opened. */
   storage?: StorageView
+  /** Each Chrome profile with a copy of Kryakl's extension and what to set right there (chromecheck.ts), read at start and when the extension's page opens. */
+  chrome?: ChromeProfileCheck[]
 }
 
 /**
@@ -642,6 +645,8 @@ export type ToHost =
    * wanted. Clean up removes every part nothing uses. Use recommended: the models advised for this computer, and their downloads.
    */
   | { type: 'storage' }
+  /** Read Chrome's profiles again (the extension's page opened, or Check again): what stands between Chrome and the extension. */
+  | { type: 'chromeCheck' }
   | { type: 'removeStored'; id: StorageId; item?: string }
   | { type: 'cleanUp' }
   | { type: 'useRecommended' }
@@ -671,7 +676,7 @@ export type HostCall =
   | { call: 'exportTranscript'; id: string; format: string; name: string }
   | { call: 'copy'; text: string }
   /** Open a page of Chrome's own (the extensions, their keys, one extension's card), which a link cannot: answers chrome.ts `ChromeOpened` (typed, opened, missing, refused). */
-  | { call: 'openChrome'; url: string }
+  | { call: 'openChrome'; url: string; profile?: string }
   /** The programs with a window open now, by .exe name, for the Programs page: answers string[]. */
   | { call: 'runningApps' }
 

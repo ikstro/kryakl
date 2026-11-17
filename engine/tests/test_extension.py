@@ -75,9 +75,19 @@ def test_a_refused_request_records_nothing():
 
 def test_the_last_sighting_is_read_at_start():
     engine.EXTENSION_FILE.write_text(json.dumps({"id": ID, "version": "0.2.0", "seen": 5.0}), "utf-8")
-    assert engine.load_extension() == {"id": ID, "version": "0.2.0", "seen": 5.0}
+    assert engine.load_extension() == {"id": ID, "version": "0.2.0", "seen": 5.0, "home": False}
 
 
 def test_an_older_copy_with_the_id_of_its_folder_is_read_without_its_id():
     engine.EXTENSION_FILE.write_text(json.dumps({"id": "b" * 32, "version": "0.3.0", "seen": 5.0}), "utf-8")
-    assert engine.load_extension() == {"id": "", "version": "0.3.0", "seen": 5.0}
+    assert engine.load_extension() == {"id": "", "version": "0.3.0", "seen": 5.0, "home": False}
+
+
+def test_a_copy_in_kryakl_s_own_folder_says_so_and_is_kept_across_a_restart():
+    # From 0.7.0 the copy Chrome loads from Kryakl's own folder (src/extensionhome.ts) sends X-Krya-Extension-Home.
+    assert call({"origin": ORIGIN, "x-krya-extension": "0.7.0"}) == 200
+    assert engine.extension["home"] is False
+    assert call({"origin": ORIGIN, "x-krya-extension": "0.7.0", "x-krya-extension-home": "1"}) == 200
+    assert engine.extension["home"] is True
+    assert json.loads(engine.EXTENSION_FILE.read_text("utf-8"))["home"] is True
+    assert engine.load_extension()["home"] is True

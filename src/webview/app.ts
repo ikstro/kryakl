@@ -18,6 +18,7 @@
 
 import { NATURAL_PREFIX, NATURAL_VOICES, naturalLabel } from '../natural'
 import { DOUBLE_MS, HotkeyRecorder, hotkeyLabel, type Recorded } from '../hotkey'
+import type { ChromeIssue, ChromeProfileCheck } from '../chromecheck'
 import type { AppTab, AppView, DiffPart, Feature, KeyboardLayout, MistakeEntry, SavedWord, Settings, StorageId, StoragePart, StorageView, ToView, TutorHost } from '../protocol'
 import { LANGUAGES } from '../languages'
 import { translationAdvice, type LevelFit } from '../hardware'
@@ -836,6 +837,8 @@ function show(place: Place | undefined, dir: 1 | -1 | 0, scroll = 0): void {
   if (place?.name === 'programs' && !place.sub) askRunningApps()
   // Sizes are measured each time the page opens: a download or a removal elsewhere changes them (Models says what nothing uses).
   if ((place?.name === 'storage' || place?.name === 'models') && was?.name !== place.name) post({ type: 'storage' })
+  // Chrome's profiles are read again as the meetings' page opens: the person may have just fixed something there.
+  if (place?.name === 'recordings' && place.sub === 'meet' && was?.sub !== 'meet') post({ type: 'chromeCheck' })
   if (place?.name !== 'models') recommending = false
   asking = ''
   root.classList.toggle('page-open', !!place)
@@ -880,7 +883,7 @@ const SUBS: Record<SubId, Sub> = {
   talkWindow: { title: () => t('act.talkWindow'), body: talkWindowPage },
   notes: { title: () => t('dictate.notesFolder'), body: kbRows },
   edit: { title: () => t('edit.title'), body: editPage },
-  meet: { title: 'Google Meet', body: meetPage },
+  meet: { title: () => t('meet.title'), body: meetPage },
   speakers: { title: () => t('page.speakers'), body: speakerRows, valid: installed },
   fixing: { title: () => t('page.fixing'), body: fixingPage },
   program: { title: () => programOpen, body: programPage, valid: () => !!programOpen },
@@ -2423,8 +2426,8 @@ function ago(epochSeconds: number): string {
  * Chrome's own page: Kryakl opens a new Chrome window and types the address into it. When the window did not
  * come to the front, or there is no Chrome, the address is copied for the person to paste.
  */
-function openChrome(url: string): void {
-  void window.tutorHost.call({ call: 'openChrome', url }).then(opened => {
+function openChrome(url: string, profile?: string): void {
+  void window.tutorHost.call({ call: 'openChrome', url, ...(profile ? { profile } : {}) }).then(opened => {
     if (opened === 'typed') return
     const say = opened === 'opened' ? t('meet.chromeOpen') : t('meet.noChrome')
     void window.tutorHost.call({ call: 'copy', text: url }).then(() => toast(say), fault)
@@ -2468,25 +2471,65 @@ const extensionsPage = (v: AppView) => {
   return id && /^[a-p]{32}$/.test(id) ? `chrome://extensions/?id=${id}` : 'chrome://extensions/'
 }
 
-/** The card that opens the Google Meet page: whether the extension is in Chrome. */
+/** The Chrome profiles where something stands between Chrome and the extension (chromecheck.ts). */
+const chromeToFix = (v: AppView) => (v.chrome ?? []).filter(c => c.issues.length)
+
+/** The card that opens the meetings page: whether the extension is in Chrome, and set right there. */
 function meetCard(v: AppView): HTMLElement {
   const ext = extensionSeen(v)
   const stale = extensionStale(v)
-  const value = !ext
-    ? t('meet.setUp')
-    : extensionReload(v)
-      ? t('meet.loadAgain', { from: ext.version, to: v.speech.extensionShipped ?? '' })
-      : stale
-        ? t('meet.reload', { from: ext.version, to: v.speech.extensionShipped ?? '' })
-        : t('meet.installed', { version: ext.version })
-  return navCard('video', 'Google Meet', t('meet.note'), value, () => openSub('meet'), 'meet', !!ext && !stale)
+  const fix = chromeToFix(v).length
+  const value = fix
+    ? t('meet.fixIn', { n: fix })
+    : !ext
+      ? t('meet.setUp')
+      : extensionReload(v)
+        ? t('meet.loadAgain', { from: ext.version, to: v.speech.extensionShipped ?? '' })
+        : stale
+          ? t('meet.reload', { from: ext.version, to: v.speech.extensionShipped ?? '' })
+          : t('meet.installed', { version: ext.version })
+  return navCard('video', t('meet.title'), t('meet.note'), value, () => openSub('meet'), 'meet', !!ext && !stale && !fix)
 }
 
-/** How to record a Google Meet call: the Chrome extension, loaded from Kryakl's folder, and whether it is there. */
+/** What to do about each thing in a profile, in the order the person does it. */
+const ISSUE_TEXT: Record<ChromeIssue, () => string> = {
+  devModeOff: () => t('meet.issueDevMode'),
+  oldCopy: () => t('meet.issueOldCopy'),
+  notLoaded: () => t('meet.issueNotLoaded'),
+  folderGone: () => t('meet.issueFolderGone'),
+  notHome: () => t('meet.issueNotHome'),
+  turnedOff: () => t('meet.issueTurnedOff'),
+  keyTaken: () => t('meet.issueKeyTaken'),
+  noKey: () => t('meet.issueNoKey'),
+}
+const KEY_ISSUES: ReadonlySet<ChromeIssue> = new Set(['keyTaken', 'noKey'])
+
+/** One Chrome profile: ready with its key, or what to set right, with Chrome opened in that profile where it is done. */
+function profileCard(c: ChromeProfileCheck): HTMLElement {
+  const title = t('meet.profile', { name: c.name })
+  if (!c.issues.length) return card('circle-check', title, [el('small', { class: 'ok' }, t('meet.profileReady'))], c.key ? caps(c.key) : null)
+  // Only the key left: its page; else the extensions page, where the rest is done.
+  const keyOnly = c.issues.every(i => KEY_ISSUES.has(i))
+  const page = keyOnly ? 'chrome://extensions/shortcuts' : 'chrome://extensions/'
+  return card(
+    'circle-alert',
+    title,
+    c.issues.map((i, n) => `${n + 1} · ${ISSUE_TEXT[i]()}`),
+    btn(t('meet.openInChrome'), () => openChrome(page, c.dir), 'primary'),
+  )
+}
+
+/**
+ * How to record a call in Chrome: the extension, loaded once from Kryakl's own folder, whether it is there, and
+ * what stands in its way in each Chrome profile (chromecheck.ts, read again as the page opens and by Check again).
+ */
 function meetPage(v: AppView): HTMLElement[] {
   const dir = v.speech.extensionDir
   const ext = extensionSeen(v)
   const offer = engineRows(v, 'Google Meet')
+  const profiles = v.chrome ?? []
+  // The key Chrome gave the extension (the person may have set another one), else the one it comes with.
+  const key = profiles.find(p => p.key)?.key ?? MEET_KEY
   const status = !ext
     ? card('video', t('meet.notSetUp'), [running(v) ? t('meet.threeSteps') : t('meet.needsEngine')], null)
     : extensionReload(v)
@@ -2498,11 +2541,12 @@ function meetPage(v: AppView): HTMLElement[] {
         )
       : extensionStale(v)
       ? card('rotate-cw', t('meet.stale', { from: ext.version, to: v.speech.extensionShipped ?? '' }), [t('meet.staleNote')], btn(t('meet.openInChrome'), () => openChrome(extensionsPage(v)), 'primary'))
-      : card('circle-check', t('meet.installedIn', { version: ext.version }), [el('small', { class: 'ok' }, t('meet.seen', { ago: ago(ext.seen) }))], caps(MEET_KEY))
+      : card('circle-check', t('meet.installedIn', { version: ext.version }), [el('small', { class: 'ok' }, t('meet.seen', { ago: ago(ext.seen) }))], caps(key))
   return [
     ...(offer.length ? [grp(t('dictate.engine')), ...offer] : []),
     grp(t('meet.extension')),
     status,
+    ...(profiles.length ? [grp(t('meet.profiles'), undefined, linkBtn(t('meet.checkAgain'), () => post({ type: 'chromeCheck' }))), ...profiles.map(profileCard)] : []),
     grp(t('meet.setItUp')),
     card('external-link', t('meet.step1'), [t('meet.step1Note')], btn(t('meet.openInChrome'), () => openChrome('chrome://extensions/'))),
     card(
@@ -2518,7 +2562,7 @@ function meetPage(v: AppView): HTMLElement[] {
       [t('meet.stepMicNote')],
       ext && !extensionReload(v) ? btn(t('meet.openInChrome'), () => openChrome(MIC_PAGE)) : null,
     ),
-    card('video', t('meet.step3'), [t('meet.step3Note')], caps(MEET_KEY)),
+    card('video', t('meet.step3'), [t('meet.step3Note')], caps(key)),
     grp(t('meet.off')),
     card('keyboard', t('meet.keyNothing'), [t('meet.keyNothingNote')], btn(t('meet.openInChrome'), () => openChrome('chrome://extensions/shortcuts'))),
     card('rotate-cw', t('meet.afterUpdate'), [t('meet.afterUpdateNote')], btn(t('meet.openInChrome'), () => openChrome(extensionsPage(v)))),

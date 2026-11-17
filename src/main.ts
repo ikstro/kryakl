@@ -68,6 +68,8 @@ import { createLlmTranslators, ModelSlow, type LlmTranslators } from './llmtrans
 import { BUSY_MS, busyName, slowAfter, tryAgain, type ModelBusy } from './modelbusy'
 import { cardRoom, oneAtATime, sharedReading } from './resources'
 import { MistakeStore } from './mistakes'
+import { checkChrome, chromeSummary, type ChromeProfileCheck } from './chromecheck'
+import { syncExtension } from './extensionhome'
 import { log, logTo } from './log'
 import { NATURAL_PREFIX, systemVoiceName, type NaturalState } from './natural'
 import { recognize } from './ocr'
@@ -255,6 +257,20 @@ const localAppData = () => process.env.LOCALAPPDATA ?? path.join(app.getPath('ap
 const localDir = () => TEST_HOME ?? path.join(localAppData(), 'Kryakl')
 /** %LOCALAPPDATA%\Krya and \Altype, the old names' folders, newest first: a part that could not move out of one is used there (oldfolder.ts adoptLocalFolder). */
 const oldLocalDirs = () => (TEST_HOME ? [] : OLD_LOCAL_FOLDERS.map(name => path.join(localAppData(), name)))
+/** The Chrome extension's own folder (extensionhome.ts): beside the downloads, never in the program's folder. */
+const extensionHome = () => path.join(localDir(), 'chrome-extension')
+/** Each Chrome profile with the extension and what to set right there (chromecheck.ts); read at start and when its page opens. */
+let chromeChecks: ChromeProfileCheck[] | undefined
+let chromeSaid = ''
+/** Reads Chrome's profiles again; a change of what to fix goes into kryakl.log (no profile's name) and, with `post`, to the window. */
+function checkChromeNow(post = true): ChromeProfileCheck[] {
+  chromeChecks = checkChrome(path.join(localAppData(), 'Google', 'Chrome', 'User Data'), extensionHome())
+  const said = chromeSummary(chromeChecks)
+  if (said !== chromeSaid) log(`chrome: ${said}`)
+  chromeSaid = said
+  if (post) postApp()
+  return chromeChecks
+}
 /** A part of localDir (speech, translate), or the old folder's when it is still there. */
 const localPart = (name: string) => partDir(name, localDir(), ...oldLocalDirs())
 /** A download's folder (the Firefox models, the voice, the word meanings): in localDir, beside the rest (oldfolder.ts moveDownloads); else where its move left it. */
@@ -832,6 +848,7 @@ function reportStatus(): string[] {
     `Speech engine: ${service ? `${service.state}${service.trouble ? ` (${service.trouble})` : ''}` : 'not set up'}`,
     service?.health ? `Speech engine's health: ${JSON.stringify(service.health)}` : '',
     `Translation: ${LEVEL_NAMES[settings.translationLevel]}; the model ${LEVEL_NAMES[settings.model]} is ${llmFiles.state(settings.model).status}, ${llmFiles.server.model ? `loaded (${path.basename(llmFiles.server.model)})` : 'not loaded'}`,
+    `Chrome extension: ${chromeSummary(checkChromeNow(false))}`,
   ].filter(Boolean)
 }
 
@@ -1319,6 +1336,7 @@ function appView(): AppView {
     mistakes: mistakes.list(),
     ...(talks.current() ? { talk: summaryOf(talks.current()!) } : {}),
     ...(storage ? { storage: storageView(storage) } : {}),
+    ...(chromeChecks?.length ? { chrome: chromeChecks } : {}),
     layouts: keyboardLayouts(),
     ...(keyboardTrouble ? { keyboardTrouble } : {}),
     ...(lastApp ? { lastApp } : {}),
@@ -1631,6 +1649,9 @@ function onMessage(message: ToHost, page: Page): void {
       return
     case 'storage':
       measureStorage()
+      return
+    case 'chromeCheck':
+      checkChromeNow()
       return
     case 'moveToKryakl':
       void moveToKryakl().catch(error => {
@@ -3762,11 +3783,15 @@ function setUpSpeechEngine(): void {
   // A move whose repair failed (0.15.0) left the Python's link on the old folder: set right before the engine starts.
   const healed = healSpeech(localPart('speech'), (message, error) => console.warn(message, error))
   if (healed.length) log(`speech: the Python's link pointed at its own folder again (${healed.join(', ')})`)
+  // Chrome is shown the extension in Kryakl's own folder, which no install touches (extensionhome.ts).
+  const extension = syncExtension(unpacked('extension'), extensionHome(), message => log(message))
+  if (extension.changed.length) log(`extension: v${extension.version} in its own folder (${extension.changed.length} files written or removed)`)
+  checkChromeNow()
   speech = new SpeechHost({
     root: localPart('speech'),
     userDir: userDir(),
     engineDir: unpacked('engine'),
-    extensionDir: unpacked('extension'),
+    extensionDir: extension.dir,
     sharedCache: sharedUvCache(),
     port: speechPort,
     open: url => openStream(url),
@@ -3879,7 +3904,9 @@ async function hostCall(request: HostCall): Promise<unknown> {
       await clipboard.writeText(request.text)
       return null
     case 'openChrome': {
-      const opened = await openInChrome(request.url, { front: foreground, exeOf, allowFront: allowForeground, typeAddress })
+      // A profile the extension's page names (chromecheck.ts): the window opens in it; else the one chromeProfile picks.
+      const profile = request.profile && /^(Default|Profile \d+)$/.test(request.profile) ? request.profile : undefined
+      const opened = await openInChrome(request.url, { front: foreground, exeOf, allowFront: allowForeground, typeAddress, ...(profile ? { profile: () => profile } : {}) })
       log(`chrome: ${request.url} ${opened}`)
       return opened
     }

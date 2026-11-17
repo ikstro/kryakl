@@ -377,10 +377,20 @@ async function appShots(theme: 'dark' | 'light', narrow = false): Promise<void> 
     await shot(w, tag('home-paused'))
     // Chrome holds an older copy of the extension than Kryakl's folder.
     const stale = appView()
-    stale.speech = { ...stale.speech, extensionShipped: '0.2.1' }
+    stale.speech = { ...stale.speech, extensionShipped: '0.7.1' }
     send(w, { type: 'app', view: stale })
     await sleep(300)
     await page('recordings', ['meet'], 'recordings-stale')
+    // Chrome's profiles read: one ready, one with Developer mode off, an old copy and the key taken.
+    const profiles = appView()
+    profiles.chrome = [
+      { dir: 'Default', name: 'Work', key: '', issues: ['devModeOff', 'oldCopy', 'keyTaken'] },
+      { dir: 'Profile 5', name: 'Home', key: 'Alt+Shift+M', issues: [] },
+    ]
+    send(w, { type: 'app', view: profiles })
+    await sleep(300)
+    await home()
+    await page('recordings', ['meet'], 'recordings-chrome')
     // Who spoke when installed on the card; then the processor picked, so it offers to switch.
     const card = appView()
     card.speech = { ...card.speech, pack: { status: 'ready', parts: ['core', 'gpu', 'speakers'], nvidia: true, speakersOn: 'cuda' }, health: { ...card.speech.health!, diarization: 'ready', parts: { core: true, gpu: true, speakers: true } } }

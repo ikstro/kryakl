@@ -37,10 +37,16 @@ async function micAllowed() {
   }
 }
 
+/** Offer to record when a call starts on a meeting site (meeting.js): on until turned off here. */
+function offersRow(on) {
+  const box = el('input', { type: 'checkbox', checked: on, onchange: () => chrome.storage.local.set({ offers: box.checked }) })
+  return el('label', { class: 'switch' }, box, el('span', {}, T('offers')))
+}
+
 async function render(error) {
   clearInterval(timer)
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  const status = await ask({ type: 'status' })
+  const status = await ask({ type: 'status', tabId: tab?.id })
   engine.className = `engine ${status.engine ? 'ok' : 'bad'}`
   engine.textContent = status.engine ? T('engineReady') : T('engineDown')
   const mic = await micAllowed()
@@ -59,7 +65,7 @@ async function render(error) {
     children.push(
       el('div', { class: 'title' }, tab?.title || T('tab')),
       el('button', { disabled: !status.engine, onclick: () => act('start', tab) }, T('record')),
-      el('div', { class: 'muted' }, status.engine ? T('orKey') : T('startKryakl')),
+      el('div', { class: 'muted' }, !status.engine ? T('startKryakl') : status.key ? T('orKey', status.key) : T('noKey')),
     )
     if (!mic) {
       children.push(
@@ -69,6 +75,7 @@ async function render(error) {
   }
   error ??= status.lastError
   if (error) children.push(el('div', { class: 'error' }, error))
+  children.push(offersRow(status.offers !== false))
   main.replaceChildren(...children.filter(c => c !== null && c !== undefined && c !== false))
 }
 

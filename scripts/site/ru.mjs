@@ -103,7 +103,7 @@ export default {
     [`<span>Type by voice</span>`, `<span>Печатать голосом</span>`],
     [`<span>Type by voice into English</span>`, `<span>Печатать голосом с переводом</span>`],
     [`<span>Voice note</span>`, `<span>Заметка голосом</span>`],
-    [`<span>Record a Google Meet call</span>`, `<span>Записать звонок в Google Meet</span>`],
+    [`<span>Record a call in Chrome</span>`, `<span>Записать звонок в Chrome</span>`],
     [`>your key</kbd>Click one and press the key you want, as you would in Kryakl: a combination, a modifier tapped twice, Pause or F-keys. Backspace clears it. The Translate and Talk keys you set work on this page.</p>`, `>ваша клавиша</kbd>Щёлкните и нажмите нужную клавишу, как в Крякле: сочетание, дважды модификатор, Pause или F-клавишу. Backspace стирает. Клавиши перевода и разговора, которые вы зададите, работают на этой странице.</p>`],
     // Keyboard, typed in the Russian layout
     [`</span>Keyboard layout</div>`, `</span>Раскладка</div>`],
@@ -162,7 +162,7 @@ export default {
     [`aria-label="A transcript of a call"`, `aria-label="Расшифровка звонка"`],
     [`<figcaption>The dictation panel while you speak: drag it anywhere, or fold it into the tray and keep talking. And a call transcribed with who spoke when.</figcaption>`, `<figcaption>Панель диктовки, пока вы говорите: перетащите её куда угодно или сверните в трей и говорите дальше. И звонок, расшифрованный с тем, кто когда говорил.</figcaption>`],
     [`<li><b>Quick on an ordinary processor.</b> 22 seconds of speech were typed 0.2 s after the key (Parakeet, on an Intel i9).</li>`, `<li><b>Быстро на обычном процессоре.</b> 22 секунды речи напечатаны через 0,2 с после клавиши (Parakeet, на Intel i9).</li>`],
-    [`<li><b>Transcripts</b> of files, the microphone and Google Meet calls. Telling an hour's speakers apart takes about 2 minutes on an RTX card.</li>`, `<li><b>Расшифровки</b> файлов, микрофона и звонков в Google Meet. Различить говорящих в часовой записи — около 2 минут на видеокарте RTX.</li>`],
+    [`<li><b>Transcripts</b> of files, the microphone and calls in Chrome: Meet, Teams, Zoom, Jitsi and Whereby offer to record once the call connects. Telling an hour's speakers apart takes about 2 minutes on an RTX card.</li>`, `<li><b>Расшифровки</b> файлов, микрофона и звонков в Chrome: Meet, Teams, Zoom, Jitsi и Whereby предлагают запись, как только звонок соединился. Различить говорящих в часовой записи — около 2 минут на видеокарте RTX.</li>`],
     [`<li><b>Names and terms.</b> They come out written your way, in dictation and in transcripts.</li>`, `<li><b>Имена и термины.</b> Пишутся так, как вам нужно, и в диктовке, и в расшифровках.</li>`],
     // Privacy
     [`<h2 id="pv-h">Nothing you read leaves your computer.</h2>`, `<h2 id="pv-h">Ничего из прочитанного не покидает ваш компьютер.</h2>`],

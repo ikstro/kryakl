@@ -104,7 +104,7 @@ def load_extension() -> dict | None:
         found = json.loads(EXTENSION_FILE.read_text("utf-8"))
         if found.get("id") != auth.EXTENSION_ID:
             found["id"] = ""  # an older copy, with the id Chrome gave its folder: refused now, the app says to load it again
-        return {"id": str(found["id"]), "version": str(found["version"]), "seen": float(found["seen"])}
+        return {"id": str(found["id"]), "version": str(found["version"]), "seen": float(found["seen"]), "home": bool(found.get("home", False))}
     except (OSError, ValueError, KeyError, TypeError):
         return None
 
@@ -112,18 +112,26 @@ def load_extension() -> dict | None:
 extension: dict | None = load_extension()
 
 
-def note_extension(origin: str, version: str) -> None:
+def note_extension(origin: str, version: str, home: bool = False) -> None:
     """The extension says who it is on every call (header X-Krya-Extension: its version).
 
-    The newest sighting stays in memory; the file is written only when the id or version
-    is new, as the extension pings every 15 minutes.
+    From 0.7.0 it also says whether Chrome loads it from Kryakl's own folder (X-Krya-Extension-Home: 1), which
+    Kryakl's updates keep up to date; a copy loaded from the program's folder loses its files at every update.
+    The newest sighting stays in memory; the file is written only when the id, version or folder is new, as the
+    extension pings every 15 minutes.
     """
     global extension
     # A copy before the fixed id (its hello comes without an Origin, so only its version tells): no id, and the app
     # says to remove it and load it again; from 0.4.0 on, the id is the fixed one.
     version = version.strip()[:32]
-    seen = {"id": auth.EXTENSION_ID if auth.fixed_id(version) else "", "version": version, "seen": time.time()}
-    changed = extension is None or extension["id"] != seen["id"] or extension["version"] != seen["version"] or not EXTENSION_FILE.exists()
+    seen = {"id": auth.EXTENSION_ID if auth.fixed_id(version) else "", "version": version, "seen": time.time(), "home": home}
+    changed = (
+        extension is None
+        or extension["id"] != seen["id"]
+        or extension["version"] != seen["version"]
+        or extension.get("home") != home
+        or not EXTENSION_FILE.exists()
+    )
     extension = seen
     if changed:
         try:
@@ -167,7 +175,7 @@ async def guard(request: Request, call_next):
         # The extension's look at /health may come without an Origin: it learns the engine is up, nothing else.
         if method == "GET" and path == "/health":
             if request.headers.get("x-krya-extension", "").strip():
-                note_extension(origin, request.headers["x-krya-extension"])
+                note_extension(origin, request.headers["x-krya-extension"], extension_home(request))
             nonce = request.headers.get("x-krya-nonce", "")
             # Kryakl's first look, before it sends the key: the proof alone, so a program that took the port never gets it.
             if auth.nonce_ok(nonce):
@@ -177,8 +185,13 @@ async def guard(request: Request, call_next):
     # The extension of Altype's days (up to 0.2.1) sent X-Altype-Extension; it says hello until Chrome reloads it.
     version = request.headers.get("x-krya-extension", "") or request.headers.get("x-altype-extension", "")
     if version.strip():
-        note_extension(origin, version)
+        note_extension(origin, version, extension_home(request))
     return await call_next(request)
+
+
+def extension_home(request: Request) -> bool:
+    """Whether the extension says Chrome loads it from Kryakl's own folder."""
+    return request.headers.get("x-krya-extension-home", "").strip() == "1"
 
 
 def whisper_status(model: str) -> str:

@@ -53,7 +53,7 @@ export const setTranscriptHooks = (h: Hooks) => (hooks = h)
 const SOURCES: Record<Source, { label: string; icon: string }> = {
   file: { label: t('tr.srcFile'), icon: 'file-media' },
   mic: { label: t('tr.srcMic'), icon: 'mic' },
-  meet: { label: 'Google Meet', icon: 'organization' },
+  meet: { label: t('tr.srcMeet'), icon: 'organization' },
   note: { label: t('tr.srcNote'), icon: 'note' },
 }
 const STAGES: [string, string][] = [
