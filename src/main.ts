@@ -4035,6 +4035,7 @@ function start(): void {
     notLearned: why =>
       log(why === 'field' ? 'learn: a word fixed by hand, not learned: the field said it is a password, or would not say' : 'learn: a word fixed by hand, not learned: it made no word of a word'),
     switchMissed: (exe, field) => log(`switch: did not take in ${exe} (${field})`),
+    keyLost: kind => log(`keys: let go of a key Windows no longer held (${kind}): its letting go never reached Kryakl`),
     selection: (cycle, layout, again) => void convertSelection(cycle, layout, again).catch(error => console.warn('Kryakl: could not convert the selection', error)),
     hotkey: action => {
       if (action === 'pause') return togglePause()
@@ -4084,6 +4085,7 @@ function start(): void {
     menuClosed: () => oneKeyMenu?.closed(),
     failed: message => {
       keyboardTrouble = message
+      log(`keyboard: ${message}`)
       console.warn(`Kryakl keyboard: ${message}`)
       postApp()
     },

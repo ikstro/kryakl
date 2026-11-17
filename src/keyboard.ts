@@ -13,7 +13,7 @@ import koffi from 'koffi'
 import { isAccelerator, isCopyTwice } from './hotkey'
 import type { LearnedConfig } from './learning'
 import type { Rect } from './placement'
-import { RECORD_MS, type KbdConfig, type KbdIn, type KbdOut, type KeyAction, type Learned } from './typist'
+import { RECORD_MS, type KbdConfig, type KbdIn, type KbdOut, type KeyAction, type Learned, type LostKey } from './typist'
 import type { KeyboardLayout } from './protocol'
 import { myLanguages, type Settings } from './settings'
 import { caretOf, foreground, installedLayouts } from './winkbd'
@@ -48,6 +48,8 @@ export type KeyboardEvents = {
   notLearned(why: 'field' | 'noWord'): void
   /** A layout switch a window never took: its program and the kind of field. */
   switchMissed(exe: string, field: string): void
+  /** A key Kryakl took for held that Windows no longer held was let go of (its kind, never the key). */
+  keyLost(kind: LostKey): void
   /** The fix key with a selection: convert it into the next of `cycle`; `layout` is the window's now; `again`: the text just converted, before the cursor, goes on. */
   selection(cycle: string[], layout: string, again: boolean): void
   /** A key Electron's shortcuts cannot hold, for selecting, snipping or a snip's text, was pressed. */
@@ -327,6 +329,9 @@ export class KeyboardHelper {
         return
       case 'switchMissed':
         this.events.switchMissed(message.exe, message.field)
+        return
+      case 'keyLost':
+        this.events.keyLost(message.kind)
         return
       case 'selection':
         this.events.selection(message.cycle, message.layout, message.again)

@@ -201,6 +201,8 @@ export type KbdOut =
   | { type: 'notLearned'; why: 'field' | 'noWord' }
   /** A layout switch the window never took, for the log, once per program and kind of field: no text, only their names. */
   | { type: 'switchMissed'; exe: string; field: string }
+  /** A key taken for held that Windows no longer held was let go of, for the log, once per kind: never which key. */
+  | { type: 'keyLost'; kind: LostKey }
   /**
    * The fix key with a selection: the main process copies it, converts it into the next layout and pastes it;
    * `layout` is the window's now; `again`: nothing is selected, the text it just pasted, right before the cursor, goes on.
@@ -219,6 +221,9 @@ export type KbdOut =
   /** Another key, a click outside, or another window in front closed the menu; the key or click went on. */
   | { type: 'menuClosed' }
   | { type: 'error'; message: string }
+
+/** The kind of key whose letting go never reached the hook. */
+export type LostKey = 'modifier' | 'number pad' | 'other'
 
 export type Caret = { x: number; y: number; h: number }
 export type Front = { hwnd: bigint; tid: number; pid: number }
@@ -259,6 +264,8 @@ export type TypistEnv = {
   caretOf(tid: number): Caret | undefined
   /** Whether Caps Lock is on, as the window in front sees it. */
   capsOf(front: Front): boolean
+  /** Whether Windows holds a key as down now; of the key the hook is being told of, it does not know yet. */
+  isDown(vk: number): boolean
   send(message: KbdOut): void
   doubleClickMs: number
 }
@@ -562,6 +569,7 @@ export class Typist {
     }
     const repeat = this.held.has(vk)
     this.held.add(vk)
+    this.letGoOfLost(vk)
     if (this.quiet()) {
       // A game or a presentation: no key of Kryakl's, no fixing; modifiers are still followed, so none seems held after.
       // But a dictation started before the full screen must still stop with its key: its taps and keys are read, and only they act (`allowed`); nothing typed is fixed.
@@ -615,6 +623,32 @@ export class Typist {
     }
     return this.onTyping(vk, mods)
   }
+
+  /**
+   * Keys taken for held that Windows no longer holds are let go of, as `vk`
+   * goes down. A key's letting go may never reach the hook: Windows skips a
+   * hook that answers late, shows it nothing of the lock screen or an
+   * administrator's question, and names a number-pad key let go with Shift
+   * down as the arrow it then is (pad 4 goes down as itself and up as Left).
+   * 2026-11-17: one such key stayed held for Kryakl alone, so no modifier was
+   * ever pressed alone again, and the switch key did nothing until a restart.
+   * Not `vk`, which Windows learns of once the hook has answered; not a key
+   * kept from Windows (`swallowed`), which it never held.
+   */
+  private letGoOfLost(vk: number): void {
+    if (this.held.size < 2) return
+    for (const key of this.held) {
+      if (key === vk || this.swallowed.has(key) || this.env.isDown(key)) continue
+      this.held.delete(key)
+      const kind: LostKey = modOf(key) ? 'modifier' : key >= 0x60 && key <= 0x6f ? 'number pad' : 'other'
+      if (this.lostSaid.has(kind)) continue
+      this.lostSaid.add(kind)
+      this.env.send({ type: 'keyLost', kind })
+    }
+  }
+
+  /** The kinds of lost key already named in the log. */
+  private readonly lostSaid = new Set<LostKey>()
 
   /** A key field of Kryakl's waits for a key in window `hwnd` (`on`), or no longer. */
   record(on: boolean, hwnd = 0n): void {

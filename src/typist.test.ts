@@ -66,6 +66,8 @@ class Desk {
   clicks = 0
   /** The switch's sounds, by note. */
   chimes: number[] = []
+  /** Keys Windows no longer holds though their letting go never reached the typist. */
+  gone = new Set<number>()
   /** Alt or Win taps let go behind a key that types nothing. */
   masked: number[] = []
   /** Run a fix as soon as it is due, as the thread's loop does; false holds it, for keys typed meanwhile. */
@@ -113,6 +115,7 @@ class Desk {
         chime: note => this.chimes.push(note),
         caretOf: () => undefined,
         capsOf: () => this.caps,
+        isDown: vk => !this.gone.has(vk),
         send: m => this.sent.push(m),
         doubleClickMs: 500,
       },
@@ -814,6 +817,62 @@ describe('the switch key', () => {
     expect(desk.layout).toBe('ru')
     desk.tap(VK_LCONTROL)
     expect(desk.layout).toBe('en')
+  })
+
+  test('a number-pad key let go with Shift down comes up as an arrow: it is not held for good, and the switch key goes on working', () => {
+    const desk = new Desk({ keys: { switch: 'LeftControl' } })
+    // Pad 4 goes down as itself; Shift pressed, Windows names its letting go Left (and lets Shift go and presses it again around it).
+    desk.event(0x64, true)
+    desk.event(VK_LSHIFT, true)
+    desk.event(VK_LSHIFT, false)
+    desk.event(0x25, false)
+    desk.event(VK_LSHIFT, true)
+    desk.event(VK_LSHIFT, false)
+    desk.gone.add(0x64)
+    desk.wait(1000)
+    desk.tap(VK_LCONTROL)
+    expect(desk.layout).toBe('ru')
+    desk.wait(1000)
+    desk.tap(VK_LCONTROL)
+    expect(desk.layout).toBe('en')
+    expect(desk.sent.filter(m => m.type === 'keyLost')).toEqual([{ type: 'keyLost', kind: 'number pad' }])
+  })
+
+  test('keys let go on the lock screen, where the hook sees nothing, are not held after it', () => {
+    const desk = new Desk({ keys: { switch: 'LeftControl' } })
+    desk.event(0x5b, true)
+    desk.event(0x4c, true)
+    desk.gone.add(0x5b).add(0x4c)
+    desk.wait(5000)
+    desk.tap(VK_LCONTROL)
+    expect(desk.layout).toBe('ru')
+    expect(desk.sent.filter(m => m.type === 'keyLost').map(m => (m.type === 'keyLost' ? m.kind : ''))).toEqual(['modifier', 'other'])
+  })
+
+  test('a key really held still keeps a modifier from being a tap', () => {
+    const desk = new Desk({ keys: { switch: 'LeftControl' } })
+    desk.event(0x64, true)
+    desk.tap(VK_LCONTROL)
+    desk.event(0x64, false)
+    expect(desk.layout).toBe('en')
+    expect(desk.sent.filter(m => m.type === 'keyLost')).toEqual([])
+  })
+
+  test('the key of a hotkey, kept from Windows, stays held while it is down: held longer, it acts once', () => {
+    const desk = new Desk({ keys: { dictate: 'Shift+CapsLock' } })
+    const dictated = () => desk.sent.filter(m => m.type === 'hotkey').length
+    // Windows never held Caps Lock: Kryakl kept it.
+    desk.gone.add(0x14)
+    desk.event(VK_LSHIFT, true)
+    desk.event(0x14, true)
+    desk.event(VK_LCONTROL, true)
+    desk.event(VK_LCONTROL, false)
+    desk.event(0x14, true)
+    desk.event(0x14, true)
+    desk.event(0x14, false)
+    desk.event(VK_LSHIFT, false)
+    expect(dictated()).toBe(1)
+    expect(desk.sent.filter(m => m.type === 'keyLost')).toEqual([])
   })
 
   test('a switch the window never took is said once, and the next press starts from the layout it really has', () => {

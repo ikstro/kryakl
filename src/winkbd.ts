@@ -42,6 +42,7 @@ const GetWindowThreadProcessId = user32.func('uint32 __stdcall GetWindowThreadPr
 const PostMessageW = user32.func('bool __stdcall PostMessageW(intptr hwnd, uint32 msg, uintptr w, intptr l)')
 const SetForegroundWindow = user32.func('bool __stdcall SetForegroundWindow(intptr hwnd)')
 const GetKeyState = user32.func('short __stdcall GetKeyState(int vk)')
+const GetAsyncKeyState = user32.func('short __stdcall GetAsyncKeyState(int vk)')
 const AttachThreadInput = user32.func('bool __stdcall AttachThreadInput(uint32 thread, uint32 to, bool attach)')
 const IsHungAppWindow = user32.func('bool __stdcall IsHungAppWindow(intptr hwnd)')
 const GetCurrentThreadId = kernel32.func('uint32 __stdcall GetCurrentThreadId()')
@@ -147,6 +148,15 @@ export function foreground(): Foreground {
   const pid = [0]
   const tid = GetWindowThreadProcessId(hwnd, pid) as number
   return { hwnd, tid, pid: pid[0] ?? 0 }
+}
+
+/**
+ * Whether Windows holds a key as down right now, whoever pressed it. Asked from
+ * inside the keyboard hook it is true of every key but the one the hook is
+ * being told of, which Windows marks only after the hook answers.
+ */
+export function keyDown(vk: number): boolean {
+  return (Number(GetAsyncKeyState(vk)) & 0x8000) !== 0
 }
 
 /** The layout a thread types in. */
