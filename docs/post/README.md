@@ -5,6 +5,8 @@ The owner's own story of Kryakl: why he made it and what it does, in his voice. 
 - `kryakl.uk.md`: the original. He dictated it in Ukrainian.
 - `kryakl.ru.md`, `kryakl.en.md`: translations. They keep his voice and his jokes, and the same order.
 - The three files are only the post text, ready to copy. Each one links to the landing in its own language.
+- `kryakl.uk.threads.md`: the Ukrainian post as a Threads thread of 7 (500 characters a post).
+- `kryakl-posts.md`: the hub. Where the videos and texts are, and the posts for LinkedIn (EN, 2109 characters) and X (EN, a thread of 7, 280 a post).
 
 ## Checked against 0.18.0 (2026-11-18)
 
