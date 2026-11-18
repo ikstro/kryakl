@@ -171,8 +171,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .beta-note { margin-top: 10px; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
 .display { font: 800 var(--t-display)/0.92 var(--font); letter-spacing: -0.052em; color: var(--ink); text-wrap: balance; }
 .display .duck { font-size: 0.86em; letter-spacing: -0.02em; white-space: nowrap; }
-/* Three steps under the H1: the display, the line for whom (bold, ink), the lead (muted, as a section's lead). */
-.lead { font-size: var(--t-lead); line-height: 1.55; color: var(--muted); max-width: 30em; }
+/* Three steps under the H1: the display, the line for whom (bold, ink), the lead (muted). The lead's 17 px over the
+   whole column keeps the left column about as tall as the right one (measured 2026-11-18: ru +4 px, en −20, uk +45). */
+.lead { font-size: 17px; line-height: 1.55; color: var(--muted); }
 .lead-for { font-size: clamp(20px, 2vw, 26px); font-weight: 650; line-height: 1.25; letter-spacing: -0.016em; color: var(--ink); max-width: 22em; text-wrap: balance; }
 .lead-for + .lead { margin-top: 14px; }
 .ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
