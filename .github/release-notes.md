@@ -1,28 +1,23 @@
-## Kryakl 0.17.4
+## What's new in 0.18.0
 
-**Experimental prerelease for testing the dictation changes.** This build has known text-integrity issues listed below and is not ready to replace the normal release for everyday use.
+**Meetings in Chrome (new).** On Google Meet, Microsoft Teams, Zoom, Jitsi and Whereby in the browser, Kryakl now offers to record once a call starts: a small plate in the page, and its icon on Chrome's bar lights up. Press Alt+Shift+M or click the icon, and the recording goes into Recordings as before. It stops by itself 15 seconds after you leave the call. Chrome allows no recording without a press, so nothing ever records by itself. The offers can be turned off in the extension's window.
 
-### Changes
+**The meeting recorder no longer gets lost.** The Chrome extension now lives in Kryakl's own folder, which updates do not move, and takes new versions by itself, never during a recording. The Meetings in Chrome page reads your Chrome profiles and says for each one what is left to do: turn Developer mode on, remove an old copy, set the key.
 
-- Dictation flushes the final audio buffer before stopping, handles cancellation during microphone startup, and finishes only once on repeated Stop.
-- The panel says the microphone is starting until sound reaches the audio processor.
-- Punctuation hints are closed for Whisper turbo and small. GPU Whisper sessions use shorter pieces; the new piece lengths were measured on turbo.
-- Streaming sessions track the model and device actually used, including the Parakeet fallback. Initial model preparation runs once per session.
-- Fuzzy name correction protects ordinary English, Ukrainian and Russian words while preserving explicit pronunciation aliases.
-- Whisper context has a shared token budget. The optional local text editor accepts spoken corrections and number formatting.
+**Kryakl at rest leaves the processor alone.** After the first dictated phrase, the hidden dictation panel went on drawing its waiting mark, and Kryakl took about a tenth of one processor core until it was quit. A window out of sight now draws nothing. Kryakl also checks itself once a minute and writes to its log when it takes the processor with nothing to do.
 
-### Known issues
+**Dictation.** The last moment of a phrase is no longer cut off. Phrases end with a full stop or a question mark again when you have Names and terms. Long dictation on the graphics card misses fewer words. Ordinary words are no longer turned into a name from your list that sounds alike.
 
-- Long English dictation can still omit complete sentences.
-- **Text editing:** the current experimental checks can accept changes to decimal points, number signs and negations such as "no". Text editing is off by default; check edited results carefully if you enable it.
-- **Audio capture failure:** dictation can return only the sound captured before a processor failure, with no visible warning that the recording is incomplete. The missing part is not necessarily limited to the final 100 ms.
-- The small punctuation change was measured on CPU, and shorter GPU pieces were measured on turbo. Other affected model/device combinations still need acceptance testing.
-- Live microphone testing in the packaged app, installation/rollback, noisy or quiet microphones and behavior under the user's normal workload remain open.
+**The switch key.** A layout key on a modifier tapped alone (Left Ctrl, a double Shift) could stop working until Kryakl was restarted, after a number-pad key and Shift were pressed together. It now recovers by itself.
 
-### Download and test
+**Known issues.** Long English dictation can still drop a sentence. The offer to record a meeting is new and not every service has been tried in a real call yet, Teams, Zoom and Whereby least of all. If something breaks, use Report a problem in Kryakl.
 
-For an isolated test, extract `Kryakl-0.17.4.zip` completely, quit the installed Kryakl from its tray menu, then run `Start-Isolated-Test.cmd`. It uses separate settings and downloads in `%LOCALAPPDATA%\Kryakl-Dictation-Test`, with speech port 8797. Engine and model downloads may be needed. The normal and test versions cannot run together.
+## Install and update
 
-The ZIP includes `TESTING.md`. Starting `Kryakl.exe` directly uses normal application data. **The installer replaces the installed Kryakl** and keeps its settings and downloads; use the ZIP launcher for a separate test. The installer is unsigned.
+**Install:** download `Kryakl-Setup-<version>.exe` and run it. The installer is not signed, so Windows warns: **More info → Run anyway**. Kryakl starts with Windows and lives in the tray.
 
-The source, measurements and remaining checks are in [`docs/dictation-test-plan.md`](https://github.com/ikstro/kryakl/blob/v0.17.4/docs/dictation-test-plan.md) and [`docs/speech-quality.md`](https://github.com/ikstro/kryakl/blob/v0.17.4/docs/speech-quality.md). Kryakl processes dictated audio and text locally. Updates are installed manually.
+**Update:** Kryakl does not update itself. Download the new installer from here and run it: it installs over the old version, and your settings, words and downloads stay.
+
+**Updating with Chrome's meeting recorder:** once, load the extension from Kryakl's own folder. Open Recordings › Meetings in Chrome in Kryakl: it shows the steps for each Chrome profile, with a button that opens the right Chrome page. After that the extension updates itself.
+
+**Krya is now Kryakl (0.15):** install over Krya as usual. At its first start Kryakl moves Krya's settings, words, models and transcripts into its own folders; nothing downloads again. Quit Krya first if it still runs.
