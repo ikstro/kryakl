@@ -11,6 +11,7 @@ import { isAnyArrayBuffer } from 'node:util/types'
 
 import { BrowserWindow, desktopCapturer, powerMonitor, powerSaveBlocker, screen, shell, type Display, type WebContents } from 'electron'
 
+import { calmWhenHidden } from './calm'
 import { frameWindow } from './dwm'
 import { t } from './i18n'
 import type { RecordAction, ToHost, ToView } from './protocol'
@@ -385,6 +386,7 @@ export class ScreenRecorder {
     // Before it is ever shown: no frame of the video may hold it.
     win.setContentProtection(true)
     frameWindow(win, { corner: 'round', border: this.o.border() })
+    calmWhenHidden(win)
     win.setAlwaysOnTop(true, 'screen-saver')
     win.removeMenu()
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))

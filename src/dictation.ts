@@ -18,6 +18,7 @@ import { BrowserWindow, globalShortcut, screen, shell } from 'electron'
 
 import { openable } from './bridge'
 import type { DictationLog } from './dictationlog'
+import { calmWhenHidden } from './calm'
 import { frameWindow } from './dwm'
 import { t } from './i18n'
 import { log } from './log'
@@ -370,6 +371,18 @@ export class Dictation {
   private over(): void {
     globalShortcut.unregister('Escape')
     this.set('idle')
+    this.rest()
+  }
+
+  /**
+   * A badge out of sight with no phrase under way shows nothing: its page is never throttled, so whatever
+   * moves on it ("typing…"'s spinner) would be drawn until Kryakl quits. calm.ts pauses a hidden window's
+   * animations; this empties the page besides, so nothing is left to move.
+   */
+  private rest(): void {
+    const b = this.badge
+    if (!b || b.isDestroyed() || !this.badgeReady || this.state !== 'idle' || b.isVisible()) return
+    b.webContents.send('to-view', { type: 'dictationRest' } satisfies ToView)
   }
 
   private hideSoon(ms: number): void {
@@ -416,6 +429,9 @@ export class Dictation {
     })
     // No edge of Windows 11's around it either: a square ghost behind the pill's round corners.
     frameWindow(b, { corner: 'square', border: 'none' })
+    // Its page is never throttled (it records while folded away), and it is hidden after each phrase with the
+    // "typing…" spinner still on it: unpaused, that spinner turned until Kryakl quit (calm.ts).
+    calmWhenHidden(b)
     b.setAlwaysOnTop(true, 'pop-up-menu')
     b.removeMenu()
     b.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
@@ -439,6 +455,7 @@ export class Dictation {
       clearTimeout(this.looking)
       clearInterval(this.flight)
       log(`badge: hidden, state ${this.state}`)
+      this.rest()
     })
     b.on('unresponsive', () => log('badge: the page does not answer'))
     b.webContents.on('render-process-gone', (_event, details) => log(`badge: the page's process is gone: ${details.reason}`))

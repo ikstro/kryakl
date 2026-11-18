@@ -5439,6 +5439,10 @@
       show("done", wordsOf(message.text), el("span", { class: "check" }, "\u2713"), el("span", { class: "what" }, message.note ?? (mode === "note" ? t("dict.saved") : t("dict.typed"))));
     } else if (message.type === "dictationError") {
       show("error", wordsOf(message.message), el("span", { class: "what" }, mode === "note" ? t("dict.noteFailed") : t("dict.nothingTyped")));
+    } else if (message.type === "dictationRest") {
+      quiet();
+      root.className = "badge rest";
+      root.replaceChildren();
     }
   });
   var posted = 0;

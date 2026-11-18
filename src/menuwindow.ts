@@ -6,6 +6,7 @@
 
 import { BrowserWindow, screen } from 'electron'
 
+import { calmWhenHidden } from './calm'
 import { frameWindow } from './dwm'
 import { t } from './i18n'
 import { menuKeyOf, type MenuAction, type MenuItem } from './menu'
@@ -211,6 +212,7 @@ export class KryaklMenu {
       webPreferences: { preload: this.o.preload, contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false, backgroundThrottling: false },
     })
     frameWindow(win, { corner: 'round', border: this.o.border() })
+    calmWhenHidden(win)
     win.setAlwaysOnTop(true, 'pop-up-menu')
     win.removeMenu()
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))

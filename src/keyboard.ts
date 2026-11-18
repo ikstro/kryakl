@@ -10,6 +10,7 @@ import { MessageChannel, Worker } from 'node:worker_threads'
 import { BrowserWindow, screen } from 'electron'
 import koffi from 'koffi'
 
+import { calmWhenHidden } from './calm'
 import { isAccelerator, isCopyTwice } from './hotkey'
 import type { LearnedConfig } from './learning'
 import type { Rect } from './placement'
@@ -417,6 +418,7 @@ export class KeyboardHelper {
     })
     win.setAlwaysOnTop(true, 'screen-saver')
     win.setIgnoreMouseEvents(true)
+    calmWhenHidden(win)
     void win.loadFile(path.join(path.dirname(this.wordsDir), 'badge.html'))
     this.badge = win
     return win

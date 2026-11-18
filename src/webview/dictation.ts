@@ -219,6 +219,11 @@ window.addEventListener('message', event => {
     show('done', wordsOf(message.text), el('span', { class: 'check' }, '✓'), el('span', { class: 'what' }, message.note ?? (mode === 'note' ? t('dict.saved') : t('dict.typed'))))
   } else if (message.type === 'dictationError') {
     show('error', wordsOf(message.message), el('span', { class: 'what' }, mode === 'note' ? t('dict.noteFailed') : t('dict.nothingTyped')))
+  } else if (message.type === 'dictationRest') {
+    // Out of sight until the next phrase: nothing stays on the page to be drawn (the spinner turned on for good, 2026-11-18).
+    quiet()
+    root.className = 'badge rest'
+    root.replaceChildren()
   }
 })
 

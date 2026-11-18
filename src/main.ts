@@ -50,6 +50,7 @@ import { createDuck, type Duck } from './duck'
 import { DictationLog } from './dictationlog'
 import { DOWNLOADABLE, DictionaryStore } from './dictstore'
 import { openStream } from './download'
+import { calmWhenHidden } from './calm'
 import { frameWindow, WIN11 } from './dwm'
 import { createTranslator, NATIVES } from './engine'
 import { LEVEL_VRAM_MB, translationAdvice } from './hardware'
@@ -67,6 +68,7 @@ import { createLlmFiles, LLM_MODELS, llmPaths, type LlmFiles } from './llmfiles'
 import { createLlmTranslators, ModelSlow, type LlmTranslators } from './llmtranslator'
 import { BUSY_MS, busyName, slowAfter, tryAgain, type ModelBusy } from './modelbusy'
 import { cardRoom, oneAtATime, sharedReading } from './resources'
+import { RestWatch } from './restwatch'
 import { MistakeStore } from './mistakes'
 import { checkChrome, chromeSummary, type ChromeProfileCheck } from './chromecheck'
 import { syncExtension } from './extensionhome'
@@ -971,6 +973,8 @@ function createCard(): BrowserWindow {
     },
   })
   frameWindow(win, { corner: 'round', border: borderColor() })
+  // Its page is not throttled (the voice plays on behind other windows): hidden, a spinner left on it would turn for good.
+  calmWhenHidden(win)
   // A drag of an edge (never the card's own growing) sets the width, or how tall a card may grow.
   win.on('will-resize', () => {
     if (!maximizedFrom) resizeFrom ??= win.getBounds()
@@ -1381,6 +1385,7 @@ function createAppWindow(): BrowserWindow {
     },
   })
   frameWindow(win, { corner: 'default', border: borderColor() })
+  calmWhenHidden(win)
   win.removeMenu()
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.webContents.on('will-navigate', event => event.preventDefault())
@@ -2526,6 +2531,7 @@ function createTalkWindow(): BrowserWindow {
     },
   })
   frameWindow(win, { corner: 'round', border: borderColor() })
+  calmWhenHidden(win)
   win.removeMenu()
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.webContents.on('will-navigate', event => event.preventDefault())
@@ -2777,6 +2783,43 @@ function watchModel(): void {
   stopForFullScreen()
   recheckBusy().catch(error => console.warn('Kryakl: could not look at the graphics card', error))
   measureCard().catch(error => console.warn('Kryakl: could not measure the graphics card', error))
+}
+
+const REST_LOOK_MS = 60_000
+const restWatch = new RestWatch()
+/** Something of Kryakl's was shown or dictated since the last look at its rest. */
+let stirred = true
+app.on('browser-window-created', (_event, win) => {
+  const stir = () => {
+    stirred = true
+  }
+  win.on('show', stir)
+  win.on('restore', stir)
+})
+
+/**
+ * Once a minute: what Kryakl's own processes took of the processor while nothing of it was shown, recorded or
+ * dictated (restwatch.ts). Three such minutes above the limit go into kryakl.log once, each part by its page's
+ * file or its kind, never by anything of the person's.
+ */
+function watchRest(): void {
+  const windows = BrowserWindow.getAllWindows().filter(w => !w.isDestroyed() && !w.webContents.isDestroyed())
+  const atRest = !stirred && !recordingNow() && !(dictation && dictation.state !== 'idle') && !windows.some(w => w.isVisible() && !w.isMinimized())
+  stirred = false
+  const pages = new Map<number, string>()
+  for (const w of windows) {
+    try {
+      pages.set(w.webContents.getOSProcessId(), path.basename(new URL(w.webContents.getURL()).pathname))
+    } catch {
+      // A window with no page yet is named by its kind.
+    }
+  }
+  const said = restWatch.sample(
+    Date.now(),
+    atRest,
+    app.getAppMetrics().map(m => ({ name: pages.get(m.pid) || m.type, seconds: m.cpu.cumulativeCPUUsage ?? 0 })),
+  )
+  if (said) log(said)
 }
 
 /**
@@ -3601,6 +3644,7 @@ function createTrayPanel(): BrowserWindow {
     },
   })
   frameWindow(win, { corner: 'round', border: borderColor() })
+  calmWhenHidden(win)
   win.setAlwaysOnTop(true, 'pop-up-menu')
   win.removeMenu()
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
@@ -3828,6 +3872,8 @@ function setUpSpeechEngine(): void {
     report: () => openApp('report'),
     openTranscript,
     onChange: () => {
+      // A phrase with its panel folded away shows no window: it still is no rest.
+      stirred = true
       keyboard?.dictating(dictation.state !== 'idle')
       refreshTray()
     },
@@ -3969,6 +4015,7 @@ function start(): void {
   })
   llm = createLlmTranslators({ files: llmFiles, onTimed: modelTimed })
   setInterval(watchModel, FULL_SCREEN_LOOK_MS)
+  setInterval(watchRest, REST_LOOK_MS)
   checker = createChecker({ files: llmFiles, model: () => settings.model, onTimed: modelTimed })
   editor = createEditor({ files: llmFiles, model: () => settings.model })
   mistakes = new MistakeStore(path.join(userDir(), 'mistakes.json'))

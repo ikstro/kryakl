@@ -12,6 +12,7 @@ import * as path from 'node:path'
 
 import { BrowserWindow, dialog, nativeImage, screen, type Rectangle, type WebContents } from 'electron'
 
+import { calmWhenHidden } from './calm'
 import { t } from './i18n'
 import type { ShotsAction, ShotsItem, ToHost, ToView } from './protocol'
 import type { Box, Shape, ShotStyle, Tool } from './shotmodel'
@@ -360,6 +361,7 @@ export class ShotsEditor {
       webPreferences: { preload: this.o.preload, contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
     })
     this.o.frame(win)
+    calmWhenHidden(win)
     win.removeMenu()
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     win.webContents.on('will-navigate', event => event.preventDefault())

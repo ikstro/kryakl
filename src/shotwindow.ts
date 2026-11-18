@@ -8,6 +8,7 @@ import { Worker } from 'node:worker_threads'
 
 import { BrowserWindow, screen, type Display, type WebContents } from 'electron'
 
+import { calmWhenHidden } from './calm'
 import type { ShotAction, ToHost, ToView } from './protocol'
 import type { VideoEffects, VideoSound } from './recordmodel'
 import { MIN_VIDEO_FRAME, videoSoundOf } from './recordmodel'
@@ -413,6 +414,7 @@ export class ShotOverlay {
       webPreferences: { preload: this.o.preload, contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false, backgroundThrottling: false },
     })
     win.setAlwaysOnTop(true, 'screen-saver')
+    calmWhenHidden(win)
     win.removeMenu()
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     win.webContents.on('will-navigate', event => event.preventDefault())

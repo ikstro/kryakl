@@ -417,6 +417,8 @@ export type ToView =
   /** The phrase is with the local model (text editing). */
   | { type: 'dictationEditing' }
   | { type: 'dictationError'; message: string }
+  /** The phrase is over and the badge is out of sight: its page keeps nothing on it (a spinner left there would turn for good). */
+  | { type: 'dictationRest' }
   /** The tray's panel was just shown: focus its first command. */
   | { type: 'trayShown' }
   /** Kryakl's menu on one key: what it draws now. */
