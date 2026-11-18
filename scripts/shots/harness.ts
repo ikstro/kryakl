@@ -705,10 +705,10 @@ async function shotShots(theme: 'dark' | 'light'): Promise<void> {
     await sleep(200)
     await shot(w, tag('frame'))
     // The pointer put on the picture, then taken off again; the arrows move the frame.
-    await click(w, '.b[title="' + (LANG === 'uk' ? 'Курсор на знімку' : LANG === 'ru' ? 'Курсор на снимке' : 'Pointer on the picture') + '"]')
+    await click(w, '.b[title="' + (LANG === 'uk' ? 'Курсор на скриншоті' : LANG === 'ru' ? 'Курсор на скриншоте' : 'Pointer on the picture') + '"]')
     await sleep(150)
     await shot(w, tag('cursor'))
-    await click(w, '.b[title="' + (LANG === 'uk' ? 'Курсор на знімку' : LANG === 'ru' ? 'Курсор на снимке' : 'Pointer on the picture') + '"]')
+    await click(w, '.b[title="' + (LANG === 'uk' ? 'Курсор на скриншоті' : LANG === 'ru' ? 'Курсор на скриншоте' : 'Pointer on the picture') + '"]')
     for (let i = 0; i < 4; i++) await js(w, `window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight', key: 'ArrowRight', shiftKey: true, bubbles: true })), 'ok'`)
     await sleep(150)
     await shot(w, tag('nudged'))
