@@ -86,6 +86,39 @@ button {
   color: var(--muted);
 }
 
+/* The brand and, when a newer version is out, its mark: together on the left. */
+.who {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* A newer version is out: a small yellow mark beside this one's; a click opens its page. */
+.newver {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 18px;
+  padding: 0 4px 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 600 11px / 1 var(--mono);
+}
+
+.newver svg.lu {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.4;
+}
+
+body:not(.keys) .newver:hover {
+  background: var(--accent-hover);
+}
+
 /* The state gives way to Open: a long one ("translator on first use") ends in an ellipsis. */
 .side {
   display: flex;

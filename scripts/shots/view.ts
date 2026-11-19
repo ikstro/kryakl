@@ -130,9 +130,11 @@ function full(over: Partial<AppView['settings']>, plan: AppView['speech']['plan'
       talkAbout: 'I am Alex, a product designer from Kyiv. I love hiking and progressive metal.',
       ...over,
     },
-    version: '0.11.0',
+    // SHOTS_NEW_VERSION=0.99.0 pictures the notice of a newer version (the tray's mark, Home, Settings), on an installed copy, as only that one asks.
+    version: process.env.SHOTS_NEW_VERSION ? '0.18.0' : '0.11.0',
     build: '30 Oct, 07:12 (ff17ba8, changed)',
-    dev: true,
+    dev: !process.env.SHOTS_NEW_VERSION,
+    newVersion: process.env.SHOTS_NEW_VERSION ?? '',
     natural: { status: 'ready', progress: 1, size: 170, dismissed: false, rtf: 0.3 },
     hostVoices: [{ name: 'Microsoft Zira Desktop', lang: 'en-US' }],
     languages: LANGUAGES.map(l => ({ name: l.name, native: l.native })),
@@ -271,9 +273,11 @@ export function trayView(over: Partial<TrayView> = {}): TrayView {
       { at: new Date(Date.now() - 3600e3).toISOString(), text: 'Так может проще пересобрать сборку.' },
     ],
     native: 'Russian',
-    version: '0.11.0',
+    // SHOTS_NEW_VERSION=0.99.0 pictures the notice of a newer version (the tray's mark, Home, Settings), on an installed copy, as only that one asks.
+    version: process.env.SHOTS_NEW_VERSION ? '0.18.0' : '0.11.0',
     build: '30 Oct, 07:12 (ff17ba8, changed)',
-    dev: true,
+    dev: !process.env.SHOTS_NEW_VERSION,
+    newVersion: process.env.SHOTS_NEW_VERSION ?? '',
     ...over,
   }
 }

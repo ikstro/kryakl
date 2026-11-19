@@ -6,7 +6,7 @@
 // while the window lives (it only hides); the advice is setup.ts's.
 
 import { cardText, mainCard, shortCpu } from '../hardware'
-import { languageName, t } from '../i18n'
+import { byName, languageName, t } from '../i18n'
 import { LANGUAGES } from '../languages'
 import type { AppView, ToHost } from '../protocol'
 import type { Settings } from '../settings'
@@ -109,7 +109,7 @@ function languageStep(v: AppView, h: SetupHooks): HTMLElement[] {
     [t('setup.languageNote')],
     select(
       s.native,
-      v.languages.map(l => [l.name, twoNames(l.native, languageName(l.name))]),
+      byName(v.languages, l => languageName(l.name)).map(l => [l.name, twoNames(languageName(l.name), l.native)]),
       native => {
         choice = undefined
         h.save({ native })
@@ -127,7 +127,7 @@ function languageStep(v: AppView, h: SetupHooks): HTMLElement[] {
       'plus',
       t('setup.addLanguage'),
       [t('setup.addLanguageNote')],
-      select<string>('', [['', t('setup.pickLanguage')], ...rest.map((l): [string, string] => [l.code, twoNames(languageName(l.name), l.native)])], code => code && h.save({ languages: [...s.languages, code] })),
+      select<string>('', [['', t('setup.pickLanguage')], ...byName(rest, l => languageName(l.name)).map((l): [string, string] => [l.code, twoNames(languageName(l.name), l.native)])], code => code && h.save({ languages: [...s.languages, code] })),
     ),
     card('globe', languageName('English'), [t('setup.always')], null),
     ...s.languages.map(code => card('globe', languageName(nameOf(code)), [], ib('x', t('ui.remove', { item: languageName(nameOf(code)) }), () => h.save({ languages: s.languages.filter(x => x !== code) })))),

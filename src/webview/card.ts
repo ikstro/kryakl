@@ -14,7 +14,7 @@
 import { hotkeyLabel } from '../hotkey'
 import { findLanguage, labelCode, langCode, voiceMatches } from '../languages'
 import { chosenNatural } from '../natural'
-import { languageName as uiLanguageName, levelName, t, type Key } from '../i18n'
+import { byName, languageName as uiLanguageName, levelName, t, type Key } from '../i18n'
 import { updateSentences } from './sweep'
 import type { BusyPart, CardKind, CardState, CardView, CheckResult, DiffPart, HostVoice, NaturalState, TextResult, ToHost, ToView, TranslationState, TutorHost, ViewConfig } from '../protocol'
 import { dwmFlag, el, html, icon } from './dom'
@@ -621,7 +621,7 @@ function syncLanguages(): void {
 /** Both lists: the languages the person uses first (`mine`, in their order), then the others by name; a code the list lacks falls back to English. */
 function fillLanguages(codes: string[], from: string, to: string, mine: string[] = []): void {
   const first = mine.filter(c => codes.includes(c))
-  const rest = codes.filter(c => !first.includes(c)).sort((a, b) => languageName(a).localeCompare(languageName(b)))
+  const rest = byName(codes.filter(c => !first.includes(c)), languageName)
   const fallback = codes.includes('en') ? 'en' : (rest[0] ?? first[0] ?? '')
   const option = (c: string) => el('option', { value: c }, languageName(c))
   for (const [select, code] of [

@@ -74,6 +74,7 @@ import { checkChrome, chromeSummary, type ChromeProfileCheck } from './chromeche
 import { syncExtension } from './extensionhome'
 import { log, logTo } from './log'
 import { NATURAL_PREFIX, systemVoiceName, type NaturalState } from './natural'
+import { DOWNLOAD_PAGE, LATEST_URL, dueToLook, latestFrom, offered, readState, type VersionState } from './newversion'
 import { recognize } from './ocr'
 import { pickLines } from './ocrpick'
 import { adoptLocalFolder, adoptOldFolders, freeFolder, hasToMove, healSpeech, leftIn, moveDownloads, OLD_LOCAL_FOLDERS, partDir, removeOldUpdaterCaches, type LeftPart, type Warn } from './oldfolder'
@@ -228,6 +229,8 @@ const LINKS = new Set([
   'https://ikstro.com',
   'https://github.com/ikstro/kryakl',
   'https://github.com/ikstro/kryakl/releases',
+  // The newest release's page: where a new version's notice leads (newversion.ts).
+  DOWNLOAD_PAGE,
   'https://github.com/ikstro/kryakl/blob/main/NOTICE',
   // The author's own places, and a letter to him (About).
   'https://github.com/ikstro',
@@ -527,6 +530,8 @@ function saveSettings(patch: Partial<Settings>): void {
   // The speech models are chosen from these (speechplan.ts), and the words to spell go with the plan: sent to the engine again.
   if (speech && (['native', 'speechPrefer', 'dictationModel', 'transcriptsModel', 'speechTestAgreed', 'vocabulary'] as const).some(k => k in patch)) speech.replan()
   if ('talkOnTop' in patch) talkWin?.setAlwaysOnTop(settings.talkOnTop)
+  // Turned on: GitHub is asked now, if a day has passed since the last answer.
+  if (patch.versionNotice) void lookForVersion()
   refreshTray()
   if (shown) postCard()
   postApp()
@@ -1319,6 +1324,7 @@ function appView(): AppView {
     version: app.getVersion(),
     build: buildText(),
     dev: !app.isPackaged,
+    newVersion: newVersion(),
     natural: naturalState(),
     hostVoices: hostVoices ?? [],
     languages: NATIVES.map(code => findLanguage(code))
@@ -2822,6 +2828,70 @@ function watchRest(): void {
   if (said) log(said)
 }
 
+// A newer version (newversion.ts; the owner, 2026-11-19): an installed Kryakl asks GitHub once a day for the newest
+// release's number and says when it is newer than this copy; nothing is downloaded or installed. A run from source and
+// a test run never ask, nor does a Kryakl whose notice is turned off.
+const VERSION_FIRST_MS = 60_000
+const VERSION_TICK_MS = 10 * 60_000
+let versionState: VersionState | undefined
+let versionFailedAt = 0
+let versionFailSaid = false
+let versionAsking = false
+let versionSaid = ''
+const versionFile = () => path.join(userDir(), 'version.json')
+const versionAsked = () => app.isPackaged && !TEST_HOME && settings.versionNotice
+
+function versionSeen(): VersionState {
+  if (!versionState) {
+    try {
+      versionState = readState(JSON.parse(fs.readFileSync(versionFile(), 'utf8')))
+    } catch {
+      versionState = readState(undefined)
+    }
+  }
+  return versionState
+}
+
+/** The newer release to tell the person of, '' when there is none or nothing is asked. */
+function newVersion(): string {
+  return versionAsked() ? offered(versionSeen(), app.getVersion()) : ''
+}
+
+/** Asks GitHub when a day has passed (an hour after a failure); kryakl.log says a new version once, and a failure once a start. */
+async function lookForVersion(): Promise<void> {
+  if (!versionAsked() || versionAsking || !dueToLook(versionSeen(), versionFailedAt, Date.now())) return
+  versionAsking = true
+  const before = newVersion()
+  try {
+    // A plain client name, nothing of the person or this computer.
+    const res = await fetch(LATEST_URL, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Kryakl' }, signal: AbortSignal.timeout(10_000) })
+    if (!res.ok) throw new Error(`GitHub answered ${res.status}`)
+    const latest = latestFrom(await res.json())
+    if (!latest) throw new Error('no release in the answer')
+    versionState = { latest, lookedAt: Date.now() }
+    versionFailedAt = 0
+    try {
+      fs.mkdirSync(userDir(), { recursive: true })
+      fs.writeFileSync(versionFile(), JSON.stringify(versionState) + '\n', 'utf8')
+    } catch {
+      // Not kept: asked again after the next start.
+    }
+  } catch (error) {
+    versionFailedAt = Date.now()
+    if (!versionFailSaid) log(`version: could not ask GitHub (${error instanceof Error ? error.message : String(error)})`)
+    versionFailSaid = true
+  } finally {
+    versionAsking = false
+  }
+  const now = newVersion()
+  if (now && now !== versionSaid) log(`version: ${now} is out (this is ${app.getVersion()})`)
+  versionSaid = now || versionSaid
+  if (now !== before) {
+    refreshTray()
+    postApp()
+  }
+}
+
 /**
  * The local model starts loading the moment a key asks for it (2026-10-31),
  * while the text is still being copied, snipped or typed: its 3 s start after
@@ -3488,6 +3558,7 @@ function trayView(): TrayView {
     version: app.getVersion(),
     build: buildText(),
     dev: !app.isPackaged,
+    newVersion: newVersion(),
   }
 }
 
@@ -3754,6 +3825,9 @@ function runTrayCommand(command: TrayCommand): void {
     case 'report':
       openApp('report')
       return
+    case 'newVersion':
+      void shell.openExternal(DOWNLOAD_PAGE)
+      return
     case 'open':
       openApp()
       return
@@ -4016,6 +4090,8 @@ function start(): void {
   llm = createLlmTranslators({ files: llmFiles, onTimed: modelTimed })
   setInterval(watchModel, FULL_SCREEN_LOOK_MS)
   setInterval(watchRest, REST_LOOK_MS)
+  setTimeout(() => void lookForVersion(), VERSION_FIRST_MS)
+  setInterval(() => void lookForVersion(), VERSION_TICK_MS)
   checker = createChecker({ files: llmFiles, model: () => settings.model, onTimed: modelTimed })
   editor = createEditor({ files: llmFiles, model: () => settings.model })
   mistakes = new MistakeStore(path.join(userDir(), 'mistakes.json'))

@@ -20,7 +20,7 @@ Select any text, press your key, and hear it in English. A small Windows app for
 
 Download `Kryakl-Setup-<version>.exe` from the [releases](https://github.com/ikstro/kryakl/releases) and run it. The installer is not signed (Kryakl is a free app), so Windows warns once: **More info → Run anyway**. Kryakl starts with Windows and lives in the tray. It installs over Altype and 2Talker and takes their words, settings and downloads along.
 
-**New versions.** Kryakl does not update itself: download the new installer from the [releases](https://github.com/ikstro/kryakl/releases) and run it. It installs over the version you have; your settings, words and downloads stay. Settings → Version links there.
+**New versions.** Kryakl does not update itself: download the new installer from the [releases](https://github.com/ikstro/kryakl/releases) and run it. It installs over the version you have; your settings, words and downloads stay. Once a day Kryakl asks GitHub for the newest version's number and tells you when one is out (in the tray, on Home and in Settings → Version); nothing about you is sent, and Settings → Version turns it off.
 
 The first translation downloads the translator for your language (about 85 MB for Russian ↔ English), once.
 

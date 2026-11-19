@@ -524,6 +524,15 @@ svg.glyph {
   margin: 10px 0 0;
 }
 
+/* A newer version is out: the same card, its dot the duck's mark, Download the yellow button. */
+.status.newver {
+  margin-top: 10px;
+}
+
+.status.newver .sdot {
+  background: var(--mark);
+}
+
 /* Something on its way down: its name, how far it has got. */
 .dl {
   display: flex;

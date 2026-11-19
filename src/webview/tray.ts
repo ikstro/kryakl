@@ -242,11 +242,16 @@ function render(v: TrayView): void {
   // The brand opens the window too; Open is the one the keys reach. The version beside it: a run from source says so, and when it was built.
   const version = el('span', { class: 'ver', title: t('tray.built', { build: v.build }) }, v.dev ? `${versionText(v.version)} dev` : versionText(v.version))
   const brand = el('button', { class: 'brand', tabindex: '-1', title: t('tray.openKryakl'), onclick: openApp }, logo(), version)
+  // A newer version is out (newversion.ts): a small mark beside this one's; a click opens the page it is downloaded from.
+  // The head has room for one of the two: the mark takes the state's place ("ready"), and paused, the state stays.
+  const newer = v.newVersion && !v.paused
+    ? el('button', { class: 'newver', tabindex: '-1', title: t('tray.newVersion', { version: v.newVersion }), 'aria-label': t('tray.newVersion', { version: v.newVersion }), onclick: () => post({ type: 'tray', command: 'newVersion' }) }, v.newVersion, lucide('arrow-down', 's'))
+    : null
   const open = el('button', { class: 'open', 'data-nav': true, 'data-id': 'open', onclick: openApp }, t('tray.open'))
   const panel = el(
     'div',
     { class: 'panel' },
-    el('header', { class: 'head' }, brand, el('div', { class: 'side' }, status(v), open)),
+    el('header', { class: 'head' }, el('div', { class: 'who' }, brand, newer), el('div', { class: 'side' }, newer ? null : status(v), open)),
     group(
       t('tray.actions'),
       command('shot', 'camera', t('tray.shot'), 'shot', v.keys.shot),

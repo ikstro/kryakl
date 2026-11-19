@@ -31,6 +31,7 @@ function view(profile: DeviceProfile, over: Partial<AppView> = {}): AppView {
     version: '0.9.0',
     build: '',
     dev: false,
+    newVersion: '',
     natural: { status: 'absent', progress: 0, size: 170, dismissed: false },
     hostVoices: [],
     languages: [],

@@ -253,6 +253,8 @@ export type AppView = {
   build: string
   /** A run from source, not an installed copy. */
   dev: boolean
+  /** A newer release than this copy ("0.18.0"), as GitHub said at the last daily look (newversion.ts); '' when there is none or the notice is off. */
+  newVersion: string
   natural: NaturalState
   hostVoices: HostVoice[]
   /** The languages a person may name as their own: English name and own name. */
@@ -359,10 +361,12 @@ export type TrayView = {
   version: string
   build: string
   dev: boolean
+  /** A newer release than this copy (as `AppView.newVersion`): a mark beside the version, a click opens its page. */
+  newVersion: string
 }
 
 /** What the tray's panel can do; each puts the panel away first. */
-export type TrayCommand = 'shot' | 'shots' | 'video' | 'listenCopied' | 'translateCopied' | 'typeToTranslate' | 'checkEnglish' | 'talk' | 'listenScreen' | 'translateScreen' | 'note' | 'transcripts' | 'vocabulary' | 'kept' | 'phrases' | 'settings' | 'report' | 'open' | 'quit'
+export type TrayCommand = 'newVersion' | 'shot' | 'shots' | 'video' | 'listenCopied' | 'translateCopied' | 'typeToTranslate' | 'checkEnglish' | 'talk' | 'listenScreen' | 'translateScreen' | 'note' | 'transcripts' | 'vocabulary' | 'kept' | 'phrases' | 'settings' | 'report' | 'open' | 'quit'
 
 /**
  * Why a word has no meanings: no dictionary exists for the person's language,

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { en, type Key, type Phrase } from './en'
 import { engineMessage } from './engine'
-import { languageName, levelName, setUiLanguage, sizeText, t } from './index'
+import { byName, languageName, levelName, setUiLanguage, sizeText, t } from './index'
 import { ru } from './ru'
 import { uk } from './uk'
 
@@ -89,5 +89,23 @@ describe('engineMessage', () => {
     expect(engineMessage('Could not recognize: CUDA out of memory')).toBe('Не удалось распознать: CUDA out of memory')
     expect(engineMessage('Could not remove small: Access is denied')).toBe('Не удалось удалить small: Access is denied')
     expect(engineMessage('Something new')).toBe('Something new')
+  })
+})
+
+describe('byName', () => {
+  const codes = ['es', 'de', 'fr', 'uk', 'pl', 'ar', 'zh']
+
+  it("puts languages in the alphabet's order of the interface's language", () => {
+    expect(byName(codes, languageName).map(languageName)).toEqual(['Arabic', 'Chinese', 'French', 'German', 'Polish', 'Spanish', 'Ukrainian'])
+    setUiLanguage('ru')
+    expect(byName(codes, languageName)).toEqual(['ar', 'es', 'zh', 'de', 'pl', 'uk', 'fr'])
+    setUiLanguage('uk')
+    expect(byName(codes, languageName)).toEqual(['ar', 'es', 'zh', 'de', 'pl', 'uk', 'fr'])
+  })
+
+  it('leaves the list given as it was', () => {
+    const given = ['uk', 'ar']
+    expect(byName(given, languageName)).toEqual(['ar', 'uk'])
+    expect(given).toEqual(['uk', 'ar'])
   })
 })

@@ -177,7 +177,7 @@ export default {
     [`<p>Downloaded when you first need them, from Mozilla and Hugging Face, each checked by size and SHA-256.</p>`, `<p>Завантажуються, коли вперше знадобляться, з Mozilla і Hugging Face; кожна перевіряється за розміром і SHA-256.</p>`],
     [`<h3>New versions</h3>`, `<h3>Нові версії</h3>`],
     [`</svg>You decide</span>`, `</svg>Вирішуєте ви</span>`],
-    [`<p>Kryakl never updates itself. You download a new installer from GitHub when you want it.</p>`, `<p>Крякл ніколи не оновлюється сам. Ви завантажуєте новий інсталятор з GitHub, коли захочете.</p>`],
+    [`<p>Once a day Kryakl asks GitHub whether a newer version is out, and sends nothing about you; one switch turns that off. It never installs anything itself: you download the installer when you want it.</p>`, `<p>Раз на день Крякл питає в GitHub, чи вийшла новіша версія, і нічого про вас не передає; це вимикається одним перемикачем. Сам він нічого не встановлює: інсталятор ви завантажуєте, коли захочете.</p>`],
     // Install
     [`<h2 id="in-h">Three steps to the tray.</h2>`, `<h2 id="in-h">Три кроки до трею.</h2>`],
     [`<p class="sec-lead">Free, open source, about a minute to set up. It installs over Krya, Altype and 2Talker and takes their words and settings along.</p>`, `<p class="sec-lead">Безкоштовно, з відкритим кодом, налаштування — близько хвилини. Встановлюється поверх Krya, Altype і 2Talker і забирає їхні слова й налаштування.</p>`],

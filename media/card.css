@@ -900,6 +900,18 @@ body.maximized .text-field {
   color: var(--text);
 }
 
+/* The groups' titles too ("Yours", "All languages"): the select itself is see-through, so Windows drew
+   them on white with the card's light text, a white strip with nothing to read in the dark theme. */
+.select-pill optgroup {
+  background: var(--raised);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.select-pill optgroup option {
+  font-weight: 400;
+}
+
 .select-pill .codicon {
   position: absolute;
   top: 50%;

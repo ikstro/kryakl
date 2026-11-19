@@ -97,6 +97,22 @@ export function languageName(nameOrCode: string): string {
   return name && name !== language.code ? name : language.name
 }
 
+const collators = new Map<UiLanguage, Intl.Collator>()
+
+/**
+ * Items in the alphabet's order of the interface's language, by the name each
+ * shows ("Arabic, Bulgarian, Chinese…"; in Russian «английский, арабский,
+ * болгарский…»): every list of languages a person picks from, so a language
+ * is found where the eye looks for it (the owner, 2026-11-19; the lists came
+ * in the model catalog's order).
+ */
+export function byName<T>(items: readonly T[], name: (item: T) => string): T[] {
+  let collator = collators.get(current)
+  if (!collator) collators.set(current, (collator = new Intl.Collator(current, { sensitivity: 'base' })))
+  const order = collator
+  return [...items].sort((a, b) => order.compare(name(a), name(b)))
+}
+
 /** A translation level's name (Fast, Accurate, Most accurate), the local model's too. */
 export const levelName = (level: TranslationLevel): string => t(`level.${level}`)
 

@@ -25,7 +25,7 @@ import { translationAdvice, type LevelFit } from '../hardware'
 import { COPY_TWICE_KEYS, DEFAULTS, EDIT_OWN_MAX, EDIT_STYLES, keptForm, myLanguages, RATES, SWITCH_SOUNDS, TALK_ABOUT_MAX, TALK_LEVELS, type AppRule, type LlmModel, type TalkLevel, type ThemeMode, type TranslationLevel } from '../settings'
 import type { AppPart } from '../typist'
 // app.ts has a languageName of its own (a code's English name); the interface's is langName here.
-import { formatDate, languageName as langName, levelName, numberText, setUiLanguage, t, uiLanguage, type Key } from '../i18n'
+import { byName, formatDate, languageName as langName, levelName, numberText, setUiLanguage, t, uiLanguage, type Key } from '../i18n'
 import { ZOOM_SCALES, type ZoomScale } from '../recordmodel'
 import { parseEntry } from '../vocabulary'
 import { changesOf, wordDiff } from '../worddiff'
@@ -40,6 +40,7 @@ import { recommend, recommendedModels } from '../setup'
 import { resetSetup, setupNodes } from './setup'
 import { aboutOf, api, computerRows, diarizationOf, engineRows, engineSettings, fault, forgetEngine, gpuRow, hasPart, installed, onRedraw, pickKb, preferRow, running, saveEngine, size as speechSize, speakerRows, speechChoiceRows, testOffer, toast } from './speech'
 import { TOPICS } from '../topics'
+import { DOWNLOAD_PAGE } from '../newversion'
 import { isBeta, versionText } from '../version'
 import { withMarks } from './marks'
 import { backToList, enterTranscripts, leaveTranscripts, newRows, openTranscript, setTranscriptHooks, transcriptOpen, transcriptsBody } from './transcripts'
@@ -53,6 +54,8 @@ declare global {
 const save = (patch: Partial<Settings>) => post({ type: 'saveSettings', patch })
 /** Where new versions are: downloaded by hand, nothing installs itself (main.ts LINKS has it). */
 const RELEASES = 'https://github.com/ikstro/kryakl/releases'
+/** Opens the newest release's page: where a new version is downloaded by hand (newversion.ts). */
+const openNewVersion = () => post({ type: 'openLink', url: DOWNLOAD_PAGE })
 /** Where a problem report goes by email (report.ts writes to it). */
 const REPORT_EMAIL = 'ikstro.design@gmail.com'
 
@@ -366,6 +369,18 @@ function statusCard(v: AppView): HTMLElement {
   )
 }
 
+/** A newer version is out: said on Home, with the page it is downloaded from; installing stays the person's step. */
+function newVersionCard(v: AppView): HTMLElement | null {
+  if (!v.newVersion) return null
+  return el(
+    'div',
+    { class: 'status newver' },
+    el('span', { class: 'sdot' }),
+    el('div', { class: 'st' }, t('version.out', { version: v.newVersion }), el('small', {}, t('version.outNote', { mine: v.version }))),
+    btn(t('version.download'), openNewVersion, 'primary'),
+  )
+}
+
 /** What stands in the way, said on Home so it is not found by chance. */
 function homeTrouble(v: AppView): HTMLElement[] {
   const lines: (HTMLElement | null)[] = [
@@ -426,6 +441,7 @@ function homeNodes(v: AppView): HTMLElement[] {
       'div',
       { class: 'hsum' },
       statusCard(v),
+      newVersionCard(v),
       ...homeTrouble(v),
       ...downloadsNow(v).map(d =>
         el(
@@ -3192,7 +3208,7 @@ function languagesPage(v: AppView): HTMLElement[] {
       'plus',
       t('settings.addLanguage'),
       [t('settings.addLanguageNote')],
-      select<string>('', [['', t('settings.pickLanguage')], ...rest.map((l): [string, string] => [l.code, twoNames(languageName(l.code), l.native)])], code => code && save({ languages: [...mine(), code] })),
+      select<string>('', [['', t('settings.pickLanguage')], ...byName(rest, l => languageName(l.code)).map((l): [string, string] => [l.code, twoNames(languageName(l.code), l.native)])], code => code && save({ languages: [...mine(), code] })),
     ),
     grp(t('settings.languagesGroup'), used.length),
     card('globe', languageName(used[0] ?? ''), [t('settings.yourLangNote')], null),
@@ -3241,7 +3257,7 @@ function settingsPage(v: AppView): HTMLElement[] {
       [t('settings.yourLanguageNote')],
       select(
         s.native,
-        v.languages.map(l => [l.name, twoNames(l.native, languageName(l.name))]),
+        byName(v.languages, l => languageName(l.name)).map(l => [l.name, twoNames(languageName(l.name), l.native)]),
         native => save({ native }),
       ),
     ),
@@ -3263,12 +3279,18 @@ function settingsPage(v: AppView): HTMLElement[] {
     toggleCard('power', t('settings.startWithWindows'), s.startWithWindows, startWithWindows => save({ startWithWindows })),
     toggleCard('pause', t('settings.pause'), s.paused, paused => save({ paused }), t('settings.pauseNote')),
     // New versions are downloaded by hand from GitHub (the owner, 2026-10-30): nothing installs itself.
+    // Since 2026-11-19 Kryakl says when one is out (newversion.ts), unless that is turned off.
     card(
       'rotate-cw',
       t(v.dev ? 'settings.versionDev' : 'settings.version', { version: versionText(v.version) }),
-      [v.dev ? t('settings.built', { build: v.build }) : t('settings.versionNote'), isBeta(v.version) ? t('settings.betaNote') : null],
-      linkBtn(t('settings.newVersions'), () => post({ type: 'openLink', url: RELEASES })),
+      [
+        v.newVersion ? t('version.out', { version: v.newVersion }) : null,
+        v.dev ? t('settings.built', { build: v.build }) : t('settings.versionNote'),
+        isBeta(v.version) ? t('settings.betaNote') : null,
+      ],
+      v.newVersion ? btn(t('version.download'), openNewVersion, 'primary') : linkBtn(t('settings.newVersions'), () => post({ type: 'openLink', url: RELEASES })),
     ),
+    toggleCard('download', t('settings.versionNotice'), s.versionNotice, versionNotice => save({ versionNotice }), t('settings.versionNoticeNote')),
     grp(t('settings.backup')),
     card(
       'file-text',

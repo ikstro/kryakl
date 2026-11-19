@@ -225,6 +225,8 @@ export type Settings = {
   speechTestDeclinedAt: number
   /** Start Kryakl when Windows starts. */
   startWithWindows: boolean
+  /** Say when a newer version is out (newversion.ts): GitHub is asked once a day; nothing is downloaded or installed. */
+  versionNotice: boolean
   /** The offer of the natural voice was closed. */
   naturalDismissed: boolean
   /** The local models whose offer to Translate on Fast was answered (taken or Not now): it shows once per model, once the model is here for Check or Talk. */
@@ -326,6 +328,7 @@ export const DEFAULTS: Settings = {
   speechTestDeclinedKey: '',
   speechTestDeclinedAt: 0,
   startWithWindows: true,
+  versionNotice: true,
   naturalDismissed: false,
   shareOfferSeen: [],
   introSeen: false,
@@ -539,6 +542,7 @@ export function normalize(raw: unknown, native = DEFAULTS.native): Settings {
     speechTestDeclinedKey: key(r.speechTestDeclinedKey, DEFAULTS.speechTestDeclinedKey),
     speechTestDeclinedAt: typeof r.speechTestDeclinedAt === 'number' && Number.isFinite(r.speechTestDeclinedAt) ? r.speechTestDeclinedAt : 0,
     startWithWindows: flag(r.startWithWindows, DEFAULTS.startWithWindows),
+    versionNotice: flag(r.versionNotice, DEFAULTS.versionNotice),
     naturalDismissed: flag(r.naturalDismissed, DEFAULTS.naturalDismissed),
     shareOfferSeen: strings(r.shareOfferSeen).filter((m): m is LlmModel => m === 'accurate' || m === 'most'),
     introSeen: flag(r.introSeen, DEFAULTS.introSeen),
