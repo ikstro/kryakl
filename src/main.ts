@@ -1325,6 +1325,7 @@ function appView(): AppView {
     build: buildText(),
     dev: !app.isPackaged,
     newVersion: newVersion(),
+    versionCheck: versionCheck(),
     natural: naturalState(),
     hostVoices: hostVoices ?? [],
     languages: NATIVES.map(code => findLanguage(code))
@@ -1615,6 +1616,9 @@ function onMessage(message: ToHost, page: Page): void {
       return
     case 'resetSettings':
       resetSettings().catch(error => console.warn('Kryakl: could not reset the settings', error))
+      return
+    case 'checkVersion':
+      void lookForVersion(true)
       return
     case 'resetKeys':
       resetKeys().catch(error => console.warn('Kryakl: could not reset the keys', error))
@@ -2857,11 +2861,22 @@ function newVersion(): string {
   return versionAsked() ? offered(versionSeen(), app.getVersion()) : ''
 }
 
-/** Asks GitHub when a day has passed (an hour after a failure); kryakl.log says a new version once, and a failure once a start. */
-async function lookForVersion(): Promise<void> {
-  if (!versionAsked() || versionAsking || !dueToLook(versionSeen(), versionFailedAt, Date.now())) return
+/** What Settings › Version says of the last look, whatever the notice (Check now works with it off, and from source). */
+function versionCheck(): AppView['versionCheck'] {
+  const seen = versionSeen()
+  return { latest: offered(seen, app.getVersion()), lookedAt: seen.lookedAt, failed: versionFailedAt > seen.lookedAt, checking: versionAsking }
+}
+
+/**
+ * Asks GitHub when a day has passed (an hour after a failure), or at once for Check now (`now`, never in a test
+ * run); kryakl.log says a new version once, and a failure once a start.
+ */
+async function lookForVersion(now = false): Promise<void> {
+  if (versionAsking) return
+  if (now ? !!TEST_HOME : !versionAsked() || !dueToLook(versionSeen(), versionFailedAt, Date.now())) return
   versionAsking = true
-  const before = newVersion()
+  if (now) postApp()
+  const before = offered(versionSeen(), app.getVersion())
   try {
     // A plain client name, nothing of the person or this computer.
     const res = await fetch(LATEST_URL, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Kryakl' }, signal: AbortSignal.timeout(10_000) })
@@ -2883,13 +2898,11 @@ async function lookForVersion(): Promise<void> {
   } finally {
     versionAsking = false
   }
-  const now = newVersion()
-  if (now && now !== versionSaid) log(`version: ${now} is out (this is ${app.getVersion()})`)
-  versionSaid = now || versionSaid
-  if (now !== before) {
-    refreshTray()
-    postApp()
-  }
+  const shown = offered(versionSeen(), app.getVersion())
+  if (shown && shown !== versionSaid) log(`version: ${shown} is out (this is ${app.getVersion()})`)
+  versionSaid = shown || versionSaid
+  if (shown !== before) refreshTray()
+  if (shown !== before || now) postApp()
 }
 
 /**

@@ -135,6 +135,7 @@ function full(over: Partial<AppView['settings']>, plan: AppView['speech']['plan'
     build: '30 Oct, 07:12 (ff17ba8, changed)',
     dev: !process.env.SHOTS_NEW_VERSION,
     newVersion: process.env.SHOTS_NEW_VERSION ?? '',
+    versionCheck: { latest: process.env.SHOTS_NEW_VERSION ?? '', lookedAt: process.env.SHOTS_NEW_VERSION ? now - 3_600_000 : now - 600_000, failed: false, checking: false },
     natural: { status: 'ready', progress: 1, size: 170, dismissed: false, rtf: 0.3 },
     hostVoices: [{ name: 'Microsoft Zira Desktop', lang: 'en-US' }],
     languages: LANGUAGES.map(l => ({ name: l.name, native: l.native })),

@@ -32,6 +32,7 @@ function view(profile: DeviceProfile, over: Partial<AppView> = {}): AppView {
     build: '',
     dev: false,
     newVersion: '',
+    versionCheck: { latest: '', lookedAt: 0, failed: false, checking: false },
     natural: { status: 'absent', progress: 0, size: 170, dismissed: false },
     hostVoices: [],
     languages: [],

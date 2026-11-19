@@ -369,6 +369,15 @@ function statusCard(v: AppView): HTMLElement {
   )
 }
 
+/** What the last look at GitHub found, under Settings › Version: a newer version, this one the newest (and when), or no answer. */
+function versionLine(c: AppView['versionCheck']): string | null {
+  if (c.checking) return null
+  if (c.latest) return t('version.out', { version: c.latest })
+  if (c.failed) return t('version.failed')
+  if (!c.lookedAt) return null
+  return t('version.upToDate', { when: formatDate(new Date(c.lookedAt), { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) })
+}
+
 /** A newer version is out: said on Home, with the page it is downloaded from; installing stays the person's step. */
 function newVersionCard(v: AppView): HTMLElement | null {
   if (!v.newVersion) return null
@@ -3279,16 +3288,23 @@ function settingsPage(v: AppView): HTMLElement[] {
     toggleCard('power', t('settings.startWithWindows'), s.startWithWindows, startWithWindows => save({ startWithWindows })),
     toggleCard('pause', t('settings.pause'), s.paused, paused => save({ paused }), t('settings.pauseNote')),
     // New versions are downloaded by hand from GitHub (the owner, 2026-10-30): nothing installs itself.
-    // Since 2026-11-19 Kryakl says when one is out (newversion.ts), unless that is turned off.
+    // Since 2026-11-19 Kryakl says when one is out (newversion.ts), and Check now asks GitHub at once.
     card(
       'rotate-cw',
       t(v.dev ? 'settings.versionDev' : 'settings.version', { version: versionText(v.version) }),
       [
-        v.newVersion ? t('version.out', { version: v.newVersion }) : null,
+        versionLine(v.versionCheck),
         v.dev ? t('settings.built', { build: v.build }) : t('settings.versionNote'),
         isBeta(v.version) ? t('settings.betaNote') : null,
       ],
-      v.newVersion ? btn(t('version.download'), openNewVersion, 'primary') : linkBtn(t('settings.newVersions'), () => post({ type: 'openLink', url: RELEASES })),
+      v.versionCheck.latest
+        ? btn(t('version.download'), openNewVersion, 'primary')
+        : el(
+            'span',
+            { class: 'kchg' },
+            linkBtn(t(v.versionCheck.checking ? 'version.checking' : 'version.check'), () => v.versionCheck.checking || post({ type: 'checkVersion' })),
+            linkBtn(t('settings.newVersions'), () => post({ type: 'openLink', url: RELEASES })),
+          ),
     ),
     toggleCard('download', t('settings.versionNotice'), s.versionNotice, versionNotice => save({ versionNotice }), t('settings.versionNoticeNote')),
     grp(t('settings.backup')),

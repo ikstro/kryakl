@@ -255,6 +255,8 @@ export type AppView = {
   dev: boolean
   /** A newer release than this copy ("0.18.0"), as GitHub said at the last daily look (newversion.ts); '' when there is none or the notice is off. */
   newVersion: string
+  /** Settings › Version's own look, whatever the notice: the newer release found ('' none), when GitHub last answered (0 never), whether the last ask failed, whether one runs now. */
+  versionCheck: { latest: string; lookedAt: number; failed: boolean; checking: boolean }
   natural: NaturalState
   hostVoices: HostVoice[]
   /** The languages a person may name as their own: English name and own name. */
@@ -640,6 +642,8 @@ export type ToHost =
   | { type: 'exportBackup' }
   | { type: 'importBackup' }
   | { type: 'resetSettings' }
+  /** Settings › Version's Check now: GitHub is asked at once, whatever the day's look and the notice. */
+  | { type: 'checkVersion' }
   /** Every key back to how it came (after a question). */
   | { type: 'resetKeys' }
   /** Report a problem (report.ts): the zip made and shown in its folder, then the email or the GitHub issue opened with `text` in it; or Kryakl's folder with the logs opened. */
