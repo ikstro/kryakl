@@ -1,4 +1,8 @@
-## What's new in 0.18.1
+## What's new in 0.18.2
+
+**Check now.** Settings › Version has a Check now button: Kryakl asks GitHub at once and says under the version what it found, "You have the newest version · checked 19 November, 12:50" or "Version … is out" with Download. It works with the daily notice turned off too.
+
+## New in 0.18.1
 
 **Kryakl tells you when a new version is out (new).** Once a day it asks GitHub for the newest version's number. When a newer one is out, a small yellow mark shows beside the version in the tray, and Home and Settings › Version say so, with a Download button that opens its page here. Kryakl still installs nothing by itself: you download the installer and run it, as before. Nothing about you or your computer is sent. Settings › Version › Tell me when a new version is out turns it off. It starts with this version, so this is the last update you have to look for yourself.
 
