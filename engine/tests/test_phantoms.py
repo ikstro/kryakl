@@ -2,7 +2,7 @@
 
 import pytest
 
-from phantoms import Sound, clean, clean_segment
+from phantoms import Sound, clean, clean_segment, open_ended, pauses
 
 HEARD = Sound(seconds=3.0, no_speech=0.02, logprob=-0.2)  # the sound carries the text
 SILENT = Sound(seconds=1.0, no_speech=0.7, logprob=-0.4)  # a breath, a pause
@@ -120,3 +120,47 @@ def test_a_segment_of_nothing_but_credits_is_gone():
 def test_a_clean_segment_is_the_same_object():
     segment = {"start": 0.0, "end": 2.0, "text": "Начинаем.", "words": []}
     assert clean_segment(segment, HEARD) is segment
+
+
+# The shapes of the 14 ellipses inside the owner's 200 phrases of 2026-11-19..20, with other words.
+@pytest.mark.parametrize("said, written", [
+    ("Там отчёт по складу. В какой-то момент... я увидел, что цифры другие.", "Там отчёт по складу. В какой-то момент я увидел, что цифры другие."),
+    ("если там много снега... допустим, метр", "если там много снега допустим, метр"),
+    ("От создания списка... ...по плану, который она же и написала.", "От создания списка по плану, который она же и написала."),
+    ("не добавился в... нашу таблицу?", "не добавился в нашу таблицу?"),
+    ("коли у тебе… є групи", "коли у тебе є групи"),
+    ("перемикатися на інший тип... де показано дорогу.", "перемикатися на інший тип де показано дорогу."),
+    ("слово ... и ещё слово", "слово и ещё слово"),
+    ("он сказал... «ладно», и ушёл", "он сказал «ладно», и ушёл"),
+    ("...и тогда всё заработало.", "и тогда всё заработало."),
+    ("… и тогда всё заработало.", "и тогда всё заработало."),
+    ("At some point... I saw the numbers change.", "At some point I saw the numbers change."),
+    ("so then... I'm not sure it works", "so then I'm not sure it works"),
+    ("we could... maybe try again", "we could maybe try again"),
+])
+def test_an_ellipsis_a_sentence_goes_on_after_was_a_pause(said, written):
+    assert pauses(said) == written
+
+
+@pytest.mark.parametrize("said", [
+    "А как мы будем...",  # let go of mid-thought: it says so (the owner, 2026-11-20)
+    "Если пользователь говорит…",
+    "у меня останется... Закрытый лимит на всю неделю.",  # Whisper heard a new sentence
+    "Например... Отправить письмо может бот.",
+    "I was thinking... It does not matter.",
+    "It was... Ivan who called.",
+    "около... 100 рублей",
+    "Что?.. а, понял.",
+    "Конец. Начало.",
+    "версия 1..5 подойдёт",
+    "მე ვფიქრობ... ეს კარგია",  # no capitals to go by
+])
+def test_other_ellipses_stay(said):
+    assert pauses(said) == said
+
+
+def test_the_next_piece_is_told_the_text_without_the_ellipsis_it_was_cut_at():
+    assert open_ended("Там отчёт. В какой-то момент...") == "Там отчёт. В какой-то момент"
+    assert open_ended("коли у тебе…") == "коли у тебе"
+    assert open_ended("Там отчёт.") == "Там отчёт."
+    assert open_ended("Что?..") == "Что?.."

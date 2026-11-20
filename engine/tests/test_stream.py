@@ -295,3 +295,46 @@ def test_sessions_one_at_a_time():
     assert sessions.active()
     sessions.drop(b.id)
     assert not sessions.active()
+
+
+class Lines(Recognizer):
+    """Answers each piece with the next of the lines given."""
+
+    def __init__(self, *lines):
+        super().__init__()
+        self.lines = lines
+
+    def __call__(self, sound, language, expected, before):
+        super().__call__(sound, language, expected, before)
+        return self.lines[len(self.calls) - 1], "ru", 0.9
+
+
+def test_a_pause_in_the_middle_of_a_sentence_leaves_no_ellipsis():
+    r = Lines("В какой-то момент...", "я увидел, что всё работает.")
+    s = make(r)
+    n = send(s, np.concatenate([tone(5), silence(1.0)]))
+    assert wait(lambda: s.status()["heard"] == "В какой-то момент...")  # the end of what is heard so far: it stays
+    send(s, tone(3), first=n)
+    out = s.finish(b"")
+    assert out["text"] == "В какой-то момент я увидел, что всё работает."
+    # The second piece was told the text without the ellipsis, so it goes on with the sentence.
+    assert r.calls[1]["before"] == "В какой-то момент"
+
+
+def test_a_new_sentence_after_the_pause_keeps_its_ellipsis_and_so_does_the_end():
+    r = Lines("у меня останется...", "Закрытый лимит. А как мы будем...")
+    s = make(r)
+    n = send(s, np.concatenate([tone(5), silence(1.0)]))
+    assert wait(lambda: len(r.calls) >= 1)
+    send(s, tone(3), first=n)
+    assert s.finish(b"")["text"] == "у меня останется... Закрытый лимит. А как мы будем..."
+
+
+def test_the_badge_shows_the_seam_as_the_finish_gives_it():
+    r = Lines("От создания списка...", "...по плану.", "")
+    s = make(r)
+    n = send(s, np.concatenate([tone(5), silence(1.0)]))
+    assert wait(lambda: len(r.calls) >= 1)
+    send(s, np.concatenate([tone(5), silence(1.0)]), first=n)
+    assert wait(lambda: s.status()["heard"] == "От создания списка по плану.")
+    assert s.finish(b"")["text"] == "От создания списка по плану."

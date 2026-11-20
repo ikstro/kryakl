@@ -175,6 +175,21 @@ Over the Chrome extension paragraph of the speech engine above where they differ
 - **The card's language lists** (`card.css`): the groups' titles ("Yours", "All languages") are drawn in the card's colours; the select is see-through, so Windows drew them on white with the card's light text, white strips with nothing to read in the dark theme. Not pictured offscreen (a system list); to be confirmed by eye.
 - `npm run shots` takes `SHOTS_NEW_VERSION=0.99.0`: the pages as an installed copy with a newer version out.
 
+## Since 2026-11-20: a pause is not an ellipsis
+
+Over the dictation paragraphs above where they differ. The numbers in `docs/speech-quality.md`.
+
+- **Why** (the owner, 2026-11-20: "В какой-то момент... я увидел", often): a dictation is cut into pieces at pauses of 0.6 s, and a piece that ends in the middle of a sentence is, to Whisper, a subtitle line cut short: it ends it in "..." and sometimes opens the next with "..." too. Of the owner's 200 phrases of a day 22 had an ellipsis: 9 inside before a small letter, 5 inside before a capital ("у меня останется... Закрытый лимит"), 9 at the very end. That phrase in speech.log: 18.6 s, two pieces, the seam after "момент". More often since the pieces on the card became 6–20 s (2026-11-14).
+- **The rule** (`phantoms.pauses`, tested; the lever `MEND_PAUSES`): an ellipsis a sentence goes on after in a small letter (Latin, Cyrillic, Greek, Armenian; English's "I", "I'm"…) goes, and so do the dots that open a piece ("...по сценарию"); before a capital, a digit, after "?" or "!", and at the end of the text it stays. In every dictated text (`asr._said`, Parakeet's `dictate`) and at the seams (`stream.joined`, in what the badge shows and in the finish alike); never in a recording's transcript. speech.log counts them, never the words.
+- **The next piece is told the text without that ellipsis** (`stream.told`, `phantoms.open_ended`, the lever `stream.OPEN_PROMPT`), so it goes on with the sentence where it opened a new one with a capital.
+- **Measured** (`npm run quality:speech -- --mode stream --hesitate`: 0.9 s of silence put into the quietest place of each phrase's second half; the table's "… inside" and "sentences opened", `wer.pause_marks`): turbo on the card, 21 dictations of three sentences, 63 pauses, 1172 words: ellipses inside 4 → 1 with the rule → 0 with the prompt too, wrong words 154 in all three (ru 30 → 31, uk 45 → 46, en 79 → 77 with the prompt), as quick. Read speech with silence put in leaves an ellipsis far less often than a person thinking does, so the sample is small. Not done: a full stop Whisper puts at a pause ("sentences opened" 14 → 13), and forbidding the ellipsis token (the model puts a full stop in its place).
+
+## Product rules (owner decisions, 2026-11-20): a pause in a dictated phrase
+
+- An ellipsis in the middle of a dictated phrase, where the person only paused, is not typed (the owner noticed it in his own text and asked why).
+- An ellipsis at the end of a phrase let go of mid-thought stays (the owner: "Многоточие в конце оборванной фразы оставить").
+- Chosen by Claude, approved with the plan: an ellipsis meant on purpose in the middle ("Ну... не знаю") goes too; before a capital it stays.
+
 ## Product rules (owner decisions, 2026-11-19): a new version's notice
 
 - Kryakl says when a newer version is out (the owner's pick of three: a notice, as it is, or a full self-update): once a day it asks GitHub for the number; downloading and installing stay the person's own step. This replaces only "never asks" of 2026-10-30; "updates only through GitHub, by hand" stays.

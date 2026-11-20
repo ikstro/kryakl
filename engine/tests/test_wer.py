@@ -1,6 +1,6 @@
 import pytest
 
-from quality.wer import edits, format_errors, normalize, score, wrong_language
+from quality.wer import edits, format_errors, normalize, pause_marks, score, wrong_language
 
 
 def test_normalize_ignores_case_punctuation_yo_and_apostrophes():
@@ -43,3 +43,14 @@ def test_wrong_language_catches_a_translation_not_a_word():
     assert wrong_language("Привет, как дела? Мы сегодня едем, ты тоже?", "uk") == "ru"
     assert wrong_language("Привет как дела", "en") == "cyrillic"
     assert wrong_language("", "ru") == ""
+
+
+@pytest.mark.parametrize("ref,hyp,marks", [
+    ("В какой-то момент я увидел это. Потом ушёл.", "В какой-то момент... я увидел это. Потом ушёл.", (1, 0)),
+    ("У меня останется закрытый лимит.", "У меня останется... Закрытый лимит.", (1, 1)),
+    ("У меня останется закрытый лимит.", "У меня останется. Закрытый лимит.", (0, 1)),
+    ("Первое. Второе.", "Первое. Второе...", (0, 0)),
+    ("Первое. Второе.", "Первое второе.", (0, 0)),
+])
+def test_pause_marks_count_what_a_pause_left_in_the_text(ref, hyp, marks):
+    assert pause_marks(ref, hyp) == marks

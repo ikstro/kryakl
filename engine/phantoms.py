@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 from dataclasses import dataclass
 
 log = logging.getLogger("kryakl.phantoms")
@@ -174,6 +175,54 @@ def clean(text: str, sound: Sound, dictation: bool) -> str:
     # How much, never what: were a cut ever wrong, the log would hold what the person said.
     log.info("cut what nobody said: %d piece(s), %d letters", len(spans), sum(b - a for a, b in spans))
     return _without(text, spans)
+
+
+# A pause is not a mark (2026-11-20). A dictation is recognized in pieces cut at the person's
+# pauses, and a piece that ends mid-sentence is, to Whisper, a subtitle line cut short: it ends
+# it in "..." and may open the next with "...". Of the owner's 200 phrases of a day, 14 had such
+# an ellipsis inside ("В какой-то момент... я увидел"), 9 of them with the sentence going on in
+# lower case after it. Those go; before a capital it stays (Whisper heard a new sentence), and
+# at the very end too (the owner, 2026-11-20: a phrase let go of mid-thought says so).
+MEND_PAUSES = True
+_DOTS = r"(?<![?!.])(?:…|\.{2,})"  # not the dots of "?.."
+_OPENING = re.compile(rf"(^|\s){_DOTS}(?=\w)")  # "...по сценарию": a subtitle line that goes on
+_PAUSE = re.compile(rf"\s*{_DOTS}(?:\s*{_DOTS})*\s+(?=(\S+))")
+_TRAILING = re.compile(rf"\s*{_DOTS}\s*$")
+_I = re.compile(r"I(?:['’](?:m|ll|ve|d))?(?![\w'’])")  # English's only capital inside a sentence
+
+
+def _small(letter: str) -> bool:
+    """A small letter of a script that opens its sentences with a capital (Georgian's letters count as small, and it has none)."""
+    return letter.islower() and unicodedata.name(letter, "").split(" ")[0] in ("LATIN", "CYRILLIC", "GREEK", "ARMENIAN")
+
+
+def pauses(text: str) -> str:
+    """A dictated text without the ellipses its sentences go on after."""
+    if not MEND_PAUSES or ("…" not in text and ".." not in text):
+        return text
+    mended = 0
+
+    def mend(m: re.Match) -> str:
+        nonlocal mended
+        after = m.group(1).lstrip("«\"“„'‘([")
+        if not (_small(after[:1]) or _I.match(after)):
+            return m.group(0)
+        mended += 1
+        return " "
+
+    out = _PAUSE.sub(mend, _OPENING.sub(r"\1", text))
+    if out == text:
+        return text
+    # How many, never what.
+    if mended:
+        log.info("a pause was not a mark: %d ellipsis(es) a sentence went on after", mended)
+    return out.strip()
+
+
+def open_ended(text: str) -> str:
+    """The text as the next piece of a dictation is told it: without the ellipsis a cut piece ends in,
+    so Whisper goes on with the sentence."""
+    return _TRAILING.sub("", text)
 
 
 def clean_segment(segment: dict, sound: Sound) -> dict | None:

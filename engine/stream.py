@@ -31,6 +31,7 @@ from typing import Callable
 
 import numpy as np
 
+import phantoms
 from audio import RATE, lift
 
 log = logging.getLogger("kryakl.stream")
@@ -54,6 +55,12 @@ PREVIEW_SPAN = 6.0
 # The whole dictation is not heard again when the key is let go (measured 2026-11-11, the
 # quality bench: Parakeet 42.9 → 48.3 % of words wrong, as a whole pass drops sentences; turbo
 # on the card the same 37.9 % either way), so the pieces' texts are the phrase.
+
+# A piece cut at a pause in the middle of a sentence ends in "..." (Whisper's subtitles), and told
+# that text the next piece often opens a new sentence with a capital ("у меня останется...
+# Закрытый лимит", 5 of the owner's 200 phrases). So the next piece is told the text without that
+# ellipsis and goes on with the sentence (docs/speech-quality.md, 2026-11-20).
+OPEN_PROMPT = True
 
 # (sound, language or None, expected languages, text before) -> (text, language, how sure)
 Recognize = Callable[[np.ndarray, "str | None", list, str], "tuple[str, str, float] | tuple[str, str, float, dict]"]
@@ -79,6 +86,17 @@ def quietest(samples: np.ndarray, start: int, end: int) -> int:
         if energy < best:
             best, at = energy, i + window // 2
     return at
+
+
+def joined(texts: list[str]) -> str:
+    """The pieces' texts as one: an ellipsis at a seam the sentence goes on after was the pause, not a mark."""
+    return phantoms.pauses(" ".join(t for t in texts if t).strip())
+
+
+def told(texts: list[str]) -> str:
+    """The text before, as the next piece is told it."""
+    text = joined(texts)
+    return phantoms.open_ended(text) if OPEN_PROMPT else text
 
 
 class Session:
@@ -283,7 +301,7 @@ class Session:
                     return
                 self._working = job
                 sound = self._whole()[job[1] : job[2]]
-                before = " ".join(self._texts)
+                before = told(self._texts)
             try:
                 started = time.perf_counter()
                 heard = self._recognize(sound, self.language, self.expected, before)
@@ -322,7 +340,7 @@ class Session:
         with self._lock:
             waiting = sum(e - s for s, e in self._pieces)
             tail = self._guess[2] if self._guess and self._guess[0] == self._cut else self._preview[1] if self._preview and self._preview[0] > self._cut else ""
-            heard = " ".join(t for t in self._texts + [tail] if t)
+            heard = joined(self._texts + [tail])
             return {"state": self.state, "seconds": round(self._length / RATE, 2), "pending": round(waiting / RATE, 2), "heard": heard}
 
     def finish(self, pcm: bytes, timeout: float = 120.0) -> dict:
@@ -356,7 +374,7 @@ class Session:
             if self.state != "done":
                 raise TimeoutError("the dictation took too long")
             out = {
-                "text": " ".join(t for t in self._texts if t).strip(),
+                "text": joined(self._texts),
                 "language": self.language or "",
                 "sure": round(self.sure, 3),
                 "seconds": round(self._length / RATE, 2),

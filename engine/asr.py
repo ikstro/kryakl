@@ -229,7 +229,7 @@ def _said(segments, speech: np.ndarray) -> str:
         max(s.no_speech_prob for s in segments),
         min(s.avg_logprob for s in segments),
     )
-    return phantoms.clean(text, sound, dictation=True)
+    return phantoms.pauses(phantoms.clean(text, sound, dictation=True))
 
 
 # The Whisper models whose names hint is closed with a full stop (`Transcriber.dictate`).
@@ -522,14 +522,14 @@ class Parakeet:
         if speech is None:
             return "", language or "", 0.0
         if PARAKEET_FLOOR is None:
-            return str(self._model.recognize(speech)).strip(), language or "", 0.0
+            return phantoms.pauses(str(self._model.recognize(speech)).strip()), language or "", 0.0
         heard = self._model.with_timestamps().recognize(speech)
         logprobs = heard.logprobs or []
         mean = float(np.mean(logprobs)) if logprobs else 0.0
         if logprobs and mean < PARAKEET_FLOOR:
             log.info("parakeet: dropped %.1f s it was not sure of (%.2f)", len(speech) / RATE, mean)
             return "", language or "", 0.0
-        return heard.text.strip(), language or "", 0.0
+        return phantoms.pauses(heard.text.strip()), language or "", 0.0
 
     def warm(self) -> None:
         if self._warm == self._key:

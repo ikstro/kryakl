@@ -47,7 +47,7 @@ import asr  # noqa: E402
 import settings  # noqa: E402
 from audio import RATE  # noqa: E402
 from quality import conditions  # noqa: E402
-from quality.wer import format_errors, score, wrong_language  # noqa: E402
+from quality.wer import format_errors, pause_marks, score, wrong_language  # noqa: E402
 
 REPORT = ENGINE.parent / "docs" / "speech-quality.md"
 REAL_MODELS = settings.MODELS_DIR
@@ -136,21 +136,33 @@ def run_phrases(rec, name, device, threads, beam, langs, conds, n, expected, set
     return items
 
 
-def takes_of(phrases: list[dict], sounds: list[np.ndarray], size: int, key: str) -> list[tuple[str, str, np.ndarray]]:
+HESITATION = 0.9  # seconds a person stops for in the middle of a sentence (--hesitate)
+
+
+def hesitating(sound: np.ndarray) -> np.ndarray:
+    """The phrase with a pause in the middle of its sentence: silence put in where it is quietest in its second half,
+    so a piece of the dictation is cut there (stream.PAUSE) as when a person stops to think."""
+    import stream
+
+    at = stream.quietest(sound, int(0.5 * len(sound)), int(0.8 * len(sound)))
+    return np.concatenate([sound[:at], np.zeros(int(HESITATION * RATE), dtype=np.float32), sound[at:]])
+
+
+def takes_of(phrases: list[dict], sounds: list[np.ndarray], size: int, key: str, hesitate: bool = False) -> list[tuple[str, str, np.ndarray]]:
     """Phrases joined into takes of `size`, with pauses of 0.3–1.5 s between them (the same for every run)."""
     rng = np.random.default_rng(len(key))
     out = []
     for start in range(0, len(phrases) - size + 1, size):
         parts, refs = [], []
         for k in range(start, start + size):
-            parts.append(sounds[k])
+            parts.append(hesitating(sounds[k]) if hesitate else sounds[k])
             parts.append(np.zeros(int(rng.uniform(0.3, 1.5) * RATE), dtype=np.float32))
             refs.append(phrases[k]["text"])
         out.append((f"{phrases[start]['id']}+{size}", " ".join(refs), np.concatenate(parts[:-1])))
     return out
 
 
-def run_stream(rec, name, device, threads, beam, langs, conds, n, expected, sets, hotwords, size, speed) -> list[dict]:
+def run_stream(rec, name, device, threads, beam, langs, conds, n, expected, sets, hotwords, size, speed, hesitate=False) -> list[dict]:
     import stream
 
     items = []
@@ -160,7 +172,7 @@ def run_stream(rec, name, device, threads, beam, langs, conds, n, expected, sets
         phrases = phrases_of(lang, n, sets)
         sounds = [load(p) for p in phrases]
         for cond in conds:
-            for take_id, ref, clean in takes_of(phrases, sounds, size, lang):
+            for take_id, ref, clean in takes_of(phrases, sounds, size, lang, hesitate):
                 x = conditions.make(clean, cond, take_id, sounds[:4])
                 pcm = (np.clip(x, -1, 1) * 32767).astype("<i2").tobytes()
                 recognize = lambda s, language, exp, before: rec.dictate(s, language, exp, hotwords, beam, before, strict=True)  # noqa: E731
@@ -208,7 +220,7 @@ def table(items: list[dict]) -> str:
     conds = [c for c in conditions.CONDITIONS if any(i["cond"] == c for i in items)]
     head = ["Model"] + langs + conds + ["all", "wrong lang", "case errors", "end errors", "s / phrase", "p90 s"]
     if any(i["mode"] == "stream" for i in items):
-        head += ["tail s", "tail max"]
+        head += ["tail s", "tail max", "… inside", "sentences opened"]
     lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for key, group in _rows(items):
         took = sorted(i["took"] for i in group)
@@ -222,6 +234,8 @@ def table(items: list[dict]) -> str:
         if "tail s" in head:
             tails = [i["tail"] for i in group if "tail" in i]
             cells += [f"{statistics.mean(tails):.2f}", f"{max(tails):.2f}"] if tails else ["", ""]
+            marks = [pause_marks(i["ref"], i["hyp"]) for i in group]
+            cells += [f"{sum(m[0] for m in marks)} / {len(group)}", f"{sum(m[1] for m in marks)} / {len(group)}"]
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
@@ -287,6 +301,7 @@ def main(argv: list[str]) -> None:
     p.add_argument("--mode", default="phrase", choices=("phrase", "stream"))
     p.add_argument("--take", type=int, default=4, help="phrases in a take (stream)")
     p.add_argument("--speed", type=float, default=1.0, help="how much faster than real time the sound is fed (stream)")
+    p.add_argument("--hesitate", action="store_true", help="a pause of 0.9 s in the middle of every phrase (stream): what a person who stops to think leaves")
     p.add_argument("--beam", type=int, default=0, help="Whisper's beam (0: the plan's)")
     p.add_argument("--expected", default="", help="the languages expected, for every phrase (default: the phrase's own and English)")
     p.add_argument("--sets", default="fleurs", help="fleurs, own (the owner's reading in .cache/speech-quality/own), or fleurs,own")
@@ -317,7 +332,7 @@ def main(argv: list[str]) -> None:
             print(f"{name} on {a.device} ({rec.compute}, {threads or 'default'} threads, {where} copy) loaded in {time.perf_counter() - started:.1f} s", flush=True)
             beam = a.beam or default_beam(name, a.device)
             args = (rec, name, a.device, threads, beam, langs, conds, a.n, expected, a.sets, a.hotwords)
-            items += run_stream(*args, a.take, a.speed) if a.mode == "stream" else run_phrases(*args)
+            items += run_stream(*args, a.take, a.speed, a.hesitate) if a.mode == "stream" else run_phrases(*args)
             rec.unload()
             del rec
             gc.collect()
@@ -343,6 +358,7 @@ def report(record: dict) -> None:
     a = record["args"]
     head = (f"\n### {record['label']} · {record['at']} · {record['commit']}\n\n"
             f"{a['mode']}, {a['n']} phrases a language, {a['conditions'].replace(',', ', ')}"
+            + ("; a pause in the middle of every phrase" if a.get("hesitate") else "")
             + (f"; levers {record['levers']}" if record["levers"] else "") + (f"; beam {a['beam']}" if a["beam"] else "") + "\n\n")
     with REPORT.open("a", encoding="utf-8") as f:
         f.write(head + table(record["items"]) + "\n")

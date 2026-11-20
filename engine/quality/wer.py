@@ -78,6 +78,19 @@ def score(ref: str, hyp: str) -> tuple[int, int]:
     return edits(r, normalize(hyp)), len(r)
 
 
+def pause_marks(ref: str, hyp: str) -> tuple[int, int]:
+    """(ellipses the text goes on after, sentences opened that the reference does not have).
+
+    What a pause in the middle of a sentence leaves in a dictation recognized in pieces:
+    "В какой-то момент... я увидел", "у меня останется... Закрытый лимит". The bench's
+    phrases have no ellipsis, so every one inside the text heard is the recognizer's."""
+    def opened(text: str) -> int:
+        return sum(1 for m in re.finditer(r"[.!?…]+[\"'”’»)\]]*\s+[«\"“(\[]*(\w)", text) if m.group(1).isupper())
+
+    inside = len(re.findall(r"(?:…|\.{2,})(?![.…])(?=\s*\S)", hyp))
+    return inside, max(0, opened(hyp) - opened(ref))
+
+
 def format_errors(ref: str, hyp: str) -> tuple[int, int]:
     """(initial-case error, final-mark error), each 0 or 1; not internal punctuation.
 
