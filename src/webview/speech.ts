@@ -315,6 +315,12 @@ function liveModel(v: AppView, feature: Feature): SpeechHealth['models']['dictat
 }
 
 const FEATURES: Feature[] = ['dictation', 'transcripts']
+/** Under Dictate's Automatic on a card's computer: what types while the card is busy, or that it is on its way. */
+function spareNote(spare: NonNullable<AppView['speech']['plan']['spare']>): string {
+  const coming = spare.better && !spare.better.downloaded ? spare.better : spare.chosen.downloaded ? undefined : spare.chosen
+  return coming ? t('speech.autoCardFetch', { model: coming.label }) : t('speech.autoCard', { model: spare.chosen.label })
+}
+
 const pin = (feature: Feature, model: string) => post({ type: 'saveSettings', patch: { [feature === 'dictation' ? 'dictationModel' : 'transcriptsModel']: model } })
 
 /**
@@ -340,12 +346,8 @@ export function speechChoiceRows(v: AppView, feature: Feature): HTMLElement[] {
       [
         t('speech.autoNote', { budget }),
         p.pinned ? null : t('speech.usesNow', { model: p.chosen.label }),
-        // Dictation leaves the card to the person's programs (speechplan.ts forDevice).
-        feature === 'dictation' && plan.device === 'cuda' && (p.chosen.device === 'cpu' || p.better?.device === 'cpu')
-          ? p.chosen.device === 'cpu'
-            ? t('speech.autoCpu')
-            : t('speech.autoMoves', { model: p.better?.label ?? '' })
-          : null,
+        // The card dictates, and the processor's model takes over while other programs fill it (speechplan.ts `spare`).
+        feature === 'dictation' && !p.pinned && p.chosen.device === 'cuda' && plan.spare ? spareNote(plan.spare) : null,
       ],
       !p.pinned,
       () => pin(feature, ''),

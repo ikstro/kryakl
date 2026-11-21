@@ -209,6 +209,11 @@ class Calibrator:
                     self.done += 2
                     continue
                 name = key(model, device, t.compute or "int8")
+                asked = run.get("compute")
+                if device == "cuda" and asked and t.compute and t.compute != asked:
+                    # The card had no room for the format asked, so the other was loaded: said, or Kryakl,
+                    # which compares the two formats on a card (speechplan.ts slowHalf), would ask for ever.
+                    self.bench.failed(key(model, device, asked), f"loaded as {t.compute}")
                 beam = int(run.get("beam") or (5 if device == "cuda" else 2))
 
                 def dictation() -> float:

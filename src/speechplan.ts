@@ -6,10 +6,11 @@
 // model within its budget (a phrase in about 1.5 s; the words of an hour in about
 // 45 min), preferring one already downloaded and offering the better one; a model
 // the person picked is kept whatever it costs. On a computer with the card,
-// dictation runs on the processor all the same when Parakeet suits every
-// language the person uses (2026-10-31): the card is left to their programs.
-// The engine gets the result as its plan (settings.py), for the card and for
-// the processor, should the card fail.
+// dictation takes the card's model too when it is the more accurate one within
+// the budget (2026-11-21; from 2026-10-31 Parakeet dictated on the processor
+// wherever it suited the person's languages). The engine gets the result as its
+// plan (settings.py), for the card and for the processor, which dictates while
+// other programs fill the card or should the card fail.
 
 import catalog from '../engine/models.json'
 import { nvidiaCard, type DeviceProfile } from './hardware'
@@ -58,7 +59,8 @@ const OVERHEAD_RTF = 0.015
 /** A model bigger than this (large-v3, 3.1 GB) is never downloaded by itself: it is offered, with its size. */
 export const AUTO_DOWNLOAD_MB = 2000
 
-export type BenchRun = { phrase?: number; rtf?: number; n?: number; at?: string; source?: 'test' | 'use'; failed?: string }
+/** `tested`: the speed test's own numbers (bench.py), measured one after another with nothing else running. */
+export type BenchRun = { phrase?: number; rtf?: number; n?: number; at?: string; source?: 'test' | 'use'; failed?: string; tested?: { phrase?: number; rtf?: number } }
 export type Bench = { fingerprint: string; runs: Record<string, BenchRun> }
 
 export type PlanInput = {
@@ -132,6 +134,9 @@ export type SpeechPlan = {
   offers: { gpu: boolean; speakersGpu: boolean }
   /** Minutes to tell an hour's speakers apart here, on the processor and (when offered) on the card; where it is advised. */
   speakers: { cpu: number; cuda?: number; advised: Device }
+  /** When the card dictates: what dictates on the processor while other programs fill the card (the processor's
+   *  plan), and the model that would do it better once downloaded. */
+  spare?: { chosen: Choice; better?: Choice }
   threads: number
 }
 
@@ -164,8 +169,8 @@ export function gpuOffer(profile: DeviceProfile | undefined, nvidiaDriver = fals
   return true
 }
 
-/** The compute type a model takes on this card, or '' when it does not fit. */
-function cudaCompute(m: CatalogModel, profile: DeviceProfile | undefined): string {
+/** The compute type a model has room for on this card, or '' when it does not fit. */
+function roomCompute(m: CatalogModel, profile: DeviceProfile | undefined): string {
   const vram = nvidiaCard(profile)?.vramMb
   if (!vram) return 'float16'
   if (vram >= m.vramMb.float16 + 1024) return 'float16'
@@ -173,9 +178,51 @@ function cudaCompute(m: CatalogModel, profile: DeviceProfile | undefined): strin
   return ''
 }
 
+/** The compute type a model takes on this card, or '' when it does not fit: float16 where there is room for it,
+ *  as it writes a little better than int8_float16 (2026-11-21, docs/speech-quality.md: turbo on 750 phrases,
+ *  25.7 against 26.4 words wrong in a hundred, worse in 102 phrases and better in 55), except on a card slow at
+ *  half precision (`slowHalf`), where float16 costs four times the time. */
+function cudaCompute(m: CatalogModel, input: Pick<PlanInput, 'profile' | 'bench'>): string {
+  const room = roomCompute(m, input.profile)
+  return room === 'float16' && slowHalf(input) ? 'int8_float16' : room
+}
+
 function measuredValue(bench: Bench | undefined, key: string, field: 'phrase' | 'rtf'): number | undefined {
   const v = bench?.runs[key]?.[field]
   return typeof v === 'number' && v > 0 ? v : undefined
+}
+
+function testedValue(bench: Bench | undefined, key: string, field: 'phrase' | 'rtf'): number | undefined {
+  const v = bench?.runs[key]?.tested?.[field]
+  return typeof v === 'number' && v > 0 ? v : undefined
+}
+
+/** float16 must take this many times int8_float16's time for a card to count as slow at half precision: where
+ *  both run alike the ratio is 1 (an RTX 2080 SUPER: 0.16 s a window either way), where they do not it is 4. */
+const HALF_SLOWER = 2
+/** Cards known to be slow at half precision before anything is measured: a GTX 1660 Ti read Whisper turbo's 30 s
+ *  window in 3.9 s in float16 and in 0.96 s in int8_float16 (2026-11-21), so a dictated phrase took 4.4 s. */
+const SLOW_HALF_CARDS = /\bGTX 16\d\d\b/i
+/** Cards known to be quick at it, which the speed test need not ask. */
+const QUICK_HALF_CARDS = /\bRTX\b/i
+/** A first guess for such a card against the reference card, per format (the 1660 Ti's phrase: 4.2 s and about 1.1 s). */
+const SLOW_HALF_FACTOR: Record<string, number> = { float16: 16, int8_float16: 4.5 }
+
+/** This card computes half precision slowly, so Whisper runs in int8_float16 on it: by the speed test's own
+ *  numbers once it has measured a model in both formats here (real use is not compared: another program on the
+ *  card slows one format's phrases and not the other's), else by the card's name. */
+export function slowHalf(input: Pick<PlanInput, 'profile' | 'bench'>): boolean {
+  let measured = false
+  for (const m of MODELS) {
+    for (const field of ['rtf', 'phrase'] as const) {
+      const full = testedValue(input.bench, runKey(m.name, 'cuda', 'float16'), field)
+      const compact = testedValue(input.bench, runKey(m.name, 'cuda', 'int8_float16'), field)
+      if (full === undefined || compact === undefined) continue
+      if (full >= compact * HALF_SLOWER) return true
+      measured = true
+    }
+  }
+  return !measured && SLOW_HALF_CARDS.test(nvidiaCard(input.profile)?.name ?? '')
 }
 
 /** Seconds for a phrase or seconds per second, and where the number comes from. */
@@ -186,9 +233,12 @@ function speed(m: CatalogModel, device: Device, compute: string, field: 'phrase'
   // from the measured model nearest in size and kind (small says more about turbo than tiny
   // does; a Whisper measured says something of Parakeet's processor, though less).
   let near: { value: number; distance: number } | undefined
+  const slow = device === 'cuda' && slowHalf(input)
   for (const other of MODELS) {
     if (other.name === m.name) continue
     for (const c of device === 'cpu' ? ['int8'] : ['float16', 'int8_float16']) {
+      // On a card slow at half precision one format's time says nothing of the other's.
+      if (slow && c !== compute) continue
       const v = measuredValue(input.bench, runKey(other.name, device, c), field)
       if (v === undefined) continue
       const distance = Math.abs(Math.log(other.bytes / m.bytes)) + (other.backend === m.backend ? 0 : 1)
@@ -197,7 +247,7 @@ function speed(m: CatalogModel, device: Device, compute: string, field: 'phrase'
     }
   }
   if (near) return { value: near.value, basis: 'scaled' }
-  const factor = device === 'cpu' ? cpuFactor(input.profile) : cudaFactor(input.profile) * (compute === 'int8_float16' ? 1.1 : 1)
+  const factor = device === 'cpu' ? cpuFactor(input.profile) : slow ? (SLOW_HALF_FACTOR[compute] ?? 1) : cudaFactor(input.profile) * (compute === 'int8_float16' ? 1.1 : 1)
   return { value: m[device][field] * factor, basis: 'guess' }
 }
 
@@ -215,7 +265,7 @@ function choice(m: CatalogModel, feature: Feature, plan: Device, input: PlanInpu
   // A processor-only model (Parakeet) in the card's plan runs on the processor, beside the card's Whisper.
   const device: Device = m.devices.includes(plan) ? plan : 'cpu'
   let why = ''
-  let compute = device === 'cpu' ? 'int8' : cudaCompute(m, input.profile)
+  let compute = device === 'cpu' ? 'int8' : cudaCompute(m, input)
   if (device === 'cuda' && !compute) {
     why = 'too big for this graphics card'
     compute = 'int8_float16'
@@ -308,15 +358,17 @@ function forDevice(device: Device, input: PlanInput): Record<Feature, FeaturePla
   const transcripts = decide('transcripts', device, input)
   let dictation = decide('dictation', device, input)
   if (device !== 'cuda' || dictation.pinned) return { dictation, transcripts }
-  // The card is left to the person's programs (2026-10-31, the owner: dictation always on the processor):
-  // Parakeet, as accurate as turbo and as quick here, dictates when it suits every language they use;
-  // until it is downloaded (speechhost.ts fetches it by itself) the card's model dictates.
-  const processor = dictation.choices.find(c => c.device === 'cpu' && !c.why && c.fits)
-  if (processor?.downloaded) return { dictation: { ...dictation, chosen: processor, better: undefined }, transcripts }
-  // On the card, dictation uses the transcripts' model when it is quick enough: one model in the card's memory.
+  // The most accurate model quick enough dictates, on the card too (2026-11-21, the owner: "да, меняй правило";
+  // Parakeet on the processor, which dictated on every card's computer from 2026-10-31, gets twice turbo's
+  // words wrong: 34.6 against 15.4 in a hundred on the owner's reading). The card is still the person's
+  // programs' first: while they fill it the processor's plan dictates (jobs.py _card_full; `spare` below).
+  // On the card, dictation uses the transcripts' model when that costs it neither time nor accuracy: one
+  // model in the card's memory.
+  const own = dictation.chosen
   const same = dictation.choices.find(c => c.model === transcripts.chosen.model && !c.why)
-  if (same && same.estimate <= dictation.budget * KEEP) dictation = { ...dictation, chosen: same, better: undefined }
-  if (processor) dictation = { ...dictation, better: processor }
+  const costsNothing = same && same.estimate <= Math.min(dictation.budget, own.estimate) * KEEP && accuracyOrder(same.model, own.model, input) <= 0
+  // Never a model still to download in place of one that is here: that one is only offered (`better`).
+  if (same && same.model !== own.model && costsNothing && (same.downloaded || !own.downloaded)) dictation = { ...dictation, chosen: same, better: undefined }
   return { dictation, transcripts }
 }
 
@@ -371,18 +423,46 @@ export function planSpeech(input: PlanInput): SpeechPlan {
       ...(offers.speakersGpu ? { cuda: Math.max(1, Math.round(60 * speakersRtfOn(input, 'cuda'))) } : {}),
       advised: offers.speakersGpu ? 'cuda' : 'cpu',
     },
+    ...(cuda?.dictation.chosen.device === 'cuda' ? { spare: { chosen: cpu.dictation.chosen, ...(cpu.dictation.better ? { better: cpu.dictation.better } : {}) } } : {}),
     threads,
   }
 }
 
-/** The models the speed test should measure: those downloaded, on the device in use, not yet measured here. */
+/** The processor's dictation model still to download, so that a busy card never leaves dictation waiting:
+ *  the better one when the processor's plan names one, else its choice when that is not here yet. */
+export function spareToFetch(plan: SpeechPlan): Choice | undefined {
+  const spare = plan.spare
+  const c = spare && (spare.better ?? spare.chosen)
+  return c && c.device === 'cpu' && !c.downloaded && !c.why && c.mb <= AUTO_DOWNLOAD_MB ? c : undefined
+}
+
+/** The model whose two formats the speed test compares on this card, so that `slowHalf` is this card's own answer:
+ *  the one Transcribe runs there, when the card has room for float16 and is not known to be quick at it. */
+function formatProbe(input: PlanInput, plan: SpeechPlan): string | undefined {
+  const card = nvidiaCard(input.profile)
+  if (plan.device !== 'cuda' || !card || QUICK_HALF_CARDS.test(card.name)) return undefined
+  const c = plan.transcripts.chosen
+  const m = MODELS.find(o => o.name === c.model)
+  return m && c.device === 'cuda' && c.downloaded && !c.why && roomCompute(m, input.profile) === 'float16' ? m.name : undefined
+}
+
+/** The models the speed test should measure: those downloaded, on the device in use, not yet measured here; and,
+ *  on a card not known to be quick at half precision, one model in the format the plan did not take as well. */
 export function testRuns(input: PlanInput, plan: SpeechPlan, all = false): { model: string; device: Device; compute?: string; beam: number }[] {
   // Each model where it runs: on a card's computer Parakeet is measured on the processor.
-  return plan.dictation.choices
+  const runs: { model: string; device: Device; compute?: string; beam: number }[] = plan.dictation.choices
     .filter(c => c.downloaded && !c.why)
     .filter(c => all || measuredValue(input.bench, runKey(c.model, c.device, c.compute), 'phrase') === undefined || measuredValue(input.bench, runKey(c.model, c.device, c.compute), 'rtf') === undefined)
     .sort((a, b) => a.mb - b.mb)
     .map(c => ({ model: c.model, device: c.device, ...(c.device === 'cuda' ? { compute: c.compute } : {}), beam: beamOn(c.device, input) }))
+  const probe = formatProbe(input, plan)
+  for (const compute of probe ? ['float16', 'int8_float16'] : []) {
+    if (runs.some(r => r.model === probe && r.device === 'cuda' && r.compute === compute)) continue
+    // A format the card had no room for when it was asked (bench.py marks it) is not asked again and again.
+    const run = input.bench?.runs[runKey(probe!, 'cuda', compute)]
+    if (all || (testedValue(input.bench, runKey(probe!, 'cuda', compute), 'rtf') === undefined && !run?.failed)) runs.push({ model: probe!, device: 'cuda', compute, beam: beamOn('cuda', input) })
+  }
+  return runs
 }
 
 /** What a declined test is remembered by: it is offered again when this changes (another computer, a model added). */

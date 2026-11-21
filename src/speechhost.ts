@@ -18,7 +18,7 @@ import { freeFolderSoon, runningProcessesSoon } from './oldfolder'
 import type { SpeechView } from './protocol'
 import { myLanguages, type Settings } from './settings'
 import { DOWNLOAD_MB, hasNvidia, INSTALLED_MB, SpeechPack, type SpeechPart } from './speechpack'
-import { AUTO_DOWNLOAD_MB, planSpeech, testKey, testRuns, type PlanInput, type SpeechPlan } from './speechplan'
+import { planSpeech, spareToFetch, testKey, testRuns, type PlanInput, type SpeechPlan } from './speechplan'
 import { SpeechService, speechToken, type SpeechResult } from './speechservice'
 import { vocabularyFor } from './vocabulary'
 
@@ -231,19 +231,19 @@ export class SpeechHost {
   }
 
   /**
-   * Dictation leaves the card to the person's programs (2026-10-31): its
-   * processor model (Parakeet, speechplan.ts `better`) downloads by itself
-   * while the card's model dictates, and the plan moves to it once it is here.
+   * The card dictates (2026-11-21), and the person's programs still come first
+   * on it: while they fill it, the processor's model dictates (Parakeet,
+   * speechplan.ts `spare`), so it downloads by itself beside the card's model.
    * Asked once, and again a while later should the download have failed.
    */
   private fetchProcessorDictation(): void {
-    const better = this.plan.dictation.better
-    if (this.plan.device !== 'cuda' || better?.device !== 'cpu' || better.downloaded || better.mb > AUTO_DOWNLOAD_MB) return
-    const asked = this.fetchAsked.get(better.model)
+    const spare = spareToFetch(this.plan)
+    if (this.plan.device !== 'cuda' || !spare) return
+    const asked = this.fetchAsked.get(spare.model)
     if (asked !== undefined && Date.now() - asked < FETCH_AGAIN_MS) return
-    this.fetchAsked.set(better.model, Date.now())
-    log(`speech: ${better.model} downloads for dictation on the processor, leaving the graphics card free`)
-    void this.downloadModel(better.model)
+    this.fetchAsked.set(spare.model, Date.now())
+    log(`speech: ${spare.model} downloads for dictation on the processor while the graphics card is busy`)
+    void this.downloadModel(spare.model)
   }
 
   /** What the engine is told of Kryakl's choices: the plan, and the words to spell (vocabulary.ts). */

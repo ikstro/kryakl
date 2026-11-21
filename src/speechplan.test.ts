@@ -62,25 +62,51 @@ describe('planSpeech', () => {
     expect(kazakh.dictation.choices.find(c => c.model === 'parakeet-tdt-0.6b-v3')?.why).toMatch(/language/)
   })
 
-  it('the card is left to other programs: Parakeet dictates on the processor, the card transcribes', () => {
+  it('the card dictates with the more accurate model, and Parakeet is the processor\'s for a busy card', async () => {
+    const { spareToFetch } = await import('./speechplan')
     const downloaded = ['large-v3-turbo', 'parakeet-tdt-0.6b-v3']
-    const plan = planSpeech(input({ cuda: true, downloaded, languages: ['ru', 'en'] }))
+    const plan = planSpeech(input({ cuda: true, downloaded, languages: ['ru', 'en'], previous: { dictation: 'parakeet-tdt-0.6b-v3' } }))
     expect(plan.device).toBe('cuda')
-    expect(plan.dictation.chosen).toMatchObject({ model: 'parakeet-tdt-0.6b-v3', device: 'cpu', compute: 'int8' })
-    expect(plan.engine.cuda?.dictation).toEqual({ model: 'parakeet-tdt-0.6b-v3', beam: 2 })
+    // Parakeet dictated here until 2026-11-21: turbo gets half its words wrong, so having been used keeps nothing.
+    expect(plan.dictation.chosen).toMatchObject({ model: 'large-v3-turbo', device: 'cuda', compute: 'float16' })
+    expect(plan.engine.cuda?.dictation).toEqual({ model: 'large-v3-turbo', compute: 'float16', beam: 5 })
     expect(plan.engine.cuda?.transcripts).toEqual({ model: 'large-v3-turbo', compute: 'float16' })
-    // Not for a language Parakeet does not know, nor when the person picked a model.
-    expect(planSpeech(input({ cuda: true, downloaded, native: 'kk' })).dictation.chosen).toMatchObject({ model: 'large-v3-turbo', device: 'cuda' })
+    // While other programs fill the card, the processor's plan dictates.
+    expect(plan.engine.cpu.dictation).toEqual({ model: 'parakeet-tdt-0.6b-v3', beam: 2 })
+    expect(plan.spare?.chosen).toMatchObject({ model: 'parakeet-tdt-0.6b-v3', device: 'cpu', downloaded: true })
+    expect(spareToFetch(plan)).toBeUndefined()
+    // A language Parakeet does not know, and a model the person picked, as before.
     const kazakhToo = planSpeech(input({ cuda: true, downloaded, languages: ['ru', 'en', 'kk'] })).dictation
     expect(kazakhToo.chosen.model).toBe('large-v3-turbo')
     expect(kazakhToo.choices.find(c => c.model === 'parakeet-tdt-0.6b-v3')?.why).toMatch(/every language/)
-    expect(planSpeech(input({ cuda: true, downloaded, pins: { dictation: 'large-v3-turbo', transcripts: '' } })).dictation.chosen.device).toBe('cuda')
+    expect(planSpeech(input({ cuda: true, downloaded, pins: { dictation: 'parakeet-tdt-0.6b-v3', transcripts: '' } })).dictation.chosen).toMatchObject({ model: 'parakeet-tdt-0.6b-v3', device: 'cpu' })
+    // Speed first, on a card where turbo's phrase is over 0.8 s: the processor's quick model, and no spare to speak of.
+    const slowCard: DeviceProfile = { ...i9, gpus: [{ ...i9.gpus[0]!, name: 'NVIDIA GeForce GTX 1660 Ti', vramMb: 6144 }] }
+    const quick = planSpeech(input({ profile: slowCard, cuda: true, downloaded, prefer: 'speed' }))
+    expect(quick.dictation.chosen).toMatchObject({ model: 'parakeet-tdt-0.6b-v3', device: 'cpu' })
+    expect(quick.spare).toBeUndefined()
+    // With accuracy first that card dictates too, compact: about a second a phrase.
+    expect(planSpeech(input({ profile: slowCard, cuda: true, downloaded })).dictation.chosen).toMatchObject({ model: 'large-v3-turbo', device: 'cuda', compute: 'int8_float16' })
   })
 
-  it('until Parakeet is here the card dictates, and Parakeet is offered for the processor', () => {
+  it('the processor\'s model for a busy card downloads by itself, and the card\'s is never fetched unasked', async () => {
+    const { spareToFetch } = await import('./speechplan')
     const plan = planSpeech(input({ cuda: true, downloaded: ['large-v3-turbo'] }))
     expect(plan.dictation.chosen).toMatchObject({ model: 'large-v3-turbo', device: 'cuda' })
-    expect(plan.dictation.better).toMatchObject({ model: 'parakeet-tdt-0.6b-v3', device: 'cpu', downloaded: false })
+    expect(plan.dictation.better).toBeUndefined()
+    expect(spareToFetch(plan)).toMatchObject({ model: 'parakeet-tdt-0.6b-v3', device: 'cpu', downloaded: false })
+    // Only Parakeet here: it dictates, turbo is offered, nothing is fetched.
+    const parakeet = planSpeech(input({ cuda: true, downloaded: ['parakeet-tdt-0.6b-v3'] }))
+    expect(parakeet.dictation.chosen).toMatchObject({ model: 'parakeet-tdt-0.6b-v3', device: 'cpu' })
+    expect(parakeet.dictation.better?.model).toBe('large-v3-turbo')
+    expect(spareToFetch(parakeet)).toBeUndefined()
+  })
+
+  it('dictation shares the transcripts\' model only when that costs it nothing', () => {
+    // large-v3 kept for recordings: a phrase in it takes four times turbo's, so dictation keeps turbo.
+    const two = planSpeech(input({ cuda: true, downloaded: ['large-v3', 'large-v3-turbo', 'parakeet-tdt-0.6b-v3'], previous: { transcripts: 'large-v3' } }))
+    expect(two.transcripts.chosen.model).toBe('large-v3')
+    expect(two.dictation.chosen.model).toBe('large-v3-turbo')
   })
 
   it('a weak laptop transcribes with turbo, whose decoder is light, and keeps the large model out of its memory', () => {
@@ -163,6 +189,59 @@ describe('planSpeech', () => {
     expect(gpuOffer({ ...i9, gpus: [{ ...i9.gpus[0]!, vramMb: 1024 }] })).toBe(false)
     expect(gpuOffer({ ...i9, gpus: [{ ...i9.gpus[0]!, driver: '472.12' }] })).toBe(false)
     expect(gpuOffer(undefined, true)).toBe(true)
+  })
+
+  it('a card slow at half precision takes int8_float16: by its name first, then by what the speed test measured', async () => {
+    const { slowHalf } = await import('./speechplan')
+    const card = (name: string, vramMb = 6144): DeviceProfile => ({ ...i9, gpus: [{ ...i9.gpus[0]!, name, vramMb }] })
+    const gtx = card('NVIDIA GeForce GTX 1660 Ti')
+    const downloaded = ['large-v3-turbo', 'parakeet-tdt-0.6b-v3']
+    const turbo = (profile: DeviceProfile, bench?: PlanInput['bench']) => planSpeech(input({ profile, bench, cuda: true, downloaded })).transcripts.chosen
+    // Room for float16, and four times its time there (a phrase in 4.4 s): the compact format, with a guess of its own.
+    expect(turbo(gtx)).toMatchObject({ model: 'large-v3-turbo', compute: 'int8_float16', basis: 'guess' })
+    expect(planSpeech(input({ profile: gtx, cuda: true, downloaded })).engine.cuda?.transcripts).toEqual({ model: 'large-v3-turbo', compute: 'int8_float16' })
+    expect(planSpeech(input({ profile: gtx, cuda: true, downloaded, native: 'kk' })).dictation.chosen.estimate).toBeCloseTo(0.26 * 4.5, 5)
+    // The reference card and its like keep float16, which writes a little better.
+    expect(turbo(i9).compute).toBe('float16')
+    expect(slowHalf({ profile: i9, bench: undefined })).toBe(false)
+    // A card nobody named: the speed test's own two numbers decide, never those of real use.
+    const tested = (full: number, compact: number, field = 'tested') => ({
+      fingerprint: 'fp',
+      runs: {
+        [runKey('large-v3-turbo', 'cuda', 'float16')]: { phrase: full, rtf: full / 20, [field]: { phrase: full, rtf: full / 20 } },
+        [runKey('large-v3-turbo', 'cuda', 'int8_float16')]: { phrase: compact, rtf: compact / 20, [field]: { phrase: compact, rtf: compact / 20 } },
+      },
+    })
+    const old = card('NVIDIA GeForce GTX 1080', 8192)
+    expect(turbo(old).compute).toBe('float16')
+    expect(turbo(old, tested(4.2, 1.1))).toMatchObject({ compute: 'int8_float16', basis: 'measured', estimate: expect.closeTo(60 * (1.1 / 20 + 0.015), 5) })
+    expect(turbo(old, tested(0.3, 0.3)).compute).toBe('float16')
+    expect(turbo(old, tested(4.2, 1.1, 'other')).compute).toBe('float16')
+    // A named card that measures quick at it after all is believed.
+    expect(turbo(gtx, tested(0.3, 0.3)).compute).toBe('float16')
+  })
+
+  it('the speed test compares the two formats once on a card not known to be quick at half precision', () => {
+    const card = (name: string): DeviceProfile => ({ ...i9, gpus: [{ ...i9.gpus[0]!, name }] })
+    const downloaded = ['large-v3-turbo', 'parakeet-tdt-0.6b-v3']
+    const runsOn = (name: string, bench?: PlanInput['bench']) => {
+      const i = input({ profile: card(name), bench, cuda: true, downloaded })
+      return testRuns(i, planSpeech(i)).filter(r => r.device === 'cuda')
+    }
+    const both = [
+      { model: 'large-v3-turbo', device: 'cuda', compute: 'float16', beam: 5 },
+      { model: 'large-v3-turbo', device: 'cuda', compute: 'int8_float16', beam: 5 },
+    ]
+    expect(runsOn('NVIDIA GeForce GTX 1080')).toEqual(both)
+    // The compact format first where the plan takes it; an RTX card is not asked twice.
+    expect(runsOn('NVIDIA GeForce GTX 1660 Ti')).toEqual([both[1], both[0]])
+    expect(runsOn('NVIDIA GeForce RTX 2080 SUPER')).toEqual([both[0]])
+    // Measured in both: nothing more to ask. A format the card had no room for is not asked again.
+    const run = { phrase: 0.3, rtf: 0.02, tested: { phrase: 0.3, rtf: 0.02 } }
+    const measured = { fingerprint: 'fp', runs: { [runKey('large-v3-turbo', 'cuda', 'float16')]: run, [runKey('large-v3-turbo', 'cuda', 'int8_float16')]: run } }
+    expect(runsOn('NVIDIA GeForce GTX 1080', measured)).toEqual([])
+    const noRoom = { fingerprint: 'fp', runs: { [runKey('large-v3-turbo', 'cuda', 'float16')]: run, [runKey('large-v3-turbo', 'cuda', 'int8_float16')]: { failed: 'loaded as float16' } } }
+    expect(runsOn('NVIDIA GeForce GTX 1080', noRoom)).toEqual([])
   })
 
   it('measured numbers replace the guesses, and scale to the models not measured', () => {

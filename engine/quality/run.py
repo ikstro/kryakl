@@ -295,6 +295,7 @@ def main(argv: list[str]) -> None:
     p.add_argument("--models", default="parakeet-tdt-0.6b-v3,tiny,base,small")
     p.add_argument("--device", default="cpu", choices=("cpu", "cuda"))
     p.add_argument("--threads", default="0", help="processor threads, comma-separated (0: the engine's default)")
+    p.add_argument("--compute", default="", help="the number format on the card: float16 (the default there) or int8_float16")
     p.add_argument("--langs", default="ru,uk,en")
     p.add_argument("--conditions", default=",".join(conditions.CONDITIONS))
     p.add_argument("--n", type=int, default=40, help="phrases per language")
@@ -327,7 +328,7 @@ def main(argv: list[str]) -> None:
                 continue
             rec = asr.recognizer(name)
             started = time.perf_counter()
-            rec.load(name, a.device, None, threads)
+            rec.load(name, a.device, (a.compute or None) if a.device == "cuda" else None, threads)
             rec.warm()
             print(f"{name} on {a.device} ({rec.compute}, {threads or 'default'} threads, {where} copy) loaded in {time.perf_counter() - started:.1f} s", flush=True)
             beam = a.beam or default_beam(name, a.device)

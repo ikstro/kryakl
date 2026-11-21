@@ -595,8 +595,8 @@
     "speech.automatic": "Automatic",
     "speech.autoNote": "the most accurate model that is quick enough here: {budget}",
     "speech.usesNow": "uses {model} now",
-    "speech.autoCpu": "on the processor: leaves the graphics card to your programs",
-    "speech.autoMoves": "moves to {model} on the processor once it is downloaded, leaving the graphics card to your programs",
+    "speech.autoCard": "on the graphics card; while other programs fill it, {model} types on the processor",
+    "speech.autoCardFetch": "on the graphics card; {model} downloads by itself, to type on the processor while other programs fill the card",
     "speech.slower": "slower than usual here",
     "speech.sizeHere": "{size} on this computer",
     "speech.sizePick": "{size}, downloads when picked",
@@ -2159,8 +2159,8 @@
     "speech.automatic": "\u0410\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438",
     "speech.autoNote": "\u0441\u0430\u043C\u0430\u044F \u0442\u043E\u0447\u043D\u0430\u044F \u043C\u043E\u0434\u0435\u043B\u044C, \u0434\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u043E \u0431\u044B\u0441\u0442\u0440\u0430\u044F \u0437\u0434\u0435\u0441\u044C: {budget}",
     "speech.usesNow": "\u0441\u0435\u0439\u0447\u0430\u0441 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 {model}",
-    "speech.autoCpu": "\u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440\u0435: \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u0432\u0430\u0448\u0438\u043C \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430\u043C",
-    "speech.autoMoves": "\u043F\u0435\u0440\u0435\u0439\u0434\u0451\u0442 \u043D\u0430 {model} \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440\u0435, \u043A\u0430\u043A \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u043D\u0430 \u0441\u043A\u0430\u0447\u0430\u0435\u0442\u0441\u044F, \u0438 \u043E\u0441\u0442\u0430\u0432\u0438\u0442 \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0443 \u0432\u0430\u0448\u0438\u043C \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430\u043C",
+    "speech.autoCard": "\u043D\u0430 \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0435; \u043F\u043E\u043A\u0430 \u0435\u0451 \u0437\u0430\u043D\u0438\u043C\u0430\u044E\u0442 \u0434\u0440\u0443\u0433\u0438\u0435 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B, \u043F\u0435\u0447\u0430\u0442\u0430\u0435\u0442 {model} \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440\u0435",
+    "speech.autoCardFetch": "\u043D\u0430 \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0435; {model} \u0441\u043A\u0430\u0447\u0430\u0435\u0442\u0441\u044F \u0441\u0430\u043C\u0430, \u0447\u0442\u043E\u0431\u044B \u043F\u0435\u0447\u0430\u0442\u0430\u0442\u044C \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440\u0435, \u043F\u043E\u043A\u0430 \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0443 \u0437\u0430\u043D\u0438\u043C\u0430\u044E\u0442 \u0434\u0440\u0443\u0433\u0438\u0435 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B",
     "speech.slower": "\u0437\u0434\u0435\u0441\u044C \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435 \u043E\u0431\u044B\u0447\u043D\u043E\u0433\u043E",
     "speech.sizeHere": "{size} \u043D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435",
     "speech.sizePick": "{size}, \u0441\u043A\u0430\u0447\u0430\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u0432\u044B\u0431\u043E\u0440\u0435",
@@ -3723,8 +3723,8 @@
     "speech.automatic": "\u0410\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E",
     "speech.autoNote": "\u043D\u0430\u0439\u0442\u043E\u0447\u043D\u0456\u0448\u0430 \u043C\u043E\u0434\u0435\u043B\u044C, \u0434\u043E\u0441\u0442\u0430\u0442\u043D\u044C\u043E \u0448\u0432\u0438\u0434\u043A\u0430 \u0442\u0443\u0442: {budget}",
     "speech.usesNow": "\u0437\u0430\u0440\u0430\u0437 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454 {model}",
-    "speech.autoCpu": "\u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440\u0456: \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0432\u0430\u0448\u0438\u043C \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430\u043C",
-    "speech.autoMoves": "\u043F\u0435\u0440\u0435\u0439\u0434\u0435 \u043D\u0430 {model} \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440\u0456, \u0449\u043E\u0439\u043D\u043E \u0457\u0457 \u0431\u0443\u0434\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E, \u0456 \u0437\u0430\u043B\u0438\u0448\u0438\u0442\u044C \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0443 \u0432\u0430\u0448\u0438\u043C \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430\u043C",
+    "speech.autoCard": "\u043D\u0430 \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0456; \u043F\u043E\u043A\u0438 \u0457\u0457 \u0437\u0430\u0439\u043C\u0430\u044E\u0442\u044C \u0456\u043D\u0448\u0456 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0438, \u0434\u0440\u0443\u043A\u0443\u0454 {model} \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440\u0456",
+    "speech.autoCardFetch": "\u043D\u0430 \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0456; {model} \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u044C\u0441\u044F \u0441\u0430\u043C\u0430, \u0449\u043E\u0431 \u0434\u0440\u0443\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440\u0456, \u043F\u043E\u043A\u0438 \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0443 \u0437\u0430\u0439\u043C\u0430\u044E\u0442\u044C \u0456\u043D\u0448\u0456 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0438",
     "speech.slower": "\u0442\u0443\u0442 \u043F\u043E\u0432\u0456\u043B\u044C\u043D\u0456\u0448\u0430, \u043D\u0456\u0436 \u0437\u0430\u0437\u0432\u0438\u0447\u0430\u0439",
     "speech.sizeHere": "{size} \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456",
     "speech.sizePick": "{size}, \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u044C\u0441\u044F, \u043A\u043E\u043B\u0438 \u0432\u0438\u0431\u0435\u0440\u0435\u0442\u0435",
@@ -6524,6 +6524,10 @@
     return v.speech.health?.models[feature === "dictation" ? "dictation" : "transcripts"];
   }
   var FEATURES = ["dictation", "transcripts"];
+  function spareNote(spare) {
+    const coming = spare.better && !spare.better.downloaded ? spare.better : spare.chosen.downloaded ? void 0 : spare.chosen;
+    return coming ? t("speech.autoCardFetch", { model: coming.label }) : t("speech.autoCard", { model: spare.chosen.label });
+  }
   var pin = (feature, model) => post({ type: "saveSettings", patch: { [feature === "dictation" ? "dictationModel" : "transcriptsModel"]: model } });
   function speechChoiceRows(v, feature) {
     const plan = v.speech.plan;
@@ -6538,8 +6542,8 @@
         [
           t("speech.autoNote", { budget }),
           p.pinned ? null : t("speech.usesNow", { model: p.chosen.label }),
-          // Dictation leaves the card to the person's programs (speechplan.ts forDevice).
-          feature === "dictation" && plan.device === "cuda" && (p.chosen.device === "cpu" || p.better?.device === "cpu") ? p.chosen.device === "cpu" ? t("speech.autoCpu") : t("speech.autoMoves", { model: p.better?.label ?? "" }) : null
+          // The card dictates, and the processor's model takes over while other programs fill it (speechplan.ts `spare`).
+          feature === "dictation" && !p.pinned && p.chosen.device === "cuda" && plan.spare ? spareNote(plan.spare) : null
         ],
         !p.pinned,
         () => pin(feature, "")
