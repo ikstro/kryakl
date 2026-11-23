@@ -108,7 +108,7 @@ import type { LibraryRow } from './transcriptwatch'
 import { MODELS as SPEECH_MODELS } from './speechplan'
 import { SPEECH_PORT } from './speechservice'
 import { recommendedModels } from './setup'
-import { cleanable, markAway, measureParts, partPackages, speechModelDir, splitSpeech, withUse, type Place, type UseContext } from './storage'
+import { cleanable, spare, markAway, measureParts, partPackages, speechModelDir, splitSpeech, withUse, type Place, type UseContext } from './storage'
 import { NaturalSpeaker } from './synth'
 import { system32 } from './system32'
 import { Talk } from './talk'
@@ -1234,7 +1234,7 @@ function useContext(): UseContext {
     native: langCode(settings.native),
     naturalVoice: settings.voice === '' || settings.voice.startsWith(NATURAL_PREFIX),
     build: translationAdvice(speech.profile)[settings.model].cuda ? 'cuda' : 'vulkan',
-    speech: { dictation: plan.dictation.chosen.model, transcripts: plan.transcripts.chosen.model, reserve: { dictation: other?.dictation.model, transcripts: other?.transcripts.model } },
+    speech: { dictation: plan.dictation.chosen.model, transcripts: plan.transcripts.chosen.model, reserve: { dictation: other?.dictation.model, transcripts: other?.transcripts.model }, preview: speech.previewModel },
     groq: { llm: remoteLlm(), dictate: remoteDictate(), transcribe: remoteTranscribe() },
   }
 }
@@ -1272,8 +1272,8 @@ async function removeStored(id: StorageId, item?: string): Promise<void> {
       return
     case 'accurate':
     case 'most':
-      // Fast translates in its place.
-      if (settings.translationLevel === id) saveSettings({ translationLevel: 'fast' })
+      // Fast translates in its place, unless Groq does (the level then means Groq's accurate translation).
+      if (settings.translationLevel === id && !remoteLlm()) saveSettings({ translationLevel: 'fast' })
       return llmFiles.remove(id)
     case 'unused':
       llmFiles.removeUnused()
@@ -1313,6 +1313,20 @@ async function cleanUp(): Promise<void> {
       noteRefused(p.id, p.item, error)
     }
   }
+}
+
+/** Remove the spare (2026-11-23, the owner): the models here that Groq stands in for, one after another, as Clean up. */
+async function removeSpare(): Promise<void> {
+  if (!storage) return
+  refused = []
+  for (const p of spare(withUse(storage.parts, useContext()))) {
+    try {
+      await removeStored(p.id, p.item)
+    } catch (error) {
+      noteRefused(p.id, p.item, error)
+    }
+  }
+  log(`storage: the spare for Groq removed${refused.length ? `, ${refused.length} part(s) stayed` : ''}`)
 }
 
 /** Use recommended (the Models page): the models advised here saved, and what they need downloaded, as the page listed it. */
@@ -1810,6 +1824,9 @@ function onMessage(message: ToHost, page: Page): void {
     case 'cleanUp':
       void cleanUp().finally(() => (postApp(), remeasure()))
       return
+    case 'removeSpare':
+      void removeSpare().finally(() => (postApp(), remeasure()))
+      return
     case 'useRecommended':
       useRecommended()
       return
@@ -2148,6 +2165,8 @@ function keysView(): AppView['keys'] {
 function remoteChanged(): void {
   registerShortcuts()
   applyKeyboard()
+  // What goes to Groq changes the speech plan: its models here only stand by then (speechplan.ts `remote`).
+  speech?.replan()
   speech?.keysChanged()
   if (shown) postCard()
   postTalk()
@@ -4282,6 +4301,7 @@ function setUpSpeechEngine(): void {
     // Groq's key goes to the engine only while recordings go to Groq.
     secrets: () => ({ hfToken: keys?.get('huggingface') ?? '', groqKey: remoteTranscribe() ? (keys.get('groq') ?? '') : '' }),
     remoteTranscribe,
+    remoteDictate,
     onChange: () => {
       postApp()
       refreshTray()

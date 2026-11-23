@@ -481,6 +481,10 @@ def download_model(name: str):
 def model_busy(name: str) -> str:
     """Why a model's files must stay now, or "" when nothing plans, holds, fetches or measures it."""
     for feature in ("transcripts", "dictation"):
+        # Recordings that go to Groq keep their planned model only as a spare (2026-11-23): it may go, and the
+        # job waits for Groq instead of recognizing here (jobs.py, `asr.downloaded`).
+        if feature == "transcripts" and remote_transcribe():
+            continue
         if worker.entry(feature)[1]["model"] == name:
             return f"In use: the {feature} model"
     for t in (worker.transcriber, worker.dictator, worker.parakeet):

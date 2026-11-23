@@ -112,6 +112,18 @@ describe('planSpeech', () => {
     expect(processorPreview(planSpeech(input({ profile: weakLaptop })), [])).toBeUndefined()
   })
 
+  it('an action Groq does takes a model here, never one to download, and Groq\'s dictation falls to the processor', () => {
+    const remote = { dictation: true, transcripts: true }
+    const both = planSpeech(input({ cuda: true, downloaded: ['large-v3-turbo', 'parakeet-tdt-0.6b-v3'], languages: ['ru', 'en'], remote }))
+    // Dictation: Parakeet, which previews the phrase anyway; turbo stays only for recordings.
+    expect(both.engine.cuda?.dictation.model).toBe('parakeet-tdt-0.6b-v3')
+    expect(both.engine.cuda?.transcripts.model).toBe('large-v3-turbo')
+    // The spare turbo removed: dictation keeps Parakeet, nothing chosen to download where something is here.
+    const left = planSpeech(input({ cuda: true, downloaded: ['parakeet-tdt-0.6b-v3', 'base'], languages: ['ru', 'en'], remote }))
+    expect(left.engine.cuda?.dictation.model).toBe('parakeet-tdt-0.6b-v3')
+    expect(left.transcripts.chosen).toMatchObject({ model: 'base', downloaded: true })
+  })
+
   it('dictation shares the transcripts\' model only when that costs it nothing', () => {
     // large-v3 kept for recordings: a phrase in it takes four times turbo's, so dictation keeps turbo.
     const two = planSpeech(input({ cuda: true, downloaded: ['large-v3', 'large-v3-turbo', 'parakeet-tdt-0.6b-v3'], previous: { transcripts: 'large-v3' } }))

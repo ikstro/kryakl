@@ -103,7 +103,7 @@ export type UseContext = {
   /** The llama.cpp build the language model runs on here. */
   build: 'vulkan' | 'cuda'
   /** The speech model each action uses now, and those kept for the processor should the graphics card fail. */
-  speech: { dictation: string; transcripts: string; reserve: { dictation?: string; transcripts?: string } }
+  speech: { dictation: string; transcripts: string; reserve: { dictation?: string; transcripts?: string }; preview?: string }
   /** What goes to Groq now (settings.remote): the models here for it stand by. */
   groq?: { llm: boolean; dictate: boolean; transcribe: boolean }
 }
@@ -118,6 +118,8 @@ function standingBy(p: StoragePart, c: UseContext): boolean {
     case 'llama':
       return g.llm
     case 'speechModel':
+      // The processor's model previews a phrase Groq hears: in use, not standing by.
+      if (p.item === c.speech.preview && g.dictate) return false
       return (p.item !== c.speech.dictation || g.dictate) && (p.item !== c.speech.transcripts || g.transcribe)
     default:
       return false
@@ -167,3 +169,6 @@ export function withUse(parts: readonly StoragePart[], c: UseContext): StoragePa
 
 /** What Clean up removes: the parts nothing uses that take room. */
 export const cleanable = (parts: readonly StoragePart[]) => parts.filter(p => p.unused && p.bytes > 0)
+
+/** What Remove the spare removes (2026-11-23, the owner): the parts kept only for when Groq cannot be reached. Clean up never takes them. */
+export const spare = (parts: readonly StoragePart[]) => parts.filter(p => p.standby && p.bytes > 0)

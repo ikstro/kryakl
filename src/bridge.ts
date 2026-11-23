@@ -66,6 +66,7 @@ const APP_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>([
   'removeStored',
   'chromeCheck',
   'cleanUp',
+  'removeSpare',
   'restartSpeech',
   'showInFolder',
   'openPath',

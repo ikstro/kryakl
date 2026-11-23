@@ -701,6 +701,7 @@ export type ToHost =
   | { type: 'chromeCheck' }
   | { type: 'removeStored'; id: StorageId; item?: string }
   | { type: 'cleanUp' }
+  | { type: 'removeSpare' }
   | { type: 'useRecommended' }
   /** What is left in the old folders moved into Kryakl's: the engine and the model's server stopped first, Kryakl started again after. */
   | { type: 'moveToKryakl' }

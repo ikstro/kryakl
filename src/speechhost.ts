@@ -57,6 +57,8 @@ export type SpeechHostOptions = {
   secrets?: () => { hfToken: string; groqKey: string }
   /** Recordings and meetings are recognized by Groq (settings.remote.transcribe with a key). */
   remoteTranscribe?: () => boolean
+  /** Dictated phrases go to Groq (settings.remote.dictate with a key). */
+  remoteDictate?: () => boolean
   onChange: () => void
   /** A transcript (never a voice note) became done or failed while Kryakl ran: main shows a notification. */
   onTranscriptEnded?: (row: LibraryRow) => void
@@ -203,6 +205,7 @@ export class SpeechHost {
       pins: { dictation: s.dictationModel, transcripts: s.transcriptsModel },
       ...(h ? { previous: { dictation: h.models.dictation.name, transcripts: h.models.transcripts.name } } : {}),
       nvidiaDriver: this.nvidiaDriver,
+      remote: { dictation: !!this.o.remoteDictate?.(), transcripts: !!this.o.remoteTranscribe?.() },
     }
   }
 

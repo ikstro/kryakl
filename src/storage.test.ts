@@ -5,7 +5,7 @@ import * as path from 'node:path'
 import { afterEach, expect, test } from 'vitest'
 
 import type { StoragePart } from './protocol'
-import { cleanable, folderSize, isUnder, markAway, measureParts, partPackages, speechModelDir, splitSpeech, withUse, type UseContext } from './storage'
+import { cleanable, spare, folderSize, isUnder, markAway, measureParts, partPackages, speechModelDir, splitSpeech, withUse, type UseContext } from './storage'
 
 const made: string[] = []
 afterEach(() => made.splice(0).forEach(dir => fs.rmSync(dir, { recursive: true, force: true })))
@@ -176,4 +176,14 @@ test('what Groq does now stands by here, kept for when it cannot be reached, nev
   expect(cleanable(parts).map(p => p.id)).toEqual(['most', 'speechModel'])
   const all = withUse([part('speechModel', 'large-v3-turbo')], { ...context, groq: { ...groq, transcribe: true } })
   expect(all[0]?.standby).toBe(true)
+})
+
+test('the spare is what stands by for Groq, never the processor\'s preview, never in Clean up', () => {
+  const groq = { llm: true, dictate: true, transcribe: true }
+  const speech = { dictation: 'parakeet-tdt-0.6b-v3', transcripts: 'large-v3-turbo', reserve: {}, preview: 'parakeet-tdt-0.6b-v3' }
+  const parts = withUse([part('accurate'), part('llama', 'vulkan'), part('speechModel', 'large-v3-turbo'), part('speechModel', 'parakeet-tdt-0.6b-v3'), part('most')], { ...context, speech, groq })
+  const id = (p: { id: string; item?: string }) => p.id + (p.item ? `:${p.item}` : '')
+  expect(spare(parts).map(id)).toEqual(['accurate', 'llama:vulkan', 'speechModel:large-v3-turbo'])
+  expect(parts.find(p => p.item === 'parakeet-tdt-0.6b-v3')?.users).toEqual(['Dictate'])
+  expect(cleanable(parts).map(id)).toEqual(['most'])
 })

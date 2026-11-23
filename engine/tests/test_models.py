@@ -35,6 +35,16 @@ def test_the_planned_model_stays(client, models):
     assert asr.downloaded(planned)
 
 
+def test_the_planned_model_may_go_while_recordings_go_to_groq(client, models, monkeypatch):
+    monkeypatch.setattr(engine, "remote_transcribe", lambda: True)
+    planned = engine.worker.entry("transcripts")[1]["model"]
+    if planned == engine.worker.entry("dictation")[1]["model"]:
+        monkeypatch.setattr(engine.worker, "entry", lambda feature, *a: ("cpu", {"model": planned if feature == "transcripts" else "parakeet-tdt-0.6b-v3"}))
+    whisper_here(planned)
+    assert client.request("DELETE", f"/models/{planned}", headers=KEY).status_code == 200
+    assert not asr.downloaded(planned)
+
+
 def test_a_loaded_model_planned_nowhere_is_let_go_and_removed(client, models, monkeypatch):
     folder, _ = whisper_here("tiny")
     monkeypatch.setattr(engine.worker.dictator, "_model", object())

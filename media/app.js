@@ -1234,6 +1234,12 @@
     "models.unused": "{size} that nothing uses",
     "models.unusedNote": "{list}; each downloads again if you pick it later",
     "models.cleaning": "Cleaning up\u2026",
+    "models.spare": "Groq does this work: {size} here are kept only for when it cannot be reached",
+    "models.spareNote": "{list}. Kryakl does not download them again while Groq does the work.",
+    "models.spareRemove": "Remove the spare",
+    "models.spareAsk": "Without the internet, or past Groq's limit, after removing:",
+    "models.spareLossLlm": "translation is Fast; Check my English and Talk do not work",
+    "models.spareLossSpeech": "recordings and meetings are not recognized",
     "models.cleanUp": "Clean up",
     "models.computer": "This computer",
     "models.eachAction": "What each action uses",
@@ -2934,6 +2940,12 @@
     "models.unused": "{size}, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043D\u0438\u0447\u0442\u043E \u043D\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442",
     "models.unusedNote": "{list}; \u043A\u0430\u0436\u0434\u043E\u0435 \u0441\u043A\u0430\u0447\u0430\u0435\u0442\u0441\u044F \u0441\u043D\u043E\u0432\u0430, \u0435\u0441\u043B\u0438 \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u0435\u0433\u043E \u043F\u043E\u0437\u0436\u0435",
     "models.cleaning": "\u041E\u0447\u0438\u0441\u0442\u043A\u0430\u2026",
+    "models.spare": "\u042D\u0442\u0443 \u0440\u0430\u0431\u043E\u0442\u0443 \u0434\u0435\u043B\u0430\u0435\u0442 Groq: {size} \u0437\u0434\u0435\u0441\u044C \u043B\u0435\u0436\u0430\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u0441\u043B\u0443\u0447\u0430\u0439, \u043A\u043E\u0433\u0434\u0430 \u043E\u043D \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D",
+    "models.spareNote": "{list}. \u041F\u043E\u043A\u0430 \u0440\u0430\u0431\u043E\u0442\u0443 \u0434\u0435\u043B\u0430\u0435\u0442 Groq, \u041A\u0440\u044F\u043A\u043B \u043D\u0435 \u0441\u043A\u0430\u0447\u0438\u0432\u0430\u0435\u0442 \u0438\u0445 \u0441\u043D\u043E\u0432\u0430.",
+    "models.spareRemove": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0437\u0430\u043F\u0430\u0441",
+    "models.spareAsk": "\u041F\u043E\u0441\u043B\u0435 \u0443\u0434\u0430\u043B\u0435\u043D\u0438\u044F \u0431\u0435\u0437 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0430 \u0438\u043B\u0438 \u043F\u043E\u0441\u043B\u0435 \u043B\u0438\u043C\u0438\u0442\u0430 Groq:",
+    "models.spareLossLlm": "\u043F\u0435\u0440\u0435\u0432\u043E\u0434 \u0431\u0443\u0434\u0435\u0442 \xAB\u0411\u044B\u0441\u0442\u0440\u044B\u043C\xBB, \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u0433\u043E \u0438 \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u043D\u0435 \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442",
+    "models.spareLossSpeech": "\u0437\u0430\u043F\u0438\u0441\u0438 \u0438 \u0432\u0441\u0442\u0440\u0435\u0447\u0438 \u043D\u0435 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u044E\u0442\u0441\u044F",
     "models.cleanUp": "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C",
     "models.computer": "\u042D\u0442\u043E\u0442 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440",
     "models.eachAction": "\u0427\u0442\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 \u043A\u0430\u0436\u0434\u043E\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435",
@@ -4634,6 +4646,12 @@
     "models.unused": "{size}, \u044F\u043A\u0456 \u043D\u0456\u0449\u043E \u043D\u0435 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454",
     "models.unusedNote": "{list}; \u043A\u043E\u0436\u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u044C\u0441\u044F \u0437\u043D\u043E\u0432\u0443, \u044F\u043A\u0449\u043E \u0432\u0438\u0431\u0440\u0430\u0442\u0438 \u0439\u043E\u0433\u043E \u043F\u0456\u0437\u043D\u0456\u0448\u0435",
     "models.cleaning": "\u041F\u0440\u0438\u0431\u0438\u0440\u0430\u043D\u043D\u044F\u2026",
+    "models.spare": "\u0426\u044E \u0440\u043E\u0431\u043E\u0442\u0443 \u0440\u043E\u0431\u0438\u0442\u044C Groq: {size} \u0442\u0443\u0442 \u043B\u0435\u0436\u0430\u0442\u044C \u043B\u0438\u0448\u0435 \u043D\u0430 \u0432\u0438\u043F\u0430\u0434\u043E\u043A, \u043A\u043E\u043B\u0438 \u0432\u0456\u043D \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439",
+    "models.spareNote": "{list}. \u041F\u043E\u043A\u0438 \u0440\u043E\u0431\u043E\u0442\u0443 \u0440\u043E\u0431\u0438\u0442\u044C Groq, \u041A\u0440\u044F\u043A\u043B \u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u0454 \u0457\u0445 \u0437\u043D\u043E\u0432\u0443.",
+    "models.spareRemove": "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0437\u0430\u043F\u0430\u0441",
+    "models.spareAsk": "\u041F\u0456\u0441\u043B\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043D\u044F \u0431\u0435\u0437 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u0430\u0431\u043E \u043F\u0456\u0441\u043B\u044F \u043B\u0456\u043C\u0456\u0442\u0443 Groq:",
+    "models.spareLossLlm": "\u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434 \u0431\u0443\u0434\u0435 \xAB\u0428\u0432\u0438\u0434\u043A\u0438\u043C\xBB, \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0430 \u0430\u043D\u0433\u043B\u0456\u0439\u0441\u044C\u043A\u043E\u0457 \u0456 \u0440\u043E\u0437\u043C\u043E\u0432\u0430 \u043D\u0435 \u043F\u0440\u0430\u0446\u044E\u044E\u0442\u044C",
+    "models.spareLossSpeech": "\u0437\u0430\u043F\u0438\u0441\u0438 \u0456 \u0437\u0443\u0441\u0442\u0440\u0456\u0447\u0456 \u043D\u0435 \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u044E\u0442\u044C\u0441\u044F",
     "models.cleanUp": "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438",
     "models.computer": "\u0426\u0435\u0439 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440",
     "models.eachAction": "\u0429\u043E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454 \u043A\u043E\u0436\u043D\u0430 \u0434\u0456\u044F",
@@ -10292,6 +10310,20 @@
       cleaning ? el("span", { class: "v" }, t("models.cleaning")) : btn(t("models.cleanUp"), () => (cleaning = "asked", post({ type: "cleanUp" }), renderBody()), "primary")
     );
   }
+  var spareState = "";
+  function spareNotice(v) {
+    const parts = (v.storage?.parts ?? []).filter((p) => p.standby && p.bytes > 0);
+    if (!parts.length) return null;
+    const mb = parts.reduce((n, p) => n + p.bytes / 1e6, 0);
+    const loss = [
+      ...parts.some((p) => p.id === "accurate" || p.id === "most" || p.id === "llama") ? [t("models.spareLossLlm")] : [],
+      ...parts.some((p) => p.id === "speechModel") ? [t("models.spareLossSpeech")] : []
+    ];
+    const busy3 = spareState === "asked" || spareState === "measuring";
+    const notes = spareState === "ask" ? [el("small", {}, t("models.spareAsk")), ...loss.map((l) => el("small", {}, `\xB7 ${l}`))] : [el("small", {}, t("models.spareNote", { list: parts.map((p) => storedName(v, p)).join(", ") })), ...busy3 ? [] : parts.map((p) => refusedNote(v, p))];
+    const control = busy3 ? el("span", { class: "v" }, t("models.cleaning")) : spareState === "ask" ? el("span", { class: "kchg" }, linkBtn(t("storage.keep"), () => (spareState = "", renderBody())), btn(t("kb.remove"), () => (spareState = "asked", post({ type: "removeSpare" }), renderBody()), "danger")) : btn(t("models.spareRemove"), () => (spareState = "ask", renderBody()));
+    return el("div", { class: "row notice old" }, lucide("cloud"), el("div", { class: "l" }, t("models.spare", { size: size(mb) }), ...notes), control);
+  }
   function modelsPage(v) {
     return [
       grp(t("models.computer")),
@@ -10299,6 +10331,7 @@
       testOffer(v),
       ...recommendRows(v),
       unusedNotice(v),
+      spareNotice(v),
       grp(t("models.eachAction")),
       navCard("languages", TITLES.translate, t("models.translateNote"), levelValue(v), () => go("models", "forTranslate"), "forTranslate"),
       navCard("graduation-cap", t("models.checkTalk"), t("page.forCheckCap"), checkValue(v), () => go("models", "forCheck"), "forCheck"),
@@ -11373,6 +11406,7 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
     return [
       oldNotice(v, s),
       unusedNotice(v),
+      spareNotice(v),
       grp(t("storage.downloads")),
       row(
         t("storage.everything", { size: size(downloadsMb(s)) }),
@@ -11678,6 +11712,8 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
     view = m.view;
     if (cleaning === "asked" && m.view.storage?.measuring) cleaning = "measuring";
     else if (cleaning === "measuring" && !m.view.storage?.measuring) cleaning = void 0;
+    if (spareState === "asked" && m.view.storage?.measuring) spareState = "measuring";
+    else if (spareState === "measuring" && !m.view.storage?.measuring) spareState = "";
     if (m.view.speech.service !== "ready") forgetEngine();
     updateNav();
     if (!m.view.settings.setupDone) {

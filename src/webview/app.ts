@@ -1931,6 +1931,35 @@ function unusedNotice(v: AppView): HTMLElement | null {
   )
 }
 
+/** Remove the spare: '' at rest, 'ask' while the line says what goes, then as Clean up's `cleaning`. */
+let spareState: '' | 'ask' | 'asked' | 'measuring' = ''
+
+/**
+ * What Groq does here, kept only for when it cannot be reached (storage.ts `spare`), in one line with Remove the spare
+ * (2026-11-23, the owner: 13 GB on the disk that Groq made needless, and nothing offered to remove them). A tap first
+ * says what stops working without the internet.
+ */
+function spareNotice(v: AppView): HTMLElement | null {
+  const parts = (v.storage?.parts ?? []).filter(p => p.standby && p.bytes > 0)
+  if (!parts.length) return null
+  const mb = parts.reduce((n, p) => n + p.bytes / 1e6, 0)
+  const loss = [
+    ...(parts.some(p => p.id === 'accurate' || p.id === 'most' || p.id === 'llama') ? [t('models.spareLossLlm')] : []),
+    ...(parts.some(p => p.id === 'speechModel') ? [t('models.spareLossSpeech')] : []),
+  ]
+  const busy = spareState === 'asked' || spareState === 'measuring'
+  const notes =
+    spareState === 'ask'
+      ? [el('small', {}, t('models.spareAsk')), ...loss.map(l => el('small', {}, `· ${l}`))]
+      : [el('small', {}, t('models.spareNote', { list: parts.map(p => storedName(v, p)).join(', ') })), ...(busy ? [] : parts.map(p => refusedNote(v, p)))]
+  const control = busy
+    ? el('span', { class: 'v' }, t('models.cleaning'))
+    : spareState === 'ask'
+      ? el('span', { class: 'kchg' }, linkBtn(t('storage.keep'), () => ((spareState = ''), renderBody())), btn(t('kb.remove'), () => ((spareState = 'asked'), post({ type: 'removeSpare' }), renderBody()), 'danger'))
+      : btn(t('models.spareRemove'), () => ((spareState = 'ask'), renderBody()))
+  return el('div', { class: 'row notice old' }, lucide('cloud'), el('div', { class: 'l' }, t('models.spare', { size: speechSize(mb) }), ...notes), control)
+}
+
 /** Models: this computer and its advice on top, then what each action uses, each opening its own choice. */
 function modelsPage(v: AppView): HTMLElement[] {
   return [
@@ -1939,6 +1968,7 @@ function modelsPage(v: AppView): HTMLElement[] {
     testOffer(v),
     ...recommendRows(v),
     unusedNotice(v),
+    spareNotice(v),
     grp(t('models.eachAction')),
     navCard('languages', TITLES.translate, t('models.translateNote'), levelValue(v), () => go('models', 'forTranslate'), 'forTranslate'),
     navCard('graduation-cap', t('models.checkTalk'), t('page.forCheckCap'), checkValue(v), () => go('models', 'forCheck'), 'forCheck'),
@@ -3249,6 +3279,7 @@ function storagePage(v: AppView): HTMLElement[] {
   return [
     oldNotice(v, s),
     unusedNotice(v),
+    spareNotice(v),
     grp(t('storage.downloads')),
     row(
       t('storage.everything', { size: speechSize(downloadsMb(s)) }),
@@ -3621,6 +3652,8 @@ window.addEventListener('message', (event: MessageEvent<ToView>) => {
   // Clean up goes on until the storage measured again comes in.
   if (cleaning === 'asked' && m.view.storage?.measuring) cleaning = 'measuring'
   else if (cleaning === 'measuring' && !m.view.storage?.measuring) cleaning = undefined
+  if (spareState === 'asked' && m.view.storage?.measuring) spareState = 'measuring'
+  else if (spareState === 'measuring' && !m.view.storage?.measuring) spareState = ''
   if (m.view.speech.service !== 'ready') forgetEngine()
   updateNav()
   // A fresh install: the setup takes Home's place until it is finished or skipped.

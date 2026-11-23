@@ -85,6 +85,9 @@ export type PlanInput = {
   previous?: Partial<Record<Feature, string>>
   /** No profile yet: whether an NVIDIA driver is installed at all (nvidia-smi.exe). */
   nvidiaDriver?: boolean
+  /** What goes to Groq now (settings.remote with a key): the model here only stands by, so one already downloaded
+   *  is taken over one to download, and dictation runs on the processor's (2026-11-23: the spare can be removed). */
+  remote?: Partial<Record<Feature, boolean>>
 }
 
 export type Choice = {
@@ -343,7 +346,8 @@ function decide(feature: Feature, device: Device, input: PlanInput): FeaturePlan
   const fits = usable.filter(c => c.fits)
   const kept = usable.find(c => c.model === input.previous?.[feature] && c.downloaded && words(c) <= budget * KEEP)
   const best = fits[0]
-  const here = fits.find(c => c.downloaded)
+  // Groq does this work: a model here, even over the budget, before one to download.
+  const here = fits.find(c => c.downloaded) ?? (input.remote?.[feature] ? usable.find(c => c.downloaded) : undefined)
   if (kept && (!here || !better(here, kept))) return pick(kept, false, best && best !== kept && !best.downloaded && better(best, kept) ? best : undefined)
   if (here) return pick(here, false, best && best !== here && better(best, here) ? best : undefined)
   // Nothing within the budget is here yet: the best that downloads by itself (a big one is only offered).
@@ -358,6 +362,8 @@ function forDevice(device: Device, input: PlanInput): Record<Feature, FeaturePla
   const transcripts = decide('transcripts', device, input)
   let dictation = decide('dictation', device, input)
   if (device !== 'cuda' || dictation.pinned) return { dictation, transcripts }
+  // Groq dictates: the processor's model is the fallback (it previews the phrase anyway), never the card's turbo.
+  if (input.remote?.dictation) return { dictation: decide('dictation', 'cpu', input), transcripts }
   // The most accurate model quick enough dictates, on the card too (2026-11-21, the owner: "да, меняй правило";
   // Parakeet on the processor, which dictated on every card's computer from 2026-10-31, gets twice turbo's
   // words wrong: 34.6 against 15.4 in a hundred on the owner's reading). The card is still the person's
