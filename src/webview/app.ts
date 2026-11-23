@@ -42,7 +42,7 @@ import { recommend, recommendedModels } from '../setup'
 import { resetSetup, setupNodes } from './setup'
 import { aboutOf, api, computerRows, diarizationOf, engineRows, engineSettings, fault, forgetEngine, gpuRow, hasPart, installed, onRedraw, pickKb, preferRow, running, saveEngine, size as speechSize, speakerRows, speechChoiceRows, testOffer, toast } from './speech'
 import { TOPICS } from '../topics'
-import { keysPage, keyState } from './keys'
+import { groqOn, groqPage, groqValue, hfSection } from './keys'
 import { DOWNLOAD_PAGE } from '../newversion'
 import { isBeta, versionText } from '../version'
 import { withMarks } from './marks'
@@ -802,7 +802,7 @@ function finishMoment(): void {
 // was scrolled to, as a browser does.
 
 /** A page of a page: a long part of it, opened from a line with a chevron or a tile. */
-type SubId = 'card' | 'screen' | 'aboutYou' | 'talkWindow' | 'notes' | 'edit' | 'typed' | 'meet' | 'speakers' | 'fixing' | 'program' | 'languages' | 'keys' | 'forTranslate' | 'forCheck' | 'forDictate' | 'forTranscribe' | 'forVoice'
+type SubId = 'card' | 'screen' | 'aboutYou' | 'talkWindow' | 'notes' | 'edit' | 'typed' | 'meet' | 'speakers' | 'fixing' | 'program' | 'languages' | 'groq' | 'forTranslate' | 'forCheck' | 'forDictate' | 'forTranscribe' | 'forVoice'
 
 type Place = { name: Page; sub?: SubId }
 
@@ -913,9 +913,10 @@ const SUBS: Record<SubId, Sub> = {
   edit: { title: () => t('edit.title'), body: editPage },
   typed: { title: () => t('typed.title'), body: typedPage },
   meet: { title: () => t('meet.title'), body: meetPage },
-  // The Hugging Face key lives on Settings › Keys with Groq's: a line leads there.
-  speakers: { title: () => t('page.speakers'), body: v => [...speakerRows(v), ...(hasPart(v, 'speakers') ? [keysLine(v, 'huggingface')] : [])], valid: installed },
-  keys: { title: () => t('page.keys'), body: v => keysPage(v, renderBody) },
+  // The Hugging Face key lives where it is needed, once, to download the voices' model (2026-11-23, the owner).
+  speakers: { title: () => t('page.speakers'), body: v => [...speakerRows(v), ...(hasPart(v, 'speakers') ? hfSection(v) : [])], valid: installed },
+  // Where the models run: Groq by the person's own key (2026-11-23, the owner: it belongs to Models, not to Settings).
+  groq: { title: () => 'Groq', body: v => groqPage(v, renderBody) },
   fixing: { title: () => t('page.fixing'), body: fixingPage },
   program: { title: () => programOpen, body: programPage, valid: () => !!programOpen },
   languages: { title: () => t('page.languages'), body: languagesPage },
@@ -1108,9 +1109,9 @@ const SEARCHED: Place[] = [
   { name: 'layouts' },
   { name: 'settings' },
   { name: 'settings', sub: 'languages' },
-  { name: 'settings', sub: 'keys' },
   { name: 'about' },
   { name: 'models' },
+  { name: 'models', sub: 'groq' },
   { name: 'models', sub: 'forTranslate' },
   { name: 'models', sub: 'forCheck' },
   { name: 'models', sub: 'forDictate' },
@@ -1783,7 +1784,7 @@ function translateChoicePage(v: AppView): HTMLElement[] {
   ].filter((n): n is HTMLElement => n !== null)
 }
 
-/** "By Groq" on an action's choice page, lit while that action goes there; with no key saved it cannot be picked, and a line leads to Settings › Keys. */
+/** "By Groq" on an action's choice page, lit while that action goes there; with no key saved it cannot be picked, and a line leads to Models › Groq. */
 function groqChoice(v: AppView, on: boolean, pick: () => void, notes: (string | HTMLElement | null)[]): HTMLElement {
   const key = v.keys.groq.set
   return radioRow(
@@ -1791,7 +1792,7 @@ function groqChoice(v: AppView, on: boolean, pick: () => void, notes: (string | 
     [...notes, key ? null : t('models.groqNoKey')],
     on,
     key ? pick : undefined,
-    key ? null : linkBtn(t('models.addKey'), () => go('settings', 'keys')),
+    key ? null : linkBtn(t('models.addKey'), () => go('models', 'groq')),
   )
 }
 
@@ -1966,6 +1967,8 @@ function modelsPage(v: AppView): HTMLElement[] {
     grp(t('models.computer')),
     ...computerRows(v),
     testOffer(v),
+    grp(t('models.where')),
+    navCard('cloud', t('models.groqLine'), t('models.whereGroqNote'), groqValue(v), () => go('models', 'groq'), 'groq', groqOn(v)),
     ...recommendRows(v),
     unusedNotice(v),
     spareNotice(v),
@@ -3409,10 +3412,6 @@ function settingsPage(v: AppView): HTMLElement[] {
     ),
     toggleCard('power', t('settings.startWithWindows'), s.startWithWindows, startWithWindows => save({ startWithWindows })),
     toggleCard('pause', t('settings.pause'), s.paused, paused => save({ paused }), t('settings.pauseNote')),
-    // Every key of an online service in one place (2026-11-23, the owner).
-    navCard('key-round', t('page.keys'), t('apikeys.navNote'), keyState(v), () => go('settings', 'keys'), 'keys', v.keys.groq.set),
-    // The version and new versions live on About (2026-11-23, the owner: "почему-то засунуто в Settings"); a line leads there.
-    navCard('rotate-cw', t(v.dev ? 'settings.versionDev' : 'settings.version', { version: versionText(v.version) }), t('settings.versionMoved'), v.versionCheck.latest ? t('version.out', { version: v.versionCheck.latest }) : null, () => go('about')),
     grp(t('settings.backup')),
     card(
       'file-text',
@@ -3423,12 +3422,6 @@ function settingsPage(v: AppView): HTMLElement[] {
     aside('info', t('settings.importNote')),
     card('rotate-ccw', t('settings.resetAll'), [t('settings.resetAllNote')], linkBtn(t('main.reset'), () => post({ type: 'resetSettings' }))),
   ].filter((n): n is HTMLElement => n !== null)
-}
-
-/** A line to Settings › Keys from a page that needs a key: its state in a word. */
-function keysLine(v: AppView, service: 'groq' | 'huggingface'): HTMLElement {
-  const k = v.keys[service]
-  return navCard('key-round', service === 'groq' ? t('apikeys.groqKey') : t('speech.hfKey'), t('apikeys.lineNote'), k.set ? t('apikeys.saved', { tail: k.tail ?? '' }) : t('apikeys.notSaved'), () => go('settings', 'keys'), 'keys', k.set)
 }
 
 // ---------------------------------------------------------------- about

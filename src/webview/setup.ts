@@ -186,7 +186,7 @@ function computerStep(v: AppView, h: SetupHooks, c: Choice, r: ReturnType<typeof
   ].filter((n): n is HTMLElement => n !== null)
 }
 
-/** Where the models run: on this computer, or by Groq with the person's own key (pasted right here, as on Settings › Keys). */
+/** Where the models run: on this computer, or by Groq with the person's own key (pasted right here, as on Models › Groq). */
 function whereStep(v: AppView, h: SetupHooks, c: Choice, r: ReturnType<typeof recommend>): HTMLElement[] {
   const pick = (groq: boolean) => () => {
     c.groq = groq

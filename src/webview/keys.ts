@@ -1,8 +1,7 @@
-// Settings › Keys (2026-11-23, the owner: "ввод всех ключей … должен быть в одном
-// месте"): every key Kryakl can use, Groq's and Hugging Face's, on one page.
-// For each: what it is for, what leaves the computer with it, its state, and
-// the steps to get one. A key typed here goes to main at once and the field is
-// emptied; the page only ever learns its last four letters back.
+// Models › Groq (2026-11-23, the owner: Settings › Service keys "относится к моделям"): Groq's key,
+// what goes there, the day's use and what leaves the computer; and Hugging Face's key, shown on Who
+// spoke when, the one place it serves. Each key is entered in one place. A key typed here goes to
+// main at once and the field is emptied; the page only ever learns its last four letters back.
 
 import { numberText, t } from '../i18n'
 import type { AppView, Settings } from '../protocol'
@@ -120,12 +119,13 @@ function partRows(s: Settings): HTMLElement[] {
 
 let redraw: () => void = () => undefined
 
-/** The page; `again` draws it anew (the field's Replace and Escape). */
-export function keysPage(v: AppView, again: () => void): HTMLElement[] {
+/** Models › Groq; `again` draws it anew (the field's Replace and Escape). */
+export function groqPage(v: AppView, again: () => void): HTMLElement[] {
   redraw = again
   const s = v.settings
   const all = s.remote.dictate && s.remote.transcribe && s.remote.llm
-  const out: HTMLElement[] = [grp('Groq'), el('p', { class: 'para' }, t('apikeys.groqWhat')), aside('info', t('apikeys.price'))]
+  // The page is titled Groq already: no heading of its own.
+  const out: HTMLElement[] = [el('p', { class: 'para' }, t('apikeys.groqWhat')), aside('info', t('apikeys.price'))]
   if (!v.keys.usable) out.push(warn(t('apikeys.noEncryption')))
   out.push(...groqKeyRow(v))
   if (v.keys.groq.set) {
@@ -139,11 +139,13 @@ export function keysPage(v: AppView, again: () => void): HTMLElement[] {
   out.push(
     aside('cloud', t('apikeys.leaves'), ' ', link(GROQ_PRIVACY, t('apikeys.privacy'))),
     aside('lock', t('apikeys.safe')),
-    grp('Hugging Face'),
-    el('p', { class: 'para' }, t('apikeys.hfWhat')),
-    ...hfKeyRows(v),
   )
   return out
+}
+
+/** Hugging Face's key on Who spoke when, the one place it serves: needed once, to download the voices' model. */
+export function hfSection(v: AppView): HTMLElement[] {
+  return [grp('Hugging Face'), el('p', { class: 'para' }, t('apikeys.hfWhat')), ...hfKeyRows(v)]
 }
 
 /** The Groq key's line alone, the same as on this page, for the first run's setup. */
@@ -152,7 +154,18 @@ export function groqKeyRows(v: AppView, again: () => void): HTMLElement[] {
   return [...groqKeyRow(v), aside('info', t('apikeys.price')), aside('cloud', t('apikeys.leaves'), ' ', link(GROQ_PRIVACY, t('apikeys.privacy'))), aside('lock', t('apikeys.safe'))]
 }
 
-/** A line on another page leading here: the key's state in a word. */
-export function keyState(v: AppView): string {
-  return v.keys.groq.set ? t('apikeys.saved', { tail: v.keys.groq.tail ?? '' }) : t('apikeys.notSaved')
+/** Groq's line on Models: what goes there now, else that it is off or has no key. */
+export function groqValue(v: AppView): string {
+  if (!v.keys.groq.set) return t('models.whereGroqNoKey')
+  const r = v.settings.remote
+  const parts = [
+    ...(r.dictate ? [t('models.groqDictate')] : []),
+    ...(r.transcribe ? [t('models.groqTranscribe')] : []),
+    ...(r.llm ? [t('models.groqLlm')] : []),
+    ...(r.screen ? [t('models.groqScreen')] : []),
+  ]
+  return parts.length ? parts.join(', ') : t('models.groqOff')
 }
+
+/** Groq works for something now: its line is marked. */
+export const groqOn = (v: AppView): boolean => v.keys.groq.set && v.keys.groq.check !== 'bad' && Object.values(v.settings.remote).some(Boolean)

@@ -253,7 +253,7 @@ const LINKS = new Set([
   'https://huggingface.co/join',
   'https://huggingface.co/pyannote/speaker-diarization-community-1',
   'https://huggingface.co/settings/tokens',
-  // Settings › Keys: where a free Groq key is made, and what Groq does with the data.
+  // Models › Groq: where a free Groq key is made, and what Groq does with the data.
   'https://console.groq.com/keys',
   'https://console.groq.com/settings/limits',
   'https://groq.com/privacy-policy',
@@ -2185,7 +2185,7 @@ function useGroq(on: boolean): void {
   remoteChanged()
 }
 
-/** A key typed on Settings › Keys: Groq's checked with Groq first (a refused key is not kept); kept encrypted, never shown again but its last four letters. */
+/** A key typed on Models › Groq: Groq's checked with Groq first (a refused key is not kept); kept encrypted, never shown again but its last four letters. */
 async function saveKey(service: KeyService, key: string): Promise<void> {
   const value = key.trim()
   if (!keyShape(service, value)) {

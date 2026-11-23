@@ -270,7 +270,7 @@ export type AppView = {
   /** Settings › Version's own look, whatever the notice: the newer release found ('' none), when GitHub last answered (0 never), whether the last ask failed, whether one runs now. */
   versionCheck: { latest: string; lookedAt: number; failed: boolean; checking: boolean }
   /**
-   * The person's keys (Settings › Keys), never the keys themselves: whether one
+   * The person's keys (Models › Groq), never the keys themselves: whether one
    * is saved, its last four letters, how its last check went; whether Windows
    * can encrypt them here; and Groq's free plan spent today, by model.
    */
@@ -678,7 +678,7 @@ export type ToHost =
   /** Every key back to how it came (after a question). */
   | { type: 'resetKeys' }
   /**
-   * Settings › Keys: a service's key saved (checked first; the page drops what
+   * Models › Groq: a service's key saved (checked first; the page drops what
    * it typed once this is sent, and learns only the key's last four letters back),
    * removed, or checked again. `useGroq`: every action Groq can do goes to it,
    * or none; `remote`: one part turned on or off.

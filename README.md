@@ -63,14 +63,14 @@ One exception, and only when you ask for it: when dictation types something wron
 
 ## Models by your own key: Groq
 
-You choose where the models run: on this computer (up to 12 GB to download, quick with a graphics card of 4 GB or more), or on [Groq](https://groq.com)'s servers with a key of your own (quick on any computer, but it needs the internet). The first run asks; **Settings › Service keys** and each choice on the **Models** page change it later, one action at a time:
+You choose where the models run: on this computer (up to 12 GB to download, quick with a graphics card of 4 GB or more), or on [Groq](https://groq.com)'s servers with a key of your own (quick on any computer, but it needs the internet). The first run asks; **Models › Groq** (the key, a switch per part, the day's use) and each choice on the **Models** page change it later, one action at a time:
 
 - **Voice typing** by Groq's Whisper large-v3, about a second a phrase;
 - **Recordings and meetings** by Groq's Whisper turbo; who spoke when stays on your computer;
 - **Accurate translation, Check my English, Talk and text editing** by Groq's language models. Fast translation, the voice and notes stay on your computer;
 - **Text from screenshots** by Groq's vision model, a switch of its own, as a screenshot may show anything: it reads dark code and small or Ukrainian text far better than Windows (2 words wrong in a hundred against 30). Without a connection Windows reads it.
 
-Getting a key: open [console.groq.com/keys](https://console.groq.com/keys), sign in (no card is asked for), press **Create API Key**, name it **Kryakl**, copy it and paste it into Kryakl. Groq has a free plan, and it is enough for a working day: 8 hours of speech a day on each speech model, and a thousand requests a day on each language model; Service keys shows the day's use. While no card is linked to your Groq account, nothing is charged: past the limit Groq only pauses until it lifts, and Kryakl uses this computer's models meanwhile. If you move to a paid Groq plan, Groq bills what you use.
+Getting a key: open [console.groq.com/keys](https://console.groq.com/keys), sign in (no card is asked for), press **Create API Key**, name it **Kryakl**, copy it and paste it into Kryakl. Groq has a free plan, and it is enough for a working day: 8 hours of speech a day on each speech model, and a thousand requests a day on each language model; Models › Groq shows the day's use. While no card is linked to your Groq account, nothing is charged: past the limit Groq only pauses until it lifts, and Kryakl uses this computer's models meanwhile. If you move to a paid Groq plan, Groq bills what you use.
 
 What leaves your computer: the sound of your phrases and recordings, and the texts you translate, check or say to the duck, only for the actions you turn on. Groq does not train on them and by default does not keep them ([its privacy policy](https://groq.com/privacy-policy)). A cloud icon marks everything Groq did. With no connection, or once the free day is spent, Kryakl uses the model on your computer if it is downloaded, and translation falls back to Fast.
 
@@ -80,7 +80,7 @@ The key is encrypted by Windows for your account and stays on this computer; Kry
 
 ## Who spoke when: the Hugging Face key
 
-Telling speakers apart in a transcript uses pyannote's model, which Hugging Face hands out for free once you accept its terms. Kryakl asks for a key once, in Settings › Service keys (the Who spoke when page leads there), and shows these steps there too:
+Telling speakers apart in a transcript uses pyannote's model, which Hugging Face hands out for free once you accept its terms. Kryakl asks for a key once, on the Who spoke when page (Recordings and meetings), and shows these steps there too:
 
 1. Sign up at [huggingface.co/join](https://huggingface.co/join), free.
 2. Open [the model's page](https://huggingface.co/pyannote/speaker-diarization-community-1) and fill in its form: Company or university, anything (your own name will do); Use case: **Meeting note taker**. Then **Agree and access repository**.

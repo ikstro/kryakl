@@ -575,7 +575,7 @@ export function speakerRows(v: AppView): HTMLElement[] {
 }
 
 /**
- * The Hugging Face key, on Settings › Keys with the other keys (2026-11-23):
+ * The Hugging Face key, on Who spoke when, the one place it serves (2026-11-23):
  * its live state from the engine (checking, downloading, a bad key, no access
  * to the model, ready) and the four steps to get one. Saved through main,
  * which keeps it encrypted and hands it to the engine in memory only.

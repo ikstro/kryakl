@@ -353,7 +353,7 @@ async function appShots(theme: 'dark' | 'light', narrow = false): Promise<void> 
     await sleep(200)
     await shot(w, tag('settings-end'))
     // Models: this computer and the actions, each action's choice; Use recommended's changes shown before Apply.
-    await page('models', ['forTranslate', 'forCheck', 'forDictate', 'forTranscribe', 'forVoice'])
+    await page('models', ['groq', 'forTranslate', 'forCheck', 'forDictate', 'forTranscribe', 'forVoice'])
     log.push(`recommend: ${await click(w, '.pbody .row .btn.primary')}`)
     await sleep(300)
     await shot(w, tag('models-recommend'))

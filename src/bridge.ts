@@ -48,7 +48,7 @@ const APP_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>([
   'resetSettings',
   'checkVersion',
   'resetKeys',
-  // The person's own keys, and what goes to Groq with them: the app window's Settings › Keys alone.
+  // The person's own keys, and what goes to Groq with them: the app window's Models › Groq alone.
   'saveKey',
   'removeKey',
   'checkKey',
