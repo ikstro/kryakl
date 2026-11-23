@@ -169,3 +169,12 @@ export function groqValue(v: AppView): string {
 
 /** Groq works for something now: its line is marked. */
 export const groqOn = (v: AppView): boolean => v.keys.groq.set && v.keys.groq.check !== 'bad' && Object.values(v.settings.remote).some(Boolean)
+
+/** Groq does the language model's work (Talk, Check, text editing): pages then ask for no model here. */
+export const groqLlm = (v: AppView): boolean => v.keys.groq.set && v.settings.remote.llm
+
+/** Groq hears dictated phrases: their keys work with no speech engine here (notes and Talk still need it). */
+export const groqDictate = (v: AppView): boolean => v.keys.groq.set && v.settings.remote.dictate
+
+/** Groq reads a screenshot's text (Windows when it cannot). */
+export const groqScreen = (v: AppView): boolean => v.keys.groq.set && !!v.settings.remote.screen

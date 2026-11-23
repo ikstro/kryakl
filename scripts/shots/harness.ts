@@ -974,12 +974,16 @@ async function badgeShots(theme: 'dark' | 'light'): Promise<void> {
 
 app.whenReady().then(async () => {
   try {
-    if (process.env.SHOTS !== 'shot' && process.env.SHOTS !== 'dictation') {
+    if (process.env.SHOTS !== 'shot' && process.env.SHOTS !== 'dictation' && process.env.SHOTS !== 'app') {
       await cardShots('dark')
       await cardShots('light')
     }
     // SHOTS=card: the card alone; SHOTS=tray: the tray panel; SHOTS=menu: the menu on one key; SHOTS=shot: a screenshot's page alone; SHOTS=daily: the card, the tray panel, the menu, the badge, the talk window and the setup.
-    if (process.env.SHOTS === 'dictation') {
+    // SHOTS=app: the app window's pages in the dark theme, and the tray panel.
+    if (process.env.SHOTS === 'app') {
+      await appShots('dark')
+      await trayShots('dark')
+    } else if (process.env.SHOTS === 'dictation') {
       await badgeShots('dark')
       await badgeShots('light')
     } else if (process.env.SHOTS === 'shot') {

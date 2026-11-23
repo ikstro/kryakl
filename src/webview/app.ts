@@ -42,7 +42,7 @@ import { recommend, recommendedModels } from '../setup'
 import { resetSetup, setupNodes } from './setup'
 import { aboutOf, api, computerRows, diarizationOf, engineRows, engineSettings, fault, forgetEngine, gpuRow, hasPart, installed, onRedraw, pickKb, preferRow, running, saveEngine, size as speechSize, speakerRows, speechChoiceRows, testOffer, toast } from './speech'
 import { TOPICS } from '../topics'
-import { groqOn, groqPage, groqValue, hfSection } from './keys'
+import { groqDictate, groqLlm, groqOn, groqScreen, groqPage, groqValue, hfSection } from './keys'
 import { DOWNLOAD_PAGE } from '../newversion'
 import { isBeta, versionText } from '../version'
 import { withMarks } from './marks'
@@ -333,7 +333,8 @@ window.setInterval(() => void followMaking(), 3000)
 // ---------------------------------------------------------------- home
 
 /** A key on Home: what it does, the page it is set on and that page's section; `chain` marks the three the moment lights, `speech` the keys that work once the speech engine is here. */
-type HomeKey = { key: KeyName; title: Key; page: Action | 'settings'; section?: Key; chain?: 'listen' | 'translate' | 'fix'; speech?: boolean }
+/** `speech`: shown once the engine is here; `heard`: also while Groq hears dictated phrases. */
+type HomeKey = { key: KeyName; title: Key; page: Action | 'settings'; section?: Key; chain?: 'listen' | 'translate' | 'fix'; speech?: boolean; heard?: boolean }
 
 const HOME_KEYS: readonly HomeKey[] = [
   { key: 'menuKey', title: 'menu.keyTitle', page: 'settings', section: 'keys.group' },
@@ -346,10 +347,10 @@ const HOME_KEYS: readonly HomeKey[] = [
   { key: 'talkKey', title: 'act.talk', page: 'english', section: 'act.talkGroup', speech: true },
   { key: 'checkKey', title: 'check.keySelected', page: 'english', section: 'page.checkEnglish' },
   { key: 'typeCheckKey', title: 'check.typeKey', page: 'english', section: 'page.checkEnglish' },
-  { key: 'practiceKey', title: 'act.say', page: 'english', section: 'page.checkEnglish', speech: true },
-  { key: 'dictateKey', title: 'dict.type', page: 'voice', speech: true },
-  { key: 'englishKey', title: 'dict.english', page: 'voice', speech: true },
-  { key: 'againKey', title: 'dictate.againKey', page: 'voice', speech: true },
+  { key: 'practiceKey', title: 'act.say', page: 'english', section: 'page.checkEnglish', speech: true, heard: true },
+  { key: 'dictateKey', title: 'dict.type', page: 'voice', speech: true, heard: true },
+  { key: 'englishKey', title: 'dict.english', page: 'voice', speech: true, heard: true },
+  { key: 'againKey', title: 'dictate.againKey', page: 'voice', speech: true, heard: true },
   { key: 'noteKey', title: 'dict.note', page: 'voice', speech: true },
   { key: 'shotKey', title: 'shot.keyTitle', page: 'shots' },
   { key: 'videoKey', title: 'video.keyTitle', page: 'shots' },
@@ -367,7 +368,7 @@ function statusCard(v: AppView): HTMLElement {
     'div',
     { class: paused ? 'status paused' : 'status' },
     el('span', { class: 'sdot' }),
-    el('div', { class: 'st' }, t(paused ? 'home.paused' : 'home.ready'), el('small', {}, t(paused ? 'home.pausedNote' : 'home.readyNote'))),
+    el('div', { class: 'st' }, t(paused ? 'home.paused' : 'home.ready'), el('small', {}, t(paused ? 'home.pausedNote' : groqOn(v) ? 'home.readyGroq' : 'home.readyNote'))),
     btn(t(paused ? 'tray.resume' : 'tray.pause'), () => save({ paused: !paused }), paused ? 'primary' : ''),
   )
 }
@@ -445,7 +446,7 @@ function keyLine(k: HomeKey, s: Settings): HTMLElement {
 function homeNodes(v: AppView): HTMLElement[] {
   const s = v.settings
   const sample = sampleOf(s.native)
-  const keys = HOME_KEYS.filter(k => !k.speech || installed(v))
+  const keys = HOME_KEYS.filter(k => !k.speech || installed(v) || (k.heard && groqDictate(v)))
   const set = keys.filter(k => s[k.key])
   const unset = keys.length - set.length
   return [
@@ -1562,10 +1563,10 @@ function cardPage(v: AppView): HTMLElement[] {
 }
 
 /** Translate › How it works: text on the screen, read on this computer. */
-function screenHowPage(): HTMLElement[] {
+function screenHowPage(v: AppView): HTMLElement[] {
   return [
     card('scan', t('screen.draw'), [t('screen.drawNote')], null),
-    card('type', t('screen.reads'), [t('screen.readsNote')], linkBtn(t('screen.languages'), () => post({ type: 'openLanguageSettings' }))),
+    card('type', t(groqScreen(v) ? 'screen.readsGroq' : 'screen.reads'), [t('screen.readsNote')], linkBtn(t('screen.languages'), () => post({ type: 'openLanguageSettings' }))),
     card('spell-check', t('screen.fix'), [t('screen.fixNote')], null),
   ]
 }
@@ -1580,7 +1581,7 @@ function translatorChip(v: AppView): [HTMLElement, string] {
   const from = level === 'fast' ? 'Mozilla' : 'Hugging Face'
   switch (v.translator) {
     case 'ready':
-      return [chip(t('translate.chipReady')), t('translate.readyNote', { level: levelName(level) })]
+      return [chip(t('translate.chipReady')), t(level !== 'fast' && groqLlm(v) ? 'translate.readyGroq' : 'translate.readyNote', { level: levelName(level) })]
     case 'absent':
       return [chip(t('translate.chipFirstUse'), 'off'), t('translate.absentNote', { from })]
     case 'downloading':
@@ -1829,7 +1830,7 @@ function speechChoicePage(v: AppView, feature: Feature): HTMLElement[] {
     groq ? aside('info', t('models.groqStandby')) : null,
   ].filter((n): n is HTMLElement => n !== null)
   // engineRows takes the feature's English id and words the offer itself (speech.ts).
-  const offer = engineRows(v, feature === 'dictation' ? 'Dictate' : 'Transcribe')
+  const offer = engineRows(v, feature === 'transcripts' ? 'Transcribe' : groqDictate(v) ? 'Notes' : 'Dictate')
   if (offer.length) return [...where, grp(t('models.engine')), ...offer]
   return [
     ...where,
@@ -2020,7 +2021,7 @@ function translatePage(v: AppView): HTMLElement[] {
     grp(t('act.screen')),
     keyRow('textKey', t('act.translate'), t('act.screenNote'), !v.keysOk.text),
     keyRow('snipKey', t('act.listen'), t('act.screenNote'), !v.keysOk.snip),
-    navCard(null, t('screen.how'), t('act.screenHowNote'), null, () => openSub('screen'), 'screen'),
+    navCard(null, t('screen.how'), t(groqScreen(v) ? 'act.screenHowGroq' : 'act.screenHowNote'), null, () => openSub('screen'), 'screen'),
     grp(t('act.own')),
     keyRow('typeKey', t('act.ownKey'), t('translate.typeNote'), !v.keysOk.type),
     grp(t('nav.settings')),
@@ -2076,6 +2077,8 @@ const topicTitle = (id: string) => (TOPICS.some(x => x.id === id) ? t(`topic.${i
 function talkNotice(v: AppView): HTMLElement | null {
   const model = v.settings.model
   const files = v.models[model]
+  // With Groq the duck answers by the person's key: no card or model here is needed, only the engine to hear them.
+  if (groqLlm(v)) return installed(v) ? null : engineNotice()
   if (v.speech.device.at && translationAdvice(v.speech.device).accurate.where !== 'card')
     return el('div', { class: 'row notice' }, lucide('cpu'), el('div', { class: 'l' }, t('talk.needsCard'), el('small', {}, t('talk.needsCardNote'))))
   if (files.status !== 'ready') {
@@ -2094,10 +2097,11 @@ function talkNotice(v: AppView): HTMLElement | null {
       fetching ? el('span', { class: 'pct' }, `${Math.round(files.progress * 100)}%`) : btn(files.status === 'failed' ? t('common.tryAgain') : t('settings.download'), () => post({ type: 'useModel', model }), 'primary'),
     )
   }
-  if (!installed(v))
-    return el('div', { class: 'row notice' }, lucide('mic'), el('div', { class: 'l' }, t('talkPage.engineTitle'), el('small', {}, t('talkPage.engineNote'))), linkBtn(t('talkPage.openDictate'), () => go('voice')))
-  return null
+  return installed(v) ? null : engineNotice()
 }
+
+const engineNotice = () =>
+  el('div', { class: 'row notice' }, lucide('mic'), el('div', { class: 'l' }, t('talkPage.engineTitle'), el('small', {}, t('talkPage.engineNote'))), linkBtn(t('talkPage.openDictate'), () => go('voice')))
 
 /** What the person types about themselves, saved a moment after they stop (and at once when they leave the field). */
 let aboutTimer: number | undefined
@@ -2155,7 +2159,7 @@ function englishPage(v: AppView): HTMLElement[] {
     grp(t('page.checkEnglish')),
     keyRow('checkKey', t('check.keySelected'), t('act.checkNote'), !v.keysOk.check),
     keyRow('typeCheckKey', t('check.typeKey'), t('check.typeKeyNote'), !v.keysOk.typeCheck),
-    keyRow('practiceKey', t('act.say'), installed(v) ? t('act.sayNote') : t('talkPage.needsEngine'), !v.speech.keysOk.practice),
+    keyRow('practiceKey', t('act.say'), installed(v) || groqDictate(v) ? t('act.sayNote') : t('talkPage.needsEngine'), !v.speech.keysOk.practice),
     aside('info', t('check.speechNote')),
     grp(t('act.try')),
     tryIt(TRY_CHECK, how),
@@ -2314,7 +2318,7 @@ const pathTail = (path: string) => path.split(/[\\/]/).filter(Boolean).slice(-2)
 function voicePage(v: AppView): HTMLElement[] {
   const s = v.settings
   const k = v.speech.keysOk
-  const offer = engineRows(v, 'Dictate')
+  const offer = engineRows(v, groqDictate(v) ? 'Notes' : 'Dictate')
   const kb = engineSettings(v)?.kbDir
   return [
     tiles([
@@ -2341,7 +2345,7 @@ function voicePage(v: AppView): HTMLElement[] {
     ),
     navCard(null, t('typed.title'), t('typed.titleNote'), null, () => openSub('typed'), 'typed'),
     aside('info', t('dictate.escNote')),
-    el('p', { class: 'privacy' }, lucide('lock', 's'), t('dictate.privacy')),
+    el('p', { class: 'privacy' }, lucide(groqDictate(v) ? 'cloud' : 'lock', 's'), t(groqDictate(v) ? 'dictate.privacyGroq' : 'dictate.privacy')),
     enginePlate([{ title: t('dictate.speechModel'), value: speechValue(v, 'dictation'), open: () => go('models', 'forDictate') }]),
   ].filter((n): n is HTMLElement => n !== null)
 }
@@ -2396,7 +2400,7 @@ function ownField(value: string): HTMLTextAreaElement {
 function editModelNotice(v: AppView): HTMLElement | null {
   const model = v.settings.model
   const files = v.models[model]
-  if (!v.settings.dictateEdit || files.status === 'ready') return null
+  if (!v.settings.dictateEdit || files.status === 'ready' || groqLlm(v)) return null
   const fetching = files.status === 'downloading'
   return el(
     'div',
@@ -2416,9 +2420,10 @@ function editModelNotice(v: AppView): HTMLElement | null {
 /** Voice typing › Text editing: each phrase put right by the local model, by an instruction picked or written; off until turned on. */
 function editPage(v: AppView): HTMLElement[] {
   const s = v.settings
-  const slow = translationAdvice(v.speech.device)[s.model].slow
+  const groq = groqLlm(v)
+  const slow = !groq && translationAdvice(v.speech.device)[s.model].slow
   return [
-    toggleCard('pencil-line', t('edit.on'), s.dictateEdit, dictateEdit => save({ dictateEdit }), t(slow ? 'edit.onNoteSlow' : 'edit.onNote')),
+    toggleCard('pencil-line', t('edit.on'), s.dictateEdit, dictateEdit => save({ dictateEdit }), t(groq ? 'edit.onNoteGroq' : slow ? 'edit.onNoteSlow' : 'edit.onNote')),
     editModelNotice(v),
     grp(t('edit.style')),
     ...EDIT_STYLES.map(style => radioRow(t(`edit.${style}`), [t(`edit.${style}Note`)], s.dictateEditStyle === style, () => save({ dictateEditStyle: style }))),

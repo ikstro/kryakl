@@ -372,8 +372,12 @@ export type TrayView = {
   paused: boolean
   /** "Keep a word as typed…": shown while the fixer works (fixing as one types, or the fix key on); `word` the last word fixed by itself, as typed, and `fixed` what it became (empty when none, or it is kept already). */
   keep: { on: boolean; word: string; fixed: string }
-  /** The speech engine is installed: a note can be started from here; one is being recorded now. */
-  speech: { installed: boolean; recording: boolean; noteKey: string }
+  /**
+   * The speech engine is installed: a note can be started from here; one is being recorded now.
+   * `dictates`: phrases are dictated, here or by Groq (the names to spell, the phrases kept);
+   * `talks`: the talk window answers, by the engine here or by Groq's model (typed only then).
+   */
+  speech: { installed: boolean; recording: boolean; noteKey: string; dictates: boolean; talks: boolean }
   /** The translator between English and the person's language (as `AppView.translator`). */
   translator: AppView['translator']
   /** How many screenshots the Screenshots window holds: its row shows while there are any. */

@@ -88,6 +88,16 @@ export function appView(over: Partial<AppView['settings']> = {}, fresh = false):
   })
   const now = Date.now()
   const v = full(over, plan, now)
+  // SHOTS_BARE=1 (with SHOTS_GROQ=1): the pages of a computer where Groq does the work, with no model or engine here.
+  if (!fresh && process.env.SHOTS_BARE) {
+    const absent = { status: 'absent' as const, progress: 0, size: 5155 }
+    return {
+      ...v,
+      settings: { ...v.settings, dictateEdit: true },
+      models: { ...v.models, accurate: absent },
+      speech: { ...v.speech, pack: { status: 'absent', parts: [], nvidia: true }, service: 'off', health: undefined, test: { offer: false, agreed: false, runs: 0 } },
+    }
+  }
   if (!fresh) return v
   // A fresh install: nothing downloaded, the engine absent, the setup not done.
   return {
@@ -287,7 +297,7 @@ export function trayView(over: Partial<TrayView> = {}): TrayView {
     trayLayout: false,
     paused: false,
     keep: { on: true, word: 'ghbdtn', fixed: 'привет' },
-    speech: { installed: true, recording: false, noteKey: 'Control+Alt+N' },
+    speech: { installed: true, recording: false, noteKey: 'Control+Alt+N', dictates: true, talks: true },
     translator: 'ready',
     shots: 3,
     phrases: [

@@ -300,7 +300,7 @@ function render(v: TrayView): void {
       command('translateCopied', 'languages', t('tray.translateCopied'), 'translateCopied'),
       command('typeToTranslate', 'pencil-line', t('tray.typeToTranslate'), 'typeToTranslate', v.keys.typeToTranslate),
       command('checkEnglish', 'graduation-cap', t('tray.checkEnglish'), 'checkEnglish', v.keys.checkEnglish),
-      v.speech.installed ? command('talk', 'bird', `${t('menu.talk')}…`, 'talk', v.keys.talk) : null,
+      v.speech.talks ? command('talk', 'bird', `${t('menu.talk')}…`, 'talk', v.keys.talk) : null,
       command('listenScreen', 'monitor-speaker', t('tray.listenScreen'), 'listenScreen', v.keys.snipListen),
       command('translateScreen', 'scan-text', t('tray.translateScreen'), 'translateScreen', v.keys.snipTranslate),
       v.speech.installed ? command('note', 'notebook-pen', v.speech.recording ? t('tray.saveNote') : t('tray.newNote'), 'note', v.speech.noteKey) : null,
@@ -318,10 +318,10 @@ function render(v: TrayView): void {
       'book-open',
       t('tray.yourWords'),
       v.keep.on ? keepRow(v) : null,
-      v.speech.installed ? command('vocabulary', 'mic', t('tray.vocabulary'), 'vocabulary') : null,
+      v.speech.dictates ? command('vocabulary', 'mic', t('tray.vocabulary'), 'vocabulary') : null,
       command('kept', 'list', t('tray.keptList'), 'kept'),
     ),
-    v.speech.installed && v.phrases.length
+    v.phrases.length
       ? fold('phrases', 'message-square-text', t('tray.phrases'), ...v.phrases.map(phraseRow), command('phrases', 'history', t('tray.allPhrases'), 'phrases'))
       : null,
     el(

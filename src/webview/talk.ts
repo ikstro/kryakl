@@ -418,7 +418,7 @@ function draw(v: TalkWindowView): void {
   maxButton.setAttribute('aria-label', maxButton.title)
   root.classList.toggle('maxed', v.maximized)
   modelChip.textContent = v.model.name
-  modelChip.title = t('talk.modelTitle', { model: v.model.full })
+  modelChip.title = v.model.name === 'Groq' ? t('talk.modelTitleGroq') : t('talk.modelTitle', { model: v.model.full })
   drawHistory(v)
   empty.hidden = talk.turns.length > 0
   if (!empty.hidden) drawEmpty()

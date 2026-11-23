@@ -311,6 +311,8 @@ export function engineRows(v: AppView, feature: string): HTMLElement[] {
 /** "Dictate needs the speech engine": the pages name the feature by its English id (Dictate, Transcribe, Google Meet). */
 function needsEngine(feature: string): string {
   if (feature === 'Dictate') return t('speech.needsDictate')
+  // Groq hears the phrases; the engine is for notes and the words shown while one speaks.
+  if (feature === 'Notes') return t('speech.needsNotes')
   if (feature === 'Transcribe') return t('speech.needsTranscribe')
   if (feature === 'Google Meet') return t('speech.needsMeet')
   return t('speech.needs', { feature })
