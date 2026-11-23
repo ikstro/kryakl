@@ -164,3 +164,16 @@ def test_the_next_piece_is_told_the_text_without_the_ellipsis_it_was_cut_at():
     assert open_ended("коли у тебе…") == "коли у тебе"
     assert open_ended("Там отчёт.") == "Там отчёт."
     assert open_ended("Что?..") == "Что?.."
+
+
+def test_thanks_at_the_end_over_a_weak_last_piece_go_in_dictation():
+    # Groq wrote "…сделать. Спасибо." over a phrase's trailing silence (2026-11-23)
+    tail = Sound(5.0, 0.6, -0.3, end_weak=True)
+    assert clean("Надо выпадайку сделать. Спасибо.", tail, dictation=True) == "Надо выпадайку сделать."
+    assert clean("Send it today. Thank you.", tail, dictation=True) == "Send it today."
+
+
+def test_thanks_at_the_end_heard_as_speech_stay():
+    assert clean("Хорошо. Спасибо.", Sound(5.0, 0.6, -0.3, end_weak=False), dictation=True) == "Хорошо. Спасибо."
+    # a recording keeps them: someone may thank at the end of a talk
+    assert clean("Хорошо. Спасибо.", Sound(5.0, 0.6, -0.3, end_weak=True), dictation=False) == "Хорошо. Спасибо."

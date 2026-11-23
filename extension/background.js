@@ -63,6 +63,9 @@ async function diskVersion() {
 async function selfUpdate() {
   const disk = await diskVersion()
   if (!disk || disk === chrome.runtime.getManifest().version || (await current())) return
+  // A reload empties storage.session: a transcript being followed is followed to its end first.
+  const followed = await following()
+  if (followed && !followed.done && !followed.failed) return
   // Reloaded for that version once and still not on it: Chrome kept the old files; the person's Reload will do.
   const { reloadedFor } = await chrome.storage.local.get('reloadedFor')
   if (reloadedFor === disk) return
@@ -87,7 +90,106 @@ chrome.runtime.onInstalled.addListener(startPinging)
 chrome.runtime.onStartup.addListener(startPinging)
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === 'ping') void ping()
+  // The worker slept and its 5-second timer with it: the alarm wakes the following up again.
+  if (alarm.name === 'follow') void follow()
 })
+
+// After the finish, how far Kryakl is with the transcript (GET /recordings/<id>/status: stage and progress, no words),
+// every 5 s while the worker is awake and at least every 30 s by the alarm, for 4 hours at most. Kept in
+// storage.session as `following` {id, title, since, progress, stage, done, failed}; the popup shows it, and opened
+// once it is done or failed, lets it go (the ✓ goes with it).
+const FOLLOW_EVERY_MS = 5_000
+const FOLLOW_MOST_MS = 4 * 60 * 60_000
+let followTimer = 0
+
+async function following() {
+  const { following } = await chrome.storage.session.get('following')
+  return following || null
+}
+
+async function startFollowing(id, title) {
+  if (!id) return
+  await chrome.storage.session.set({ following: { id, title, since: Date.now(), progress: 0, stage: '', done: false, failed: false } })
+  chrome.alarms.create('follow', { periodInMinutes: 0.5 })
+  await badge()
+  scheduleFollow()
+}
+
+async function stopFollowing() {
+  clearTimeout(followTimer)
+  followTimer = 0
+  await chrome.alarms.clear('follow')
+  await chrome.storage.session.remove('following')
+  await badge()
+}
+
+function scheduleFollow() {
+  clearTimeout(followTimer)
+  followTimer = setTimeout(() => void follow(), FOLLOW_EVERY_MS)
+}
+
+async function follow() {
+  const f = await following()
+  if (!f || f.done || f.failed) {
+    await chrome.alarms.clear('follow')
+    return
+  }
+  if (Date.now() - f.since > FOLLOW_MOST_MS) return stopFollowing()
+  try {
+    const r = await fetch(`http://127.0.0.1:${await port()}/recordings/${encodeURIComponent(f.id)}/status`, { headers: await self(), signal: AbortSignal.timeout(3000) })
+    // Gone (deleted in Kryakl): nothing to wait for.
+    if (r.status === 404) return stopFollowing()
+    if (r.ok) {
+      const s = await r.json()
+      const next = { ...f, progress: Number(s.progress) || 0, stage: String(s.stage || ''), done: Boolean(s.done), failed: Boolean(s.failed) }
+      // The popup may have let it go meanwhile.
+      if ((await following())?.id !== f.id) return
+      await chrome.storage.session.set({ following: next })
+      await badge()
+      if (next.done || next.failed) {
+        clearTimeout(followTimer)
+        await chrome.alarms.clear('follow')
+        return
+      }
+    }
+  } catch {} // Kryakl not running just now: asked again
+  scheduleFollow()
+}
+
+// The icon's badge for every tab without one of its own: REC while recording, "!" after a failure, else how far the
+// last meeting's transcript is ("42%"), ✓ once it is ready; nothing when none of these.
+const GREY = '#616161'
+const GREEN = '#0f7b0f'
+async function badge() {
+  const recording = await current()
+  const { lastError } = await chrome.storage.session.get('lastError')
+  const f = await following()
+  let text = ''
+  let color = RED
+  if (recording) text = 'REC'
+  else if (lastError) text = '!'
+  else if (f?.done) [text, color] = ['✓', GREEN]
+  else if (f?.failed) text = '!'
+  else if (f) [text, color] = [f.progress > 0 ? `${Math.min(99, Math.round(f.progress * 100))}%` : '…', GREY]
+  try {
+    await chrome.action.setBadgeBackgroundColor({ color })
+    await chrome.action.setBadgeTextColor({ color: '#ffffff' })
+    await chrome.action.setBadgeText({ text })
+  } catch {}
+  // A tab painted before keeps its own colours: it takes these again.
+  for (const tabId of await paintedTabs()) await paint(tabId)
+}
+
+async function paintedTabs() {
+  const { painted } = await chrome.storage.session.get('painted')
+  return Array.isArray(painted) ? painted : []
+}
+
+async function notePainted(tabId, on) {
+  const now = await paintedTabs()
+  const next = on ? (now.includes(tabId) ? now : [...now, tabId].slice(-50)) : now.filter(t => t !== tabId)
+  if (next.length !== now.length) await chrome.storage.session.set({ painted: next })
+}
 
 async function current() {
   const { recording } = await chrome.storage.session.get('recording')
@@ -141,11 +243,15 @@ async function paint(tabId) {
     } else {
       await chrome.action.setPopup({ tabId, popup: 'popup.html' })
       await chrome.action.setTitle({ tabId, title: T('actionTitle') })
-      await chrome.action.setBadgeBackgroundColor({ tabId, color: RED })
-      await chrome.action.setBadgeTextColor({ tabId, color: '#ffffff' })
+      // The global badge's colours (REC and "!" red, a transcript's progress grey, ✓ green), not the call's yellow.
+      await chrome.action.setBadgeBackgroundColor({ tabId, color: await chrome.action.getBadgeBackgroundColor({}) })
+      await chrome.action.setBadgeTextColor({ tabId, color: await chrome.action.getBadgeTextColor({}) })
       await followGlobalBadge(tabId)
     }
-  } catch {} // the tab is gone
+    await notePainted(tabId, true)
+  } catch {
+    await notePainted(tabId, false) // the tab is gone
+  }
 }
 
 /** The tab shows the global badge again (REC, "!" or none): null clears the tab's own; else the global text, copied. */
@@ -199,14 +305,33 @@ async function start(tab) {
     await closeOffscreen()
     return answer || { ok: false, error: T('errNoStart') }
   }
-  const recording = { tabId: tab.id, id: answer.id, title: titleOf(tab), startedAt: Date.now(), mic: answer.mic }
+  const recording = { tabId: tab.id, id: answer.id, title: titleOf(tab), startedAt: Date.now(), mic: answer.mic, origin: answer.origin }
+  await chrome.storage.session.remove('names')
   await chrome.storage.session.set({ recording })
-  await chrome.action.setBadgeBackgroundColor({ color: RED })
-  await chrome.action.setBadgeText({ text: 'REC' })
+  await badge()
   await paint(tab.id)
-  // The plate in the meeting's page has done its work.
-  chrome.tabs.sendMessage(tab.id, { target: 'meeting', type: 'recording' }).catch(() => {})
+  // The plate in the meeting's page has done its work; on Meet, meeting.js starts noting who speaks.
+  chrome.tabs.sendMessage(tab.id, { target: 'meeting', type: 'recording', id: answer.id, origin: answer.origin }).catch(() => {})
   return { ok: true, recording }
+}
+
+/** Who spoke when on Meet: asked of the tab at the stop (meeting.js also turns off the captions it turned on), else
+ *  the last copy it sent (the tab closed); null when the tab noted nothing (another site, an older page). */
+const NAMES_WAIT_MS = 1500
+async function namesOf(recording) {
+  let names = null
+  try {
+    names = await Promise.race([
+      chrome.tabs.sendMessage(recording.tabId, { target: 'meeting', type: 'stopping', id: recording.id }),
+      new Promise(resolve => setTimeout(() => resolve(null), NAMES_WAIT_MS)),
+    ])
+  } catch {}
+  if (!names || names.id !== recording.id) {
+    const kept = (await chrome.storage.session.get('names')).names
+    names = kept && kept.id === recording.id ? kept : null
+  }
+  await chrome.storage.session.remove('names')
+  return names && Array.isArray(names.spans) && typeof names.captions === 'string' ? { spans: names.spans, captions: names.captions } : null
 }
 
 async function stop() {
@@ -214,13 +339,16 @@ async function stop() {
   if (!recording) return { ok: false, error: T('errNotRecording') }
   let answer
   try {
-    answer = await chrome.runtime.sendMessage({ target: 'offscreen', type: 'stop' })
+    const names = await namesOf(recording)
+    answer = await chrome.runtime.sendMessage({ target: 'offscreen', type: 'stop', names })
   } catch (error) {
     answer = { ok: false, error: error.message }
   }
   await chrome.storage.session.remove('recording')
-  await chrome.action.setBadgeText({ text: '' })
   await closeOffscreen()
+  // The engine took it: the icon shows how far its transcript is, until it is ready.
+  if (answer?.ok) await startFollowing(answer.id || recording.id, recording.title)
+  else await badge()
   await paint(recording.tabId)
   // A new version that came while recording goes in now.
   void selfUpdate()
@@ -233,13 +361,9 @@ async function toggle(tab) {
 
 /** A shortcut or the icon has no popup to answer in: a failure shows as "!" on the icon, and the popup says what. */
 async function remember(answer, tabId) {
-  if (answer && !answer.ok) {
-    await chrome.storage.session.set({ lastError: answer.error })
-    await chrome.action.setBadgeBackgroundColor({ color: RED })
-    await chrome.action.setBadgeText({ text: '!' })
-  } else {
-    await chrome.storage.session.remove('lastError')
-  }
+  if (answer && !answer.ok) await chrome.storage.session.set({ lastError: answer.error })
+  else await chrome.storage.session.remove('lastError')
+  await badge()
   await paint(tabId)
   return answer
 }
@@ -265,6 +389,7 @@ chrome.action.onClicked.addListener(async tab => {
 // The meeting's tab closed: what was recorded goes to the engine.
 chrome.tabs.onRemoved.addListener(async tabId => {
   await setMeeting(tabId, null)
+  await notePainted(tabId, false)
   const recording = await current()
   if (recording && recording.tabId === tabId) await stop()
 })
@@ -311,18 +436,38 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   ;(async () => {
     if (message.type === 'status') {
       const { lastError } = await chrome.storage.session.get('lastError')
-      if (lastError && !(await current())) await chrome.action.setBadgeText({ text: '' })
       await chrome.storage.session.remove('lastError')
+      // A transcript that is ready (or failed) is said once, here: then the ✓ goes.
+      const followed = await following()
+      if (followed && (followed.done || followed.failed)) await stopFollowing()
+      else await badge()
       if (typeof message.tabId === 'number') await paint(message.tabId)
       void selfUpdate()
-      return { recording: await current(), engine: await engineReady(), lastError, offers: await offersOn(), key: await recordKey() }
+      return { recording: await current(), engine: await engineReady(), lastError, offers: await offersOn(), key: await recordKey(), following: followed }
     }
     if (message.type === 'start') return start(await chrome.tabs.get(message.tabId))
     if (message.type === 'stop') return stop()
     // The offscreen document saw the tab's sound end (the tab navigated away, Chrome stopped the capture).
     if (message.type === 'ended') return stop()
     if (message.type === 'meeting') return meeting(message.state, sender.tab?.id)
+    // meeting.js on Meet, as its page loads: is this tab being recorded (a page loaded again mid-recording)?
+    if (message.type === 'recorded') {
+      const recording = await current()
+      if (!recording || recording.tabId !== sender.tab?.id || !recording.origin) return null
+      const kept = (await chrome.storage.session.get('names')).names
+      return { id: recording.id, origin: recording.origin, spans: kept && kept.id === recording.id ? kept.spans : [] }
+    }
+    // meeting.js on Meet, now and then while recording: who spoke when so far, kept in case the tab closes.
+    if (message.type === 'names') {
+      const recording = await current()
+      if (!recording || recording.tabId !== sender.tab?.id || message.id !== recording.id || !Array.isArray(message.spans)) return { ok: false }
+      await chrome.storage.session.set({ names: { id: message.id, spans: message.spans.slice(0, 5000), captions: String(message.captions || '') } })
+      return { ok: true }
+    }
     return { ok: false, error: 'unknown' }
   })().then(reply, error => reply({ ok: false, error: String(error) }))
   return true
 })
+
+// Every wake of the worker (an event, the popup, the alarm) goes on with a transcript being followed.
+void follow()

@@ -18,8 +18,9 @@ import { freeFolderSoon, runningProcessesSoon } from './oldfolder'
 import type { SpeechView } from './protocol'
 import { myLanguages, type Settings } from './settings'
 import { DOWNLOAD_MB, hasNvidia, INSTALLED_MB, SpeechPack, type SpeechPart } from './speechpack'
-import { planSpeech, spareToFetch, testKey, testRuns, type PlanInput, type SpeechPlan } from './speechplan'
+import { planSpeech, processorPreview, spareToFetch, testKey, testRuns, type PlanInput, type SpeechPlan } from './speechplan'
 import { SpeechService, speechToken, type SpeechResult } from './speechservice'
+import { TranscriptWatch, type LibraryRow } from './transcriptwatch'
 import { vocabularyFor } from './vocabulary'
 
 /** "Not now" holds this long at least, even when there is something new to measure. */
@@ -48,7 +49,17 @@ export type SpeechHostOptions = {
   /** A test run gives the engine its own settings folder. */
   testHome?: string
   settings: () => Settings
+  /**
+   * The person's keys the engine needs, asked at each push: Hugging Face's for
+   * Who spoke when, and Groq's while recordings go to Groq (none otherwise).
+   * Held by the engine in memory only; never written to speech.json or logged.
+   */
+  secrets?: () => { hfToken: string; groqKey: string }
+  /** Recordings and meetings are recognized by Groq (settings.remote.transcribe with a key). */
+  remoteTranscribe?: () => boolean
   onChange: () => void
+  /** A transcript (never a voice note) became done or failed while Kryakl ran: main shows a notification. */
+  onTranscriptEnded?: (row: LibraryRow) => void
 }
 
 export class SpeechHost {
@@ -68,6 +79,8 @@ export class SpeechHost {
   /** A meeting is being recorded through the Chrome extension now (the tray shows it). */
   meeting = false
   private meetingTimer: NodeJS.Timeout | undefined
+  /** Which transcripts came to an end since the last look at the library (transcriptwatch.ts). */
+  private readonly library = new TranscriptWatch()
 
   constructor(private readonly o: SpeechHostOptions) {
     this.profile = loadProfile(this.deviceFile) ?? quickProfile()
@@ -156,6 +169,15 @@ export class SpeechHost {
     return this.service.state === 'down'
   }
 
+  /**
+   * The processor's dictation model, when the engine runs (proved, of a version that follows the plan) and has it
+   * downloaded: it shows a phrase going to Groq while it is spoken. Undefined otherwise: no preview, nothing fetched.
+   */
+  get previewModel(): string | undefined {
+    if (!this.planned) return undefined
+    return processorPreview(this.plan, this.service.health?.downloaded ?? [])
+  }
+
   /** The engine is of 0.2 or later: it takes a plan and runs the speed test. */
   private get planned(): boolean {
     const [major = 0, minor = 0] = (this.service.health?.version ?? '0').split('.').map(Number)
@@ -197,19 +219,31 @@ export class SpeechHost {
    * hello, the library is asked every few seconds whether a meeting's
    * transcript is still "recording". A recording the extension left behind
    * is finished by the engine itself within minutes (jobs.py `_housekeeping`).
+   * The same look says which transcripts came to an end (`onTranscriptEnded`):
+   * it runs too while the engine works on one (`/health.busy`) or one was seen
+   * unfinished, and once when the engine is first up (the baseline).
    */
   private watchMeetings(): void {
-    const wanted = this.ready && !!this.service.health?.extension
-    if (wanted && !this.meetingTimer) this.meetingTimer = setInterval(() => void this.lookForMeeting(), MEETING_PROBE_MS)
+    const h = this.service.health
+    const meetings = this.ready && !!h?.extension
+    const wanted = this.ready && (meetings || !!h?.busy || this.library.waiting || !this.library.started)
+    if (!meetings) this.setMeeting(false)
+    if (wanted && !this.meetingTimer) {
+      this.meetingTimer = setInterval(() => void this.lookForMeeting(), MEETING_PROBE_MS)
+      void this.lookForMeeting()
+    }
     if (wanted || !this.meetingTimer) return
     clearInterval(this.meetingTimer)
     this.meetingTimer = undefined
-    this.setMeeting(false)
   }
 
   private async lookForMeeting(): Promise<void> {
-    const r = await this.call<{ source: string; status: string }[]>('GET', '/transcripts')
-    if (r.ok && Array.isArray(r.data)) this.setMeeting(r.data.some(t => t.source === 'meet' && t.status === 'recording'))
+    const r = await this.call<LibraryRow[]>('GET', '/transcripts')
+    if (!r.ok || !Array.isArray(r.data)) return
+    if (this.service.health?.extension) this.setMeeting(r.data.some(t => t.source === 'meet' && t.status === 'recording'))
+    for (const row of this.library.see(r.data)) this.o.onTranscriptEnded?.(row)
+    // Nothing left to wait for: the timer stops unless meetings still want it.
+    this.watchMeetings()
   }
 
   private setMeeting(on: boolean): void {
@@ -246,9 +280,15 @@ export class SpeechHost {
     void this.downloadModel(spare.model)
   }
 
-  /** What the engine is told of Kryakl's choices: the plan, and the words to spell (vocabulary.ts). */
-  private engineSettings(): { plan: SpeechPlan['engine']; vocabulary: ReturnType<typeof vocabularyFor> } {
-    return { plan: this.plan.engine, vocabulary: vocabularyFor(this.o.settings()) }
+  /** What the engine is told of Kryakl's choices: the plan, the words to spell (vocabulary.ts), whether recordings go to Groq, and the keys. */
+  private engineSettings(): { plan: SpeechPlan['engine']; vocabulary: ReturnType<typeof vocabularyFor>; remoteTranscribe: boolean; secrets?: { hfToken: string; groqKey: string } } {
+    const secrets = this.o.secrets?.()
+    return { plan: this.plan.engine, vocabulary: vocabularyFor(this.o.settings()), remoteTranscribe: !!this.o.remoteTranscribe?.(), ...(secrets ? { secrets } : {}) }
+  }
+
+  /** The keys or the Groq switch changed: told to the engine at once. */
+  keysChanged(): void {
+    if (this.ready) void this.push()
   }
 
   private async push(): Promise<void> {

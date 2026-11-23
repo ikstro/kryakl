@@ -96,7 +96,14 @@ def defaults() -> dict:
         "plan": {},
         # How fast each model runs here: {fingerprint, at, runs: {"model|device|compute": {phrase, rtf, n, at}}}.
         "bench": {},
+        # A recording's words from Groq's Whisper with the person's own key, instead of a local model (asr.GroqWhisper).
+        "remoteTranscribe": False,
     }
+
+
+# Keys the engine holds in memory only (2026-11-23): given by Kryakl in the environment at the start or in
+# PUT /settings `secrets`, never written to speech.json or a log. An empty variable is none given.
+SECRETS = {"hfToken": "KRYA_HF_TOKEN", "groqKey": "KRYA_GROQ_KEY"}
 
 
 def adopt_altype(file: Path = SETTINGS_FILE, old: Path = ALTYPE_SETTINGS) -> None:
@@ -330,6 +337,8 @@ class Settings:
     def __init__(self, file: Path = SETTINGS_FILE):
         self.file = file
         self._lock = threading.Lock()
+        # The secrets received (SECRETS), '' for one removed; a name here is never read from or written to the file.
+        self._secrets: dict[str, str] = {}
         self.reload()
 
     def reload(self) -> None:
@@ -340,8 +349,19 @@ class Settings:
         except (OSError, ValueError):
             pass
         with self._lock:
+            for name, variable in SECRETS.items():
+                given = os.environ.get(variable, "").strip()
+                if given and name not in self._secrets:
+                    self._secrets[name] = given
             self._values = values
             self._check()
+            # A Hugging Face key Kryakl now holds itself leaves the file (an older Kryakl saved it there).
+            if "hfToken" in self._secrets and self._values["hfToken"]:
+                self._values["hfToken"] = ""
+                try:
+                    self._save()
+                except OSError as error:
+                    log.warning("could not save the settings: %s", type(error).__name__)
             # The hotwords string of before become the vocabulary's words, once.
             if not self._values["vocabulary"] and isinstance(self._values["hotwords"], str) and self._values["hotwords"].strip():
                 self._values["vocabulary"] = clean_vocabulary(split_items(self._values["hotwords"]))
@@ -354,7 +374,10 @@ class Settings:
     def _save(self) -> None:
         self.file.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.file.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self._values, ensure_ascii=False, indent=2), "utf-8")
+        values = dict(self._values)
+        if "hfToken" in self._secrets:
+            values["hfToken"] = ""
+        tmp.write_text(json.dumps(values, ensure_ascii=False, indent=2), "utf-8")
         tmp.replace(self.file)
 
     def _check(self) -> None:
@@ -368,22 +391,57 @@ class Settings:
         if not isinstance(self._values["bench"].get("runs"), dict):
             self._values["bench"] = {}
 
+    def _view(self) -> dict:
+        """The values with the Hugging Face key held in memory in place of the file's (the Groq key is never in it: `secret`)."""
+        out = dict(self._values)
+        if "hfToken" in self._secrets:
+            out["hfToken"] = self._secrets["hfToken"]
+        return out
+
     def get(self) -> dict:
         with self._lock:
-            return dict(self._values)
+            return self._view()
 
     def __getitem__(self, key: str):
         with self._lock:
+            if key == "hfToken" and key in self._secrets:
+                return self._secrets[key]
             return self._values[key]
+
+    def secret(self, name: str) -> str:
+        """A key held in memory (SECRETS); the Hugging Face key falls back to the one an older Kryakl saved."""
+        with self._lock:
+            if name == "hfToken" and name not in self._secrets:
+                return self._values["hfToken"]
+            return self._secrets.get(name, "")
+
+    def set_secrets(self, raw) -> set[str]:
+        """Keys from PUT /settings `secrets` ({hfToken?, groqKey?}, '' removes one), held in memory only;
+        the names given. A Hugging Face key saved in the file before goes from it."""
+        given: set[str] = set()
+        with self._lock:
+            for name in SECRETS:
+                value = raw.get(name) if isinstance(raw, dict) else None
+                if isinstance(value, str):
+                    self._secrets[name] = value.strip()
+                    given.add(name)
+            if "hfToken" in given and self._values["hfToken"]:
+                self._values["hfToken"] = ""
+                self._save()
+        return given
 
     def update(self, changes: dict) -> dict:
         with self._lock:
             for key, value in changes.items():
+                # An older Kryakl's plain hfToken, once Kryakl hands the key over in memory: memory only, too.
+                if key == "hfToken" and key in self._secrets and isinstance(value, str):
+                    self._secrets[key] = value.strip()
+                    continue
                 if key in self._values and isinstance(value, type(self._values[key])):
                     self._values[key] = value.strip() if isinstance(value, str) and key != "hotwords" else value
             self._check()
             self._save()
-            return dict(self._values)
+            return self._view()
 
     @property
     def data_dir(self) -> Path:

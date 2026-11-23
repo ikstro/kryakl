@@ -25,7 +25,9 @@ import { translationAdvice, type LevelFit } from '../hardware'
 import { COPY_TWICE_KEYS, DEFAULTS, EDIT_OWN_MAX, EDIT_STYLES, keptForm, myLanguages, RATES, SWITCH_SOUNDS, TALK_ABOUT_MAX, TALK_LEVELS, type AppRule, type LlmModel, type TalkLevel, type ThemeMode, type TranslationLevel } from '../settings'
 import type { AppPart } from '../typist'
 // app.ts has a languageName of its own (a code's English name); the interface's is langName here.
+import { YO_MODES, type YoMode } from '../dicttext'
 import { byName, formatDate, languageName as langName, levelName, numberText, setUiLanguage, t, uiLanguage, type Key } from '../i18n'
+import { engineMessage } from '../i18n/engine'
 import { ZOOM_SCALES, type ZoomScale } from '../recordmodel'
 import { parseEntry } from '../vocabulary'
 import { changesOf, wordDiff } from '../worddiff'
@@ -34,12 +36,13 @@ import { el, icon, setIcon } from './dom'
 import { glyph } from './glyphs'
 import { caps, COPY_TWICE } from './keycaps'
 import { lucide, type LucideName } from './lucide'
-import { aside, bad, bar, btn, card, chip, enginePlate, grp, ib, lineList, linkBtn, listPage, liveField, navCard, post, row, seg, select, radioRow, recommended, tiles, toggle, toggleCard, toggleKnob, twoNames, uiLanguageCard, warn, wordChips } from './ui'
+import { aside, bad, bar, btn, card, chip, enginePlate, grp, ib, lineList, linkBtn, listPage, liveField, liveOf, navCard, post, row, seg, select, radioRow, recommended, tiles, toggle, toggleCard, toggleKnob, twoNames, uiLanguageCard, warn, wordChips } from './ui'
 import { seconds } from '../speechplan'
 import { recommend, recommendedModels } from '../setup'
 import { resetSetup, setupNodes } from './setup'
 import { aboutOf, api, computerRows, diarizationOf, engineRows, engineSettings, fault, forgetEngine, gpuRow, hasPart, installed, onRedraw, pickKb, preferRow, running, saveEngine, size as speechSize, speakerRows, speechChoiceRows, testOffer, toast } from './speech'
 import { TOPICS } from '../topics'
+import { keysPage, keyState } from './keys'
 import { DOWNLOAD_PAGE } from '../newversion'
 import { isBeta, versionText } from '../version'
 import { withMarks } from './marks'
@@ -799,7 +802,7 @@ function finishMoment(): void {
 // was scrolled to, as a browser does.
 
 /** A page of a page: a long part of it, opened from a line with a chevron or a tile. */
-type SubId = 'card' | 'screen' | 'aboutYou' | 'talkWindow' | 'notes' | 'edit' | 'meet' | 'speakers' | 'fixing' | 'program' | 'languages' | 'forTranslate' | 'forCheck' | 'forDictate' | 'forTranscribe' | 'forVoice'
+type SubId = 'card' | 'screen' | 'aboutYou' | 'talkWindow' | 'notes' | 'edit' | 'typed' | 'meet' | 'speakers' | 'fixing' | 'program' | 'languages' | 'keys' | 'forTranslate' | 'forCheck' | 'forDictate' | 'forTranscribe' | 'forVoice'
 
 type Place = { name: Page; sub?: SubId }
 
@@ -908,8 +911,11 @@ const SUBS: Record<SubId, Sub> = {
   talkWindow: { title: () => t('act.talkWindow'), body: talkWindowPage },
   notes: { title: () => t('dictate.notesFolder'), body: kbRows },
   edit: { title: () => t('edit.title'), body: editPage },
+  typed: { title: () => t('typed.title'), body: typedPage },
   meet: { title: () => t('meet.title'), body: meetPage },
-  speakers: { title: () => t('page.speakers'), body: speakerRows, valid: installed },
+  // The Hugging Face key lives on Settings › Keys with Groq's: a line leads there.
+  speakers: { title: () => t('page.speakers'), body: v => [...speakerRows(v), ...(hasPart(v, 'speakers') ? [keysLine(v, 'huggingface')] : [])], valid: installed },
+  keys: { title: () => t('page.keys'), body: v => keysPage(v, renderBody) },
   fixing: { title: () => t('page.fixing'), body: fixingPage },
   program: { title: () => programOpen, body: programPage, valid: () => !!programOpen },
   languages: { title: () => t('page.languages'), body: languagesPage },
@@ -1091,6 +1097,7 @@ const SEARCHED: Place[] = [
   { name: 'english', sub: 'talkWindow' },
   { name: 'voice', sub: 'notes' },
   { name: 'voice', sub: 'edit' },
+  { name: 'voice', sub: 'typed' },
   { name: 'layout', sub: 'fixing' },
   { name: 'recordings', sub: 'speakers' },
   { name: 'recordings', sub: 'meet' },
@@ -1101,6 +1108,8 @@ const SEARCHED: Place[] = [
   { name: 'layouts' },
   { name: 'settings' },
   { name: 'settings', sub: 'languages' },
+  { name: 'settings', sub: 'keys' },
+  { name: 'about' },
   { name: 'models' },
   { name: 'models', sub: 'forTranslate' },
   { name: 'models', sub: 'forCheck' },
@@ -1705,7 +1714,8 @@ function llmChoice(v: AppView, model: LlmModel, on: boolean, pick: () => void, s
 function shareOffer(v: AppView): HTMLElement | null {
   const s = v.settings
   const model = s.model
-  if (s.translationLevel !== 'fast' || v.models[model].status !== 'ready' || s.shareOfferSeen.includes(model)) return null
+  // With Groq on, the model here only stands by: nothing to offer.
+  if (s.remote.llm || s.translationLevel !== 'fast' || v.models[model].status !== 'ready' || s.shareOfferSeen.includes(model)) return null
   if (translationAdvice(v.speech.device)[model].slow) return null
   const seen = () => save({ shareOfferSeen: [...s.shareOfferSeen, model] })
   const name = levelName(model)
@@ -1752,14 +1762,37 @@ function translateChoicePage(v: AppView): HTMLElement[] {
     () => post({ type: 'translationLevel', level: 'fast' }),
     fetching ? pct(fast.progress) : null,
   )
+  const groq = s.remote.llm
   const share = (model: LlmModel) =>
-    t(s.model !== model ? 'models.checkMoves' : s.translationLevel === model ? 'models.checkShares' : 'models.checkAlready')
+    t(groq || s.model !== model ? 'models.checkMoves' : s.translationLevel === model ? 'models.checkShares' : 'models.checkAlready')
+  // A model on this computer picked while Groq answers: Groq goes off for the language model's other actions too (one model for all).
+  const pickLocal = (model: LlmModel) => () => (groq && post({ type: 'remote', part: 'llm', on: false }), post({ type: 'translationLevel', level: model }))
+  const byGroq = groqChoice(
+    v,
+    groq && s.translationLevel !== 'fast',
+    () => (post({ type: 'remote', part: 'llm', on: true }), s.translationLevel === 'fast' && post({ type: 'translationLevel', level: 'accurate' })),
+    [t('models.groqNote', { what: t('models.groqText') }), t('models.groqSharesCheck')],
+  )
   return [
     shareOffer(v),
     grp(t('models.translateWith')),
     fastRow,
-    ...(['accurate', 'most'] as const).map(model => llmChoice(v, model, s.translationLevel === model, () => post({ type: 'translationLevel', level: model }), share(model))),
+    ...(['accurate', 'most'] as const).map(model => llmChoice(v, model, !groq && s.translationLevel === model, pickLocal(model), share(model))),
+    byGroq,
+    groq ? aside('info', t('models.groqFallback', { fast: levelName('fast') })) : null,
   ].filter((n): n is HTMLElement => n !== null)
+}
+
+/** "By Groq" on an action's choice page, lit while that action goes there; with no key saved it cannot be picked, and a line leads to Settings › Keys. */
+function groqChoice(v: AppView, on: boolean, pick: () => void, notes: (string | HTMLElement | null)[]): HTMLElement {
+  const key = v.keys.groq.set
+  return radioRow(
+    el('span', { class: 'groq' }, t('models.groq'), lucide('cloud')),
+    [...notes, key ? null : t('models.groqNoKey')],
+    on,
+    key ? pick : undefined,
+    key ? null : linkBtn(t('models.addKey'), () => go('settings', 'keys')),
+  )
 }
 
 /** Models › Check my English: the language model; Translate uses the same one unless it is on Fast. */
@@ -1767,20 +1800,38 @@ function checkChoicePage(v: AppView): HTMLElement[] {
   const s = v.settings
   const share = (model: LlmModel) =>
     s.translationLevel === model ? t('models.translateShares') : s.translationLevel === 'fast' ? t('models.translateStays', { fast: levelName('fast') }) : t('models.translateMoves')
+  const groq = s.remote.llm
+  const pickLocal = (model: LlmModel) => () => (groq && post({ type: 'remote', part: 'llm', on: false }), post({ type: 'useModel', model }))
   return [
     grp(t('models.checkWith')),
-    ...(['accurate', 'most'] as const).map(model => llmChoice(v, model, s.model === model, () => post({ type: 'useModel', model }), share(model))),
-    aside('info', t('models.fastOnly', { fast: levelName('fast') })),
+    ...(['accurate', 'most'] as const).map(model => llmChoice(v, model, !groq && s.model === model, pickLocal(model), share(model))),
+    groqChoice(v, groq, () => post({ type: 'remote', part: 'llm', on: true }), [
+      t('models.groqNote', { what: t('models.groqText') }),
+      s.translationLevel === 'fast' ? t('models.translateStays', { fast: levelName('fast') }) : t('models.groqSharesTranslate'),
+    ]),
+    groq ? aside('info', t('models.groqFallback', { fast: levelName('fast') })) : aside('info', t('models.fastOnly', { fast: levelName('fast') })),
   ]
 }
 
 /** Models › Dictate, Models › Transcribe: Automatic or a model of the action's own; the engine's download until it runs. */
 function speechChoicePage(v: AppView, feature: Feature): HTMLElement[] {
   const name = feature === 'dictation' ? TITLES.voice : TITLES.recordings
+  const part = feature === 'dictation' ? 'dictate' : 'transcribe'
+  const groq = v.settings.remote[part]
+  const where = [
+    grp(t('models.whereRuns')),
+    radioRow(t('models.runsHere'), [t('models.runsHereNote')], !groq, () => post({ type: 'remote', part, on: false })),
+    groqChoice(v, groq, () => post({ type: 'remote', part, on: true }), [
+      t(feature === 'dictation' ? 'models.speechGroqDictate' : 'models.speechGroqTranscribe'),
+      t('models.groqNote', { what: t('models.groqSound') }),
+    ]),
+    groq ? aside('info', t('models.groqStandby')) : null,
+  ].filter((n): n is HTMLElement => n !== null)
   // engineRows takes the feature's English id and words the offer itself (speech.ts).
   const offer = engineRows(v, feature === 'dictation' ? 'Dictate' : 'Transcribe')
-  if (offer.length) return [grp(t('models.engine')), ...offer]
+  if (offer.length) return [...where, grp(t('models.engine')), ...offer]
   return [
+    ...where,
     testOffer(v),
     grp(t('models.speechWith', { name })),
     ...speechChoiceRows(v, feature),
@@ -1910,11 +1961,13 @@ function stateText(m: { status: string; progress: number; size: number }): strin
 /** A level in a few words, for the lines to Models › Translate: its name, its size, its download. */
 function levelValue(v: AppView): string {
   const level = v.settings.translationLevel
+  if (v.settings.remote.llm && level !== 'fast') return 'Groq'
   return `${levelName(level)}${stateText(v.translation[level])}`
 }
 
 /** The checker in a few words, for the lines to Models › Check my English. */
 function checkValue(v: AppView): string {
+  if (v.settings.remote.llm) return 'Groq'
   return `${levelName(v.settings.model)}${stateText(v.models[v.settings.model])}`
 }
 
@@ -2213,6 +2266,7 @@ function kbRows(v: AppView): HTMLElement[] {
 
 /** A speech action's model in a few words: Automatic and the one it picked, or the one picked; its download. */
 function speechValue(v: AppView, feature: Feature): string {
+  if (v.settings.remote[feature === 'dictation' ? 'dictate' : 'transcribe']) return 'Groq'
   if (!installed(v)) return t('dictate.needsEngine')
   const p = v.speech.plan[feature]
   const live = v.speech.health?.models[feature]
@@ -2243,10 +2297,40 @@ function voicePage(v: AppView): HTMLElement[] {
     keyRow('againKey', t('dictate.againKey'), t('dictate.againNote'), !k.again),
     keyRow('noteKey', t('dict.note'), t('dictate.noteNote'), !k.note),
     toggle(t('dictate.panel'), s.dictationPanel, dictationPanel => save({ dictationPanel }), t('dictate.panelNote')),
+    toggle(
+      t('dictate.sound'),
+      s.dictateSound,
+      dictateSound => {
+        save({ dictateSound })
+        if (dictateSound) hearDictation()
+      },
+      t('dictate.soundNote'),
+    ),
+    navCard(null, t('typed.title'), t('typed.titleNote'), null, () => openSub('typed'), 'typed'),
     aside('info', t('dictate.escNote')),
     el('p', { class: 'privacy' }, lucide('lock', 's'), t('dictate.privacy')),
     enginePlate([{ title: t('dictate.speechModel'), value: speechValue(v, 'dictation'), open: () => go('models', 'forDictate') }]),
   ].filter((n): n is HTMLElement => n !== null)
+}
+
+/** Dictation's two sounds, heard as the switch is turned on: recording began, then the text is typed (the badge plays them at a phrase). */
+function hearDictation(): void {
+  for (const [name, at] of [['start', 0], ['done', 700]] as const) {
+    setTimeout(() => void new Audio(`dictation-${name}.wav`).play().catch(() => undefined), at)
+  }
+}
+
+/** Voice typing › The typed text: exact rules for what is typed, with no model (dicttext.ts). */
+function typedPage(v: AppView): HTMLElement[] {
+  const s = v.settings
+  const yo: Record<YoMode, [Key, Key]> = { heard: ['typed.yoHeard', 'typed.yoHeardNote'], always: ['typed.yoAlways', 'typed.yoAlwaysNote'], never: ['typed.yoNever', 'typed.yoNeverNote'] }
+  return [
+    toggle(t('typed.space'), s.dictateSpace, dictateSpace => save({ dictateSpace }), t('typed.spaceNote')),
+    toggle(t('typed.endStop'), s.dictateEndStop, dictateEndStop => save({ dictateEndStop }), t('typed.endStopNote')),
+    grp(t('typed.yo')),
+    ...YO_MODES.map(mode => radioRow(t(yo[mode][0]), [t(yo[mode][1])], s.dictateYo === mode, () => save({ dictateYo: mode }))),
+    aside('info', t('typed.exact')),
+  ]
 }
 
 /** The person's own instruction, saved a moment after they stop (and at once when they leave the field). */
@@ -2324,14 +2408,14 @@ function vocabularyPage(v: AppView): HTMLElement[] {
   const word = liveField('word', t('vocab.wordPlaceholder'), t('vocab.wordAria'), key => (key === 'Enter' ? add() : clear()))
   const heard = liveField('heard', t('vocab.heardPlaceholder'), t('vocab.heardAria'), key => (key === 'Enter' ? add() : clear()))
   const clear = () => {
-    word.value = ''
-    heard.value = ''
-    word.focus()
+    liveOf(word).value = ''
+    liveOf(heard).value = ''
+    liveOf(word).focus()
   }
   const add = () => {
-    const w = word.value.replace(/\s+/g, ' ').trim()
-    const h = heard.value.replace(/\s+/g, ' ').replace(/[()]/g, '').trim()
-    if (!w) return word.focus()
+    const w = liveOf(word).value.replace(/\s+/g, ' ').trim()
+    const h = liveOf(heard).value.replace(/\s+/g, ' ').replace(/[()]/g, '').trim()
+    if (!w) return liveOf(word).focus()
     const line = h ? `${w} (${h})` : w
     if (!parseEntry(line).word) return
     // The same word again is the person correcting it: the new line replaces the old.
@@ -2341,9 +2425,9 @@ function vocabularyPage(v: AppView): HTMLElement[] {
   }
   const edit = (line: string) => {
     const { word: w, heard: hs } = parseEntry(line)
-    word.value = w
-    heard.value = hs.join(', ')
-    word.focus()
+    liveOf(word).value = w
+    liveOf(heard).value = hs.join(', ')
+    liveOf(word).focus()
   }
   const items = s.vocabulary.map(line => {
     const { word: w, heard: hs } = parseEntry(line)
@@ -2719,7 +2803,8 @@ function programsPage(v: AppView): HTMLElement[] {
   const known = new Set(s.apps.map(a => a.exe))
   const running = runningApps.filter(exe => !known.has(exe))
   const suggest = v.lastApp && !known.has(v.lastApp) ? v.lastApp : ''
-  const addTyped = (field: HTMLInputElement) => {
+  const addTyped = (typed: HTMLInputElement) => {
+    const field = liveOf(typed)
     const name = field.value.trim().toLowerCase()
     field.value = ''
     if (name) add(/\.exe$/.test(name) ? name : `${name}.exe`)
@@ -3136,7 +3221,13 @@ function storedLine(v: AppView, p: StoragePart): HTMLElement {
     post({ type: 'removeStored', id: p.id, item: p.item })
   }
   if (asking === key) return row(label, [storedNote(v, p), bad(t('storage.removeAsk', { loss: lossOf(p) }))], el('span', { class: 'kchg' }, size, linkBtn(t('storage.keep'), () => ((asking = ''), renderBody())), btn(t('kb.remove'), remove, 'danger')))
-  const used = p.users?.length ? t('storage.usedBy', { users: usersText(p.users) }) : p.reserve ? t('storage.reserve', { reserve: usersText(p.reserve.split(' and ')) }) : null
+  const used = p.users?.length
+    ? t('storage.usedBy', { users: usersText(p.users) })
+    : p.reserve
+      ? t('storage.reserve', { reserve: usersText(p.reserve.split(' and ')) })
+      : p.standby
+        ? t('storage.standby')
+        : null
   // Files the engine shares with a developer's own uv (hard links): there, and not freed by removing it.
   const shared = p.shared / 1e6
   const freed = p.id === 'speech' && shared >= 100 ? t('storage.frees', { free: speechSize(p.bytes / 1e6 - shared), shared: speechSize(shared) }) : null
@@ -3287,26 +3378,10 @@ function settingsPage(v: AppView): HTMLElement[] {
     ),
     toggleCard('power', t('settings.startWithWindows'), s.startWithWindows, startWithWindows => save({ startWithWindows })),
     toggleCard('pause', t('settings.pause'), s.paused, paused => save({ paused }), t('settings.pauseNote')),
-    // New versions are downloaded by hand from GitHub (the owner, 2026-10-30): nothing installs itself.
-    // Since 2026-11-19 Kryakl says when one is out (newversion.ts), and Check now asks GitHub at once.
-    card(
-      'rotate-cw',
-      t(v.dev ? 'settings.versionDev' : 'settings.version', { version: versionText(v.version) }),
-      [
-        versionLine(v.versionCheck),
-        v.dev ? t('settings.built', { build: v.build }) : t('settings.versionNote'),
-        isBeta(v.version) ? t('settings.betaNote') : null,
-      ],
-      v.versionCheck.latest
-        ? btn(t('version.download'), openNewVersion, 'primary')
-        : el(
-            'span',
-            { class: 'kchg' },
-            linkBtn(t(v.versionCheck.checking ? 'version.checking' : 'version.check'), () => v.versionCheck.checking || post({ type: 'checkVersion' })),
-            linkBtn(t('settings.newVersions'), () => post({ type: 'openLink', url: RELEASES })),
-          ),
-    ),
-    toggleCard('download', t('settings.versionNotice'), s.versionNotice, versionNotice => save({ versionNotice }), t('settings.versionNoticeNote')),
+    // Every key of an online service in one place (2026-11-23, the owner).
+    navCard('key-round', t('page.keys'), t('apikeys.navNote'), keyState(v), () => go('settings', 'keys'), 'keys', v.keys.groq.set),
+    // The version and new versions live on About (2026-11-23, the owner: "почему-то засунуто в Settings"); a line leads there.
+    navCard('rotate-cw', t(v.dev ? 'settings.versionDev' : 'settings.version', { version: versionText(v.version) }), t('settings.versionMoved'), v.versionCheck.latest ? t('version.out', { version: v.versionCheck.latest }) : null, () => go('about')),
     grp(t('settings.backup')),
     card(
       'file-text',
@@ -3317,6 +3392,12 @@ function settingsPage(v: AppView): HTMLElement[] {
     aside('info', t('settings.importNote')),
     card('rotate-ccw', t('settings.resetAll'), [t('settings.resetAllNote')], linkBtn(t('main.reset'), () => post({ type: 'resetSettings' }))),
   ].filter((n): n is HTMLElement => n !== null)
+}
+
+/** A line to Settings › Keys from a page that needs a key: its state in a word. */
+function keysLine(v: AppView, service: 'groq' | 'huggingface'): HTMLElement {
+  const k = v.keys[service]
+  return navCard('key-round', service === 'groq' ? t('apikeys.groqKey') : t('speech.hfKey'), t('apikeys.lineNote'), k.set ? t('apikeys.saved', { tail: k.tail ?? '' }) : t('apikeys.notSaved'), () => go('settings', 'keys'), 'keys', k.set)
 }
 
 // ---------------------------------------------------------------- about
@@ -3353,10 +3434,24 @@ function aboutPage(v: AppView): HTMLElement[] {
     linkChips(AUTHOR_LINKS),
     row(t('about.mail'), [], el('span', { class: 'kchg' }, el('span', { class: 'mail' }, AUTHOR_MAIL), btn(t('about.write'), () => post({ type: 'openLink', url: `mailto:${AUTHOR_MAIL}` })))),
     grp(t('app.name')),
-    // A run from source says when it was built, so it is never taken for the last release.
-    row(t('about.versionTitle'), [v.dev ? t('settings.built', { build: v.build }) : null], el('span', { class: 'v' }, v.dev ? `${versionText(v.version)} dev` : versionText(v.version))),
+    // New versions are downloaded by hand from GitHub (the owner, 2026-10-30): nothing installs itself.
+    // Since 2026-11-19 Kryakl says when one is out (newversion.ts), and Check now asks GitHub at once.
+    // Here since 2026-11-23 (the owner), was Settings. A run from source says when it was built, so it is never taken for the last release.
+    row(
+      t(v.dev ? 'settings.versionDev' : 'settings.version', { version: versionText(v.version) }),
+      [versionLine(v.versionCheck), v.dev ? t('settings.built', { build: v.build }) : t('settings.versionNote'), isBeta(v.version) ? t('settings.betaNote') : null],
+      v.versionCheck.latest
+        ? btn(t('version.download'), openNewVersion, 'primary')
+        : el(
+            'span',
+            { class: 'kchg' },
+            linkBtn(t(v.versionCheck.checking ? 'version.checking' : 'version.check'), () => v.versionCheck.checking || post({ type: 'checkVersion' })),
+            linkBtn(t('settings.newVersions'), () => post({ type: 'openLink', url: RELEASES })),
+          ),
+    ),
+    toggle(t('settings.versionNotice'), v.settings.versionNotice, versionNotice => save({ versionNotice }), t('settings.versionNoticeNote')),
     row(t('about.license'), [], el('span', { class: 'v' }, t('about.licenseValue'))),
-    row(t('about.offline'), [t('about.offlineNote'), `${t('about.online')} ${t('about.onlineList', { size: v.natural.size })}`]),
+    row(t('about.offline'), [v.keys.groq.set && (v.settings.remote.dictate || v.settings.remote.transcribe || v.settings.remote.llm) ? t('about.offlineGroq') : t('about.offlineNote'), `${t('about.online')} ${t('about.onlineList', { size: v.natural.size })}`]),
     row(t('about.bug'), [isBeta(v.version) ? t('about.bugNote') : null], btn(t('about.report'), () => go('report'))),
     linkChips([
       [t('about.newVersions'), RELEASES],
@@ -3379,6 +3474,53 @@ let reported: { file?: string; error?: string } | undefined
 /** What the person wrote, from the field on the page (a redraw may have carried it over). */
 const reportText = () => pBody.querySelector<HTMLTextAreaElement>('textarea[data-live="report"]')?.value ?? ''
 
+/** The recorded phrase being heard on the report page: one at a time. */
+let heardCapture: HTMLAudioElement | undefined
+
+/** A phrase recorded for the report, heard before it is sent: its sound comes from main, never by a path. */
+function hearCapture(id: string): void {
+  heardCapture?.pause()
+  void window.tutorHost.call({ call: 'capturedSound', id }).then(bytes => {
+    if (!ArrayBuffer.isView(bytes)) return
+    const url = URL.createObjectURL(new Blob([new Uint8Array(bytes.buffer as ArrayBuffer, bytes.byteOffset, bytes.byteLength)], { type: 'audio/wav' }))
+    const audio = new Audio(url)
+    heardCapture = audio
+    audio.addEventListener('ended', () => URL.revokeObjectURL(url))
+    void audio.play().catch(() => undefined)
+  }, fault)
+}
+
+/**
+ * Dictation for the report (dictcapture.ts): off, nothing said is ever kept; on, the next phrases are, each
+ * shown here to hear and to remove before a report takes those left.
+ */
+function captureRows(v: AppView): HTMLElement[] {
+  const c = v.captures
+  const full = c.items.length >= c.most
+  return [
+    grp(t('report.capture')),
+    toggleCard('mic', t('report.captureOn'), c.on, on => post({ type: 'captureDictation', on }), c.on ? t('report.captureLeft', { n: c.left }) : t('report.captureNote', { n: c.most })),
+    full && !c.on ? warn(t('report.captureFull')) : null,
+    ...(c.items.length
+      ? [
+          grp(t('report.captured'), c.items.length, linkBtn(t('report.captureClear'), () => post({ type: 'clearCaptures' }))),
+          lineList(
+            c.items.map(p => ({
+              text: p.typed || `(${t('report.captureNothing')}${p.error ? `: ${engineMessage(p.error).replace(/\.$/, '')}` : ''})`,
+              more: `${whenSaid(new Date(p.at).toISOString(), Date.now())} · ${t('report.captureSeconds', { n: numberText(p.seconds) })}`,
+              title: t('report.captureHeard', { heard: p.heard || '…' }),
+              open: () => hearCapture(p.id),
+              remove: () => post({ type: 'forgetCapture', id: p.id }),
+              removeLabel: t('ui.remove', { item: p.typed || t('report.captureNothing') }),
+            })),
+            'time',
+          ),
+          aside('info', t('report.capturedNote')),
+        ]
+      : []),
+  ].filter((n): n is HTMLElement => n !== null)
+}
+
 function reportPage(v: AppView): HTMLElement[] {
   const send = (via: 'email' | 'github') => {
     reported = undefined
@@ -3395,6 +3537,7 @@ function reportPage(v: AppView): HTMLElement[] {
   return [
     grp(t('report.what')),
     el('div', { class: 'row add' }, field, el('small', {}, t('report.anyLanguage'))),
+    ...(installed(v) ? captureRows(v) : []),
     grp(t('report.send')),
     row(t('report.email'), [t('report.emailNote', { email: REPORT_EMAIL })], btn([lucide('mail', 's'), t('report.emailBtn')], () => send('email'), 'primary')),
     row(t('report.issue'), [t('report.issueNote')], btn([lucide('external-link', 's'), t('report.issueBtn')], () => send('github'))),

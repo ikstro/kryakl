@@ -66,11 +66,21 @@ async function start({ streamId, title, port: enginePort }) {
   session.tracks.push(track('tab', tab))
   if (mic) session.tracks.push(track('mic', mic))
   for (const t of session.tracks) t.recorder.start(SLICE)
+  // The tab track's second 0, as the engine reads it (both tracks share startedAt, so neither is shifted): meeting.js
+  // times Meet's captions from it. Date.now() is the same clock in every part of the extension.
+  const origin = Date.now()
   tab.getAudioTracks()[0].addEventListener('ended', () => chrome.runtime.sendMessage({ target: 'background', type: 'ended' }))
-  return { ok: true, id: session.id, mic: Boolean(mic) }
+  return { ok: true, id: session.id, mic: Boolean(mic), origin }
 }
 
-async function stop() {
+/** Who spoke when, from Meet's captions (meeting.js): the finish request's body; {} as before when there is none.
+ *  The timeline goes under "names", not "speakers": the engine reads "speakers" in this body as the number of voices. */
+function finishBody(names) {
+  if (!names || typeof names.captions !== 'string' || !Array.isArray(names.spans)) return {}
+  return { names: names.spans, captions: names.captions }
+}
+
+async function stop({ names } = {}) {
   if (!session) return { ok: false, error: 'Not recording' }
   const s = session
   await Promise.all(
@@ -83,7 +93,7 @@ async function stop() {
   await Promise.all(s.tracks.map(t => t.uploads))
   release()
   const lost = s.tracks.reduce((n, t) => n + t.lost, 0)
-  const r = await call('POST', `/recordings/${s.id}/finish`, {})
+  const r = await call('POST', `/recordings/${s.id}/finish`, finishBody(names))
   return r.ok ? { ok: true, id: s.id, lost } : { ok: false, error: `Kryakl did not take the end of the recording (${r.status})` }
 }
 
@@ -96,7 +106,7 @@ function release() {
 
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (message.target !== 'offscreen') return false
-  const run = message.type === 'start' ? start(message) : message.type === 'stop' ? stop() : Promise.resolve({ ok: false })
+  const run = message.type === 'start' ? start(message) : message.type === 'stop' ? stop(message) : Promise.resolve({ ok: false })
   run.then(reply, error => {
     release()
     reply({ ok: false, error: error.message || String(error) })

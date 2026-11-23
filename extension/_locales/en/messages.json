@@ -130,5 +130,20 @@
   },
   "errEngine": {
     "message": "Kryakl's speech engine is not running: open Kryakl → Recordings and meetings to install or start it"
+  },
+  "recognizing": {
+    "message": "Recognizing… $1 %"
+  },
+  "transcriptReady": {
+    "message": "Ready: open Kryakl › Recordings"
+  },
+  "transcriptFailed": {
+    "message": "Could not be recognized"
+  },
+  "stopsBy": {
+    "message": "It stops by itself about 15 s after you leave the call, at once when the tab closes, or by Kryakl's icon."
+  },
+  "stopsByKey": {
+    "message": "It stops by itself about 15 s after you leave the call, at once when the tab closes, or by Kryakl's icon or $1."
   }
 }

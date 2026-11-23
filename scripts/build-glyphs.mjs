@@ -22,6 +22,8 @@ const NAMES = [
   'camera', 'volume-x', 'circle', 'slash', 'pencil', 'highlighter', 'hash', 'droplets', 'grid-3x3', 'undo-2', 'redo-2', 'save',
   // the pointer on a screenshot, and the Screenshots window (2026-11-10)
   'mouse-pointer-2', 'images', 'copy-check', 'maximize-2', 'minimize-2',
+  // what was done by the person's own key, outside this computer, and the Keys page (2026-11-23)
+  'cloud', 'key-round',
   // controls
   'plus', 'x', 'minus', 'square', 'chevron-right', 'chevron-left', 'chevron-down', 'arrow-up', 'arrow-down',
 ]

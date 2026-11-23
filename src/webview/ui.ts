@@ -469,6 +469,19 @@ export function liveField(id: string, placeholder: string, label: string, onkey:
   return field
 }
 
+/**
+ * The field of this `data-live` that is on the page now. A redraw moves a field
+ * with typed text into the new body (carryFields) and drops the new one, so a
+ * button made with the new body must look the field up, not keep its own: until
+ * 2026-11-23 Add read the dropped, empty field and added nothing (Enter worked,
+ * as it listens on the field itself).
+ */
+export function liveOf<T extends HTMLInputElement | HTMLTextAreaElement>(field: T): T {
+  const id = field.dataset.live
+  if (!id || field.isConnected) return field
+  return document.querySelector<T>(`${field.localName}[data-live="${id}"]`) ?? field
+}
+
 /** A tile of the person's own list on top of an action's page: its icon and count, its name, a quiet line under it; a tap opens the list. */
 export type Tile = { icon: LucideName; title: string; count?: string | number; sub?: string; open: () => void; id?: string }
 
@@ -557,7 +570,8 @@ export function listPage(o: {
   extra?: HTMLElement | null
 }): HTMLElement[] {
   const norm = o.normalize ?? (text => text.trim())
-  const add = (field: HTMLInputElement) => {
+  const add = (typed: HTMLInputElement) => {
+    const field = liveOf(typed)
     const item = norm(field.value)
     if (!item) return field.focus()
     field.value = ''

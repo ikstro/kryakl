@@ -327,7 +327,7 @@ async function appShots(theme: 'dark' | 'light', narrow = false): Promise<void> 
     // Each action with its lists and its second-level pages, reached as a person reaches them.
     await page('translate', ['translations', 'card', 'screen'])
     await page('english', ['words', 'mistakes', 'aboutYou', 'talkWindow'])
-    await page('voice', ['vocabulary', 'phrases', 'notes', 'edit'])
+    await page('voice', ['vocabulary', 'phrases', 'notes', 'edit', 'typed'])
     // Text editing on, with the person's own instruction.
     await click(w, '[data-sub="edit"]')
     send(w, { type: 'app', view: appView({ dictateEdit: true, dictateEditStyle: 'own', dictateEditOwn: 'Пиши короче, без вводных слов.' }) })
@@ -498,9 +498,14 @@ async function trayShots(theme: 'dark' | 'light'): Promise<void> {
     await fit()
     await shot(w, `tray-${theme}-${name}`)
   }
-  // "Keep a word as typed…" opened into its field, the last fixed word in it; Enter; then with none.
+  // The two folding rows opened (Your words, Dictated phrases); their state is kept, so the rest of the run has them open.
   send(w, { type: 'tray', view: trayView() })
   await sleep(300)
+  log.push(`tray fold words: ${await click(w, '[data-id="fold-words"]')}`)
+  log.push(`tray fold phrases: ${await click(w, '[data-id="fold-phrases"]')}`)
+  await fit()
+  await shot(w, `tray-${theme}-open`)
+  // "Keep a word as typed…" opened into its field, the last fixed word in it; Enter; then with none.
   log.push(`tray keep: ${await click(w, '[data-id="keepWord"]')}`)
   log.push(`tray keep focus: ${await focus(w, '.keep-field')}`)
   await fit()

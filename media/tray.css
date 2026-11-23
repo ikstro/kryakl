@@ -241,6 +241,31 @@ body.keys .cmd.cur .lu {
   color: var(--muted);
 }
 
+/* Two folding rows (Your words, Dictated phrases): a chevron at the end turns down when open; the rows open under it, indented. */
+.sec.foldsec + .sec.foldsec {
+  margin-top: 0;
+}
+
+.fold .lu:last-child {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s;
+}
+
+.fold[aria-expanded='true'] .lu:last-child {
+  transform: rotate(90deg);
+}
+
+.sub {
+  padding-left: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fold .lu:last-child {
+    transition: none;
+  }
+}
+
 /* ---------------------------------------------------------------- Keep a word as typed */
 
 /* The row opened into its field, in place; what the word became beside it. */

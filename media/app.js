@@ -219,6 +219,8 @@
     "card.voiceReady": "The natural voice is ready. Press Listen to hear it.",
     "card.busyCard": "The graphics card is busy, so Fast translated this. {level} takes over again once it is free.",
     "card.busyProcessor": "The processor is busy, so Fast translated this. {level} takes over again once it is free.",
+    "card.busyRemote": "Groq did not answer (no internet, or today\u2019s limit is used up), so Fast translated this.",
+    "card.readByGroq": "Groq read the text in this picture",
     "card.useAnyway": "Use {level} anyway",
     "card.hideTranslation": "Hide the {lang} translation",
     "card.showTranslation": "Show the {lang} translation",
@@ -370,7 +372,21 @@
     "dict.engineDown": "The speech engine could not start. Click to report the problem.",
     "dict.fastCard": "Typed with Fast: the graphics card is busy",
     "dict.fastProcessor": "Typed with Fast: the processor is busy",
+    "dict.fastRemote": "Typed with Fast: Groq did not answer",
+    "dict.byGroq": "Heard by Groq \xB7 {model}, with your key: the sound leaves this computer",
+    "dict.byGroqPauses": "Listening\u2026 Groq writes it down at each pause",
+    "dict.remoteHere": "Groq did not answer, so this computer heard it",
+    "dict.remoteAgain": "Press the \u201Ctype again\u201D key to send it once more.",
+    "dict.editRemote": "Typed as said: Groq did not answer",
+    "remote.key": "Groq did not accept your key.",
+    "remote.nokey": "No Groq key is saved.",
+    "remote.limit": "Today\u2019s free Groq limit is used up for now.",
+    "remote.offline": "No connection to Groq.",
+    "remote.timeout": "Groq did not answer in time.",
+    "remote.server": "Groq had an error.",
+    "remote.format": "Groq\u2019s model answered in the wrong form.",
     "dict.tuck": "Fold into the tray: the recording goes on",
+    "dict.kept": "Kept for your problem report",
     "dict.editing": "Editing\u2026",
     "dict.editNoModel": "Typed as said: the model is not downloaded",
     "dict.editCard": "Typed as said: the graphics card is busy",
@@ -401,6 +417,7 @@
     "edit.model": "Model",
     "badge.fastCard": "Fast \xB7 graphics card busy",
     "badge.fastProcessor": "Fast \xB7 processor busy",
+    "badge.fastRemote": "Fast \xB7 Groq did not answer",
     "settings.uiLanguage": "Interface language",
     "settings.uiLanguageNote": "Kryakl\u2019s menus and pages; what it teaches stays English",
     "ui.recommended": "Recommended",
@@ -516,6 +533,16 @@
     "setup.why.speakersSlow": "possible, but slow here: on the processor an hour\u2019s voices take \u2248{time}",
     "setup.why.startWithWindows": "the keys work from the first minute",
     "setup.why.printScreen": "freeze the screen, frame a part, draw on it, Ctrl+C",
+    "setup.why.local": "the graphics card holds the models whole, so they are quick here",
+    "setup.why.groq": "the graphics card cannot hold the language model whole, so Groq is much quicker here",
+    "setup.runWhere": "Where the models run",
+    "setup.runHere": "On this computer",
+    "setup.runHereNote": "up to 12 GB to download, quick with a graphics card of 4 GB or more; nothing leaves the computer",
+    "setup.runGroq": "By Groq, with your own key",
+    "setup.runGroqNote": "quick on any computer, little to download; needs the internet, and what you send goes to Groq. Groq\u2019s free plan is enough for a working day",
+    "setup.groqNeedsKey": "Paste the key to go on, or choose On this computer. You can change it any time in Settings \u203A Service keys.",
+    "setup.dictateGroq": "by Groq: nothing to download",
+    "setup.transcribeGroq": "by Groq; the speech engine cuts and keeps the recordings here, {engine}",
     "setup.item.translator": "The translator for {pair}",
     "setup.item.translatorNote": "Firefox Translations, once \xB7 then offline",
     "setup.item.dictionary": "The word dictionary",
@@ -738,6 +765,8 @@
     "tr.failed": "failed",
     "tr.recordingChip": "recording",
     "tr.waiting": "waiting",
+    "tr.notifyReady": "Transcript ready",
+    "tr.notifyFailed": "The transcript could not be made",
     "tr.opening": "Opening\u2026",
     "tr.rename": "Rename",
     "tr.couldNot": "Could not transcribe it",
@@ -746,6 +775,14 @@
     "tr.background": "The window can be closed: it goes on in the background.",
     "tr.busyLighter": "The graphics card is busy with other programs, so a lighter model ({model}) recognizes this.",
     "tr.busyProcessor": "The graphics card is busy with other programs, so the processor recognizes this: it takes longer.",
+    "tr.waitingGroq": "Waiting until Groq has room again\u2026",
+    "tr.goesOnAt": "goes on at {time}",
+    "tr.goesOnSoon": "goes on in a minute",
+    "tr.byGroqNow": "Groq recognizes this with your key: only the speech is sent.",
+    "tr.groqOffline": "Groq did not answer, so this computer recognizes it.",
+    "tr.byGroqDone": "Recognized by Groq with your key.",
+    "tr.namesFromMeet": "The names are Google Meet\u2019s own, read from its captions during the call.",
+    "tr.groqOfflineDone": "Groq did not answer, so {model} on this computer wrote this.",
     "tr.lighterDone": "The graphics card was busy, so a lighter model ({model}) wrote this.",
     "tr.lighterAgain": "Once the card is free, it can be transcribed again with the accurate model.",
     "tr.startsAfter": "Starts once the one before it is done.",
@@ -1022,6 +1059,77 @@
     "keys.backToAria": "{label}: back to {key}",
     "keys.takenProgram": "Taken by another program; choose another.",
     "keys.set": "Set",
+    "page.keys": "Service keys",
+    "apikeys.navNote": "Groq and Hugging Face: what each key is for and what it sends",
+    "apikeys.lineNote": "kept with the other keys in Settings",
+    "apikeys.groqWhat": "With your own Groq key, Groq\u2019s servers can do what this computer\u2019s models do: quicker, and with no download or graphics card. You choose what goes there; the rest stays here.",
+    "apikeys.price": "Groq has a free plan, enough for a working day. While no card is linked to your Groq account, nothing is charged: past the limit Groq only pauses until it lifts, and Kryakl uses this computer\u2019s models meanwhile. If you move to a paid Groq plan, Groq bills what you use.",
+    "apikeys.noEncryption": "Windows offers no encryption for this account here, so no key can be saved.",
+    "apikeys.groqKey": "Groq key",
+    "apikeys.saved": "Saved \xB7 \u2026{tail}",
+    "apikeys.notSaved": "Not saved",
+    "apikeys.checking": "Checking with Groq\u2026",
+    "apikeys.bad": "Groq did not accept this key",
+    "apikeys.offline": "Could not reach Groq; it is checked again on use",
+    "apikeys.works": "Works",
+    "apikeys.checkAgain": "Check",
+    "apikeys.replace": "Replace",
+    "apikeys.delete": "Delete",
+    "apikeys.save": "Save",
+    "apikeys.step1": "Open console.groq.com/keys",
+    "apikeys.step1Rest": " and sign in with Google or an email. No card is asked for.",
+    "apikeys.step2": "Press Create API Key and name it ",
+    "apikeys.step2Rest": ", so you know which key this is.",
+    "apikeys.step3": "Copy the key and paste it here:",
+    "apikeys.useGroq": "Use Groq for everything",
+    "apikeys.useGroqNote": "dictation, recordings and meetings, accurate translation, Check my English, Talk and text editing",
+    "apikeys.useAll": "Use for everything",
+    "apikeys.useNone": "Run everything here",
+    "apikeys.partDictate": "Dictation by Groq",
+    "apikeys.partDictateNote": "typing by voice, in English and spoken practice; notes stay on this computer",
+    "apikeys.partTranscribe": "Recordings and meetings by Groq",
+    "apikeys.partTranscribeNote": "only the speech is sent, the pauses cut; who spoke when stays on this computer",
+    "apikeys.partLlm": "Language model by Groq",
+    "apikeys.partLlmNote": "accurate translation, Check my English, Talk and text editing; Fast translation stays here",
+    "apikeys.partScreen": "Text from screenshots by Groq",
+    "apikeys.partScreenNote": "the picture goes to Groq, which reads it far better than Windows; not part of \u201CUse for everything\u201D, as a screen may show anything. Without a connection, Windows reads it",
+    "apikeys.usage": "Today on Groq",
+    "apikeys.usageNone": "Nothing sent to Groq today",
+    "apikeys.usageNoneNote": "the free plan counts the last 24 hours",
+    "apikeys.useDictation": "Dictation",
+    "apikeys.useRecordings": "Recordings and meetings",
+    "apikeys.useTexts": "Translation and checking",
+    "apikeys.useTalk": "Talk",
+    "apikeys.useEdit": "Text editing",
+    "apikeys.requests": "requests: {n} of {of}",
+    "apikeys.groqLeft": "Groq says {n} requests are left today, use outside Kryakl included",
+    "apikeys.sound": "sound: {used} of {of}",
+    "apikeys.tokens": "words: {used}K of {of}K tokens",
+    "apikeys.hours": "{h} h {m} min",
+    "apikeys.minutes": "{m} min",
+    "apikeys.leaves": "What you turn on here leaves this computer: the sound of your phrases and recordings, and the texts you translate, check or say to the duck, and the screenshots you read the text of. Groq does not train on them and by default does not keep them.",
+    "apikeys.privacy": "Groq\u2019s privacy policy",
+    "apikeys.safe": "Each key is encrypted by Windows for your account and stays on this computer; only its last four letters are shown, and it never goes into logs, problem reports or backups. A program running under your Windows account could still read it, as it could a browser\u2019s saved passwords: make a key just for Kryakl, and delete it on Groq\u2019s site if in doubt.",
+    "apikeys.hfWhat": "Hugging Face gives the model that tells voices apart (Who spoke when). The key is needed once, to download it; nothing you record is sent there.",
+    "apikeys.hfNoEngine": "needed for Who spoke when, once the speech engine is installed",
+    "apikeys.hfNoSpeakers": "needed once Who spoke when is downloaded",
+    "models.groq": "By Groq, with your key",
+    "models.groqNote": "online and quick on any computer, nothing to download; {what} goes to Groq",
+    "models.groqText": "the text",
+    "models.groqSound": "the sound",
+    "models.groqNoKey": "needs your Groq key",
+    "models.addKey": "Add a key",
+    "models.groqSharesCheck": "Check my English, Talk and text editing go through Groq too",
+    "models.groqSharesTranslate": "accurate translation and text editing go through Groq too",
+    "models.groqFallback": "With no connection, or past Groq\u2019s limit, Kryakl uses the model on this computer if it is downloaded; translation falls back to {fast}.",
+    "models.speechGroqDictate": "Whisper large-v3 at Groq: about a second a phrase",
+    "models.speechGroqTranscribe": "Whisper turbo at Groq: an hour of recording in a few minutes, up to 8 hours a day",
+    "models.whereRuns": "Where it runs",
+    "models.runsHere": "On this computer",
+    "models.runsHereNote": "nothing leaves the computer; the model below is downloaded once",
+    "models.groqStandby": "Groq is in use: the model picked here runs when Groq cannot be reached.",
+    "settings.versionMoved": "new versions and their notice are on About",
+    "about.offlineGroq": "your text stays on this computer, except what you sent to Groq with your key (Settings \u203A Service keys)",
     "listen.tryKey": "Select this text, {how}.",
     "listen.tryTwice": "Select this text, press Ctrl + C twice.",
     "listen.tryNone": "Set a key above (Ctrl + C twice can be it), then select this text.",
@@ -1253,6 +1361,22 @@
     "dictate.panel": "Show the panel while dictating",
     "dictate.panelNote": "off: the red dot in the tray shows the recording; an error still comes up for a moment",
     "dictate.escNote": "The words appear as you speak. Esc cancels the phrase before it is typed.",
+    "dictate.sound": "Sounds at the start and when the text is typed",
+    "dictate.soundNote": "a quiet note as recording begins and another once the text is typed, for when you are not looking at the screen",
+    "typed.title": "The typed text",
+    "typed.titleNote": "the space after a phrase, the full stop, the letter \u0451",
+    "typed.space": "A space after each phrase",
+    "typed.spaceNote": "the next phrase or word goes on without a space typed by hand",
+    "typed.endStop": "A full stop after a single sentence",
+    "typed.endStopNote": "off: \u201CSee you at five.\u201D is typed as \u201CSee you at five\u201D; two sentences or more keep theirs, and so do ? and !",
+    "typed.yo": "The letter \u0451 in Russian",
+    "typed.yoHeard": "As heard",
+    "typed.yoHeardNote": "as the speech model wrote it; it writes \u0451 seldom",
+    "typed.yoAlways": "Always",
+    "typed.yoAlwaysNote": "put back wherever a word is written with \u0451 in one way only: \u0435\u0449\u0451, \u0435\u0451, \u0438\u0434\u0451\u0442. \xAB\u0412\u0441\u0435\xBB and \xAB\u0432\u0441\u0451\xBB stay as heard",
+    "typed.yoNever": "Never",
+    "typed.yoNeverNote": "every \u0451 is typed as \u0435",
+    "typed.exact": "These rules are exact and instant: no model, the same on every computer. They come after text editing and translation.",
     "dictate.privacy": "Speech is recognized on this computer; nothing is sent anywhere.",
     "vocab.wordPlaceholder": "Word",
     "vocab.wordAria": "Name or term",
@@ -1486,6 +1610,7 @@
     "storage.keep": "Keep",
     "storage.usedBy": "used by {users}",
     "storage.reserve": "kept for {reserve} on the processor, if the graphics card fails",
+    "storage.standby": "Groq does this now; kept for when Groq cannot be reached",
     "storage.userTranslate": "Translate",
     "storage.userListen": "Translate",
     "storage.userCheck": "English",
@@ -1600,7 +1725,18 @@
     "report.computerNote": "Processor, memory, graphics card, Windows and Kryakl\u2019s versions",
     "report.settings": "Your settings",
     "report.settingsNote": "Your own lists only counted: words kept as typed, names and terms, programs",
-    "report.never": "Never in it: your texts, words, mistakes, translations, phrases, transcripts or Hugging Face key. Your Windows name and the computer\u2019s are replaced. Nothing is sent until you send it.",
+    "report.capture": "A problem with what was typed",
+    "report.captureOn": "Record dictation for the report",
+    "report.captureNote": "Kryakl keeps the sound and the text of the next phrases you dictate ({n} at most) on this computer, then stops by itself. They go into the report file below.",
+    "report.captureLeft": "Recording: {n} more to keep. A bug icon in the dictation panel marks each such phrase.",
+    "report.captureFull": "The list is full. Remove some phrases to record more.",
+    "report.captured": "Recorded phrases",
+    "report.capturedNote": "These go into the report file with their sound. Tap a phrase to hear it; remove any you do not want to send.",
+    "report.captureNothing": "nothing typed",
+    "report.captureHeard": "Recognized: {heard}",
+    "report.captureClear": "Remove all",
+    "report.captureSeconds": "{n} s",
+    "report.never": "Never in it: your texts, words, mistakes, translations, transcripts or Hugging Face key, nor anything you dictated, except the phrases you recorded for the report above. Your Windows name and the computer\u2019s are replaced. Nothing is sent until you send it.",
     "report.folder": "Kryakl\u2019s folder",
     "report.folderNote": "Where the logs are, to look at them yourself",
     "report.stopped": "If something stopped working",
@@ -1783,6 +1919,8 @@
     "card.voiceReady": "\u0415\u0441\u0442\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0439 \u0433\u043E\u043B\u043E\u0441 \u0433\u043E\u0442\u043E\u0432. \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \xAB\u0421\u043B\u0443\u0448\u0430\u0442\u044C\xBB, \u0447\u0442\u043E\u0431\u044B \u0443\u0441\u043B\u044B\u0448\u0430\u0442\u044C \u0435\u0433\u043E.",
     "card.busyCard": "\u0412\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u043D\u044F\u0442\u0430, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u044D\u0442\u043E \u043F\u0435\u0440\u0435\u0432\u0451\u043B \xAB\u0411\u044B\u0441\u0442\u0440\u044B\u0439\xBB. \xAB{level}\xBB \u0432\u0435\u0440\u043D\u0451\u0442\u0441\u044F, \u043A\u0430\u043A \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u043D\u0430 \u043E\u0441\u0432\u043E\u0431\u043E\u0434\u0438\u0442\u0441\u044F.",
     "card.busyProcessor": "\u041F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440 \u0437\u0430\u043D\u044F\u0442, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u044D\u0442\u043E \u043F\u0435\u0440\u0435\u0432\u0451\u043B \xAB\u0411\u044B\u0441\u0442\u0440\u044B\u0439\xBB. \xAB{level}\xBB \u0432\u0435\u0440\u043D\u0451\u0442\u0441\u044F, \u043A\u0430\u043A \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u043D \u043E\u0441\u0432\u043E\u0431\u043E\u0434\u0438\u0442\u0441\u044F.",
+    "card.busyRemote": "Groq \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B (\u043D\u0435\u0442 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0430 \u0438\u043B\u0438 \u043B\u0438\u043C\u0438\u0442 \u043D\u0430 \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u0438\u0441\u0447\u0435\u0440\u043F\u0430\u043D), \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u044D\u0442\u043E \u043F\u0435\u0440\u0435\u0432\u0451\u043B \xAB\u0411\u044B\u0441\u0442\u0440\u044B\u0439\xBB.",
+    "card.readByGroq": "\u0422\u0435\u043A\u0441\u0442 \u043D\u0430 \u044D\u0442\u043E\u0439 \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0435 \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043B Groq",
     "card.useAnyway": "\u0412\u0441\u0451 \u0440\u0430\u0432\u043D\u043E \xAB{level}\xBB",
     "card.hideTranslation": "\u0421\u043A\u0440\u044B\u0442\u044C \u043F\u0435\u0440\u0435\u0432\u043E\u0434 ({lang})",
     "card.showTranslation": "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u043F\u0435\u0440\u0435\u0432\u043E\u0434 ({lang})",
@@ -1934,7 +2072,21 @@
     "dict.engineDown": "\u0414\u0432\u0438\u0436\u043E\u043A \u0440\u0435\u0447\u0438 \u043D\u0435 \u0441\u043C\u043E\u0433 \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C\u0441\u044F. \u041D\u0430\u0436\u043C\u0438\u0442\u0435, \u0447\u0442\u043E\u0431\u044B \u0441\u043E\u043E\u0431\u0449\u0438\u0442\u044C \u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0435.",
     "dict.fastCard": "\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043E \xAB\u0411\u044B\u0441\u0442\u0440\u044B\u043C\xBB: \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u043D\u044F\u0442\u0430",
     "dict.fastProcessor": "\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043E \xAB\u0411\u044B\u0441\u0442\u0440\u044B\u043C\xBB: \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440 \u0437\u0430\u043D\u044F\u0442",
+    "dict.fastRemote": "\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043E \xAB\u0411\u044B\u0441\u0442\u0440\u044B\u043C\xBB: Groq \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B",
+    "dict.byGroq": "\u0420\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0451\u0442 Groq \xB7 {model}, \u043F\u043E \u0432\u0430\u0448\u0435\u043C\u0443 \u043A\u043B\u044E\u0447\u0443: \u0437\u0432\u0443\u043A \u0443\u0445\u043E\u0434\u0438\u0442 \u0441 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0430",
+    "dict.byGroqPauses": "\u0421\u043B\u0443\u0448\u0430\u044E\u2026 Groq \u0437\u0430\u043F\u0438\u0441\u044B\u0432\u0430\u0435\u0442 \u043D\u0430 \u043A\u0430\u0436\u0434\u043E\u0439 \u043F\u0430\u0443\u0437\u0435",
+    "dict.remoteHere": "Groq \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u043B \u044D\u0442\u043E\u0442 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440",
+    "dict.remoteAgain": "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043A\u043B\u0430\u0432\u0438\u0448\u0443 \xAB\u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u0442\u044C \u0435\u0449\u0451 \u0440\u0430\u0437\xBB, \u0447\u0442\u043E\u0431\u044B \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0441\u043D\u043E\u0432\u0430.",
+    "dict.editRemote": "\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043E \u043A\u0430\u043A \u0441\u043A\u0430\u0437\u0430\u043D\u043E: Groq \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B",
+    "remote.key": "Groq \u043D\u0435 \u043F\u0440\u0438\u043D\u044F\u043B \u0432\u0430\u0448 \u043A\u043B\u044E\u0447.",
+    "remote.nokey": "\u041A\u043B\u044E\u0447 Groq \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D.",
+    "remote.limit": "\u0411\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u044B\u0439 \u043B\u0438\u043C\u0438\u0442 Groq \u043F\u043E\u043A\u0430 \u0438\u0441\u0447\u0435\u0440\u043F\u0430\u043D.",
+    "remote.offline": "\u041D\u0435\u0442 \u0441\u0432\u044F\u0437\u0438 \u0441 Groq.",
+    "remote.timeout": "Groq \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B \u0432\u043E\u0432\u0440\u0435\u043C\u044F.",
+    "remote.server": "\u0423 Groq \u043E\u0448\u0438\u0431\u043A\u0430.",
+    "remote.format": "\u041C\u043E\u0434\u0435\u043B\u044C Groq \u043E\u0442\u0432\u0435\u0442\u0438\u043B\u0430 \u043D\u0435 \u0432 \u0442\u043E\u043C \u0432\u0438\u0434\u0435.",
     "dict.tuck": "\u0421\u0432\u0435\u0440\u043D\u0443\u0442\u044C \u0432 \u0442\u0440\u0435\u0439: \u0437\u0430\u043F\u0438\u0441\u044C \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0435\u0442\u0441\u044F",
+    "dict.kept": "\u0421\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F \u0434\u043B\u044F \u043E\u0442\u0447\u0451\u0442\u0430 \u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0435",
     "dict.editing": "\u041F\u0440\u0430\u0432\u043B\u044E\u2026",
     "dict.editNoModel": "\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043E \u043A\u0430\u043A \u0441\u043A\u0430\u0437\u0430\u043D\u043E: \u043C\u043E\u0434\u0435\u043B\u044C \u043D\u0435 \u0441\u043A\u0430\u0447\u0430\u043D\u0430",
     "dict.editCard": "\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043E \u043A\u0430\u043A \u0441\u043A\u0430\u0437\u0430\u043D\u043E: \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u043D\u044F\u0442\u0430",
@@ -1965,6 +2117,7 @@
     "edit.model": "\u041C\u043E\u0434\u0435\u043B\u044C",
     "badge.fastCard": "\u0411\u044B\u0441\u0442\u0440\u044B\u0439 \xB7 \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u043D\u044F\u0442\u0430",
     "badge.fastProcessor": "\u0411\u044B\u0441\u0442\u0440\u044B\u0439 \xB7 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440 \u0437\u0430\u043D\u044F\u0442",
+    "badge.fastRemote": "\u0411\u044B\u0441\u0442\u0440\u044B\u0439 \xB7 Groq \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B",
     "settings.uiLanguage": "\u042F\u0437\u044B\u043A \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430",
     "settings.uiLanguageNote": "\u043C\u0435\u043D\u044E \u0438 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u044B \u041A\u0440\u044F\u043A\u043B\u0430; \u0442\u043E, \u0447\u0435\u043C\u0443 \u043E\u043D \u0443\u0447\u0438\u0442, \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043D\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u043C",
     "ui.recommended": "\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F",
@@ -2080,6 +2233,16 @@
     "setup.why.speakersSlow": "\u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E, \u043D\u043E \u0437\u0434\u0435\u0441\u044C \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E: \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440\u0435 \u0433\u043E\u043B\u043E\u0441\u0430 \u0447\u0430\u0441\u0430 \u0437\u0430\u043F\u0438\u0441\u0438 \u0437\u0430\u043D\u0438\u043C\u0430\u044E\u0442 \u2248{time}",
     "setup.why.startWithWindows": "\u043A\u043B\u0430\u0432\u0438\u0448\u0438 \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442 \u0441 \u043F\u0435\u0440\u0432\u043E\u0439 \u043C\u0438\u043D\u0443\u0442\u044B",
     "setup.why.printScreen": "\u044D\u043A\u0440\u0430\u043D \u0437\u0430\u043C\u0438\u0440\u0430\u0435\u0442, \u043E\u0431\u0432\u043E\u0434\u0438\u0442\u0435 \u043A\u0443\u0441\u043E\u043A, \u0440\u0438\u0441\u0443\u0435\u0442\u0435, Ctrl+C",
+    "setup.why.local": "\u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0432\u043C\u0435\u0449\u0430\u0435\u0442 \u043C\u043E\u0434\u0435\u043B\u0438 \u0446\u0435\u043B\u0438\u043A\u043E\u043C, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0437\u0434\u0435\u0441\u044C \u043E\u043D\u0438 \u0431\u044B\u0441\u0442\u0440\u044B\u0435",
+    "setup.why.groq": "\u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u043D\u0435 \u0432\u043C\u0435\u0449\u0430\u0435\u0442 \u044F\u0437\u044B\u043A\u043E\u0432\u0443\u044E \u043C\u043E\u0434\u0435\u043B\u044C \u0446\u0435\u043B\u0438\u043A\u043E\u043C, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 Groq \u0437\u0434\u0435\u0441\u044C \u043D\u0430\u043C\u043D\u043E\u0433\u043E \u0431\u044B\u0441\u0442\u0440\u0435\u0435",
+    "setup.runWhere": "\u0413\u0434\u0435 \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442 \u043C\u043E\u0434\u0435\u043B\u0438",
+    "setup.runHere": "\u041D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435",
+    "setup.runHereNote": "\u0441\u043A\u0430\u0447\u0430\u0442\u044C \u0434\u043E 12 \u0413\u0411, \u0431\u044B\u0441\u0442\u0440\u043E \u0441 \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u043E\u0439 \u043E\u0442 4 \u0413\u0411; \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0443\u0445\u043E\u0434\u0438\u0442 \u0441 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0430",
+    "setup.runGroq": "\u0427\u0435\u0440\u0435\u0437 Groq, \u043F\u043E \u0432\u0430\u0448\u0435\u043C\u0443 \u043A\u043B\u044E\u0447\u0443",
+    "setup.runGroqNote": "\u0431\u044B\u0441\u0442\u0440\u043E \u043D\u0430 \u043B\u044E\u0431\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435, \u0441\u043A\u0430\u0447\u0438\u0432\u0430\u0442\u044C \u043F\u043E\u0447\u0442\u0438 \u043D\u0435\u0447\u0435\u0433\u043E; \u043D\u0443\u0436\u0435\u043D \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442, \u0438 \u0442\u043E, \u0447\u0442\u043E \u0432\u044B \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442\u0435, \u0443\u0445\u043E\u0434\u0438\u0442 \u0432 Groq. \u0411\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u043E\u0433\u043E \u0442\u0430\u0440\u0438\u0444\u0430 Groq \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043D\u0430 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0434\u0435\u043D\u044C",
+    "setup.groqNeedsKey": "\u0412\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043A\u043B\u044E\u0447, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C, \u0438\u043B\u0438 \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \xAB\u041D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435\xBB. \u041F\u043E\u043C\u0435\u043D\u044F\u0442\u044C \u043C\u043E\u0436\u043D\u043E \u043A\u043E\u0433\u0434\u0430 \u0443\u0433\u043E\u0434\u043D\u043E \u0432 \xAB\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u203A \u041A\u043B\u044E\u0447\u0438 \u0441\u0435\u0440\u0432\u0438\u0441\u043E\u0432\xBB.",
+    "setup.dictateGroq": "\u0447\u0435\u0440\u0435\u0437 Groq: \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0441\u043A\u0430\u0447\u0438\u0432\u0430\u0442\u044C",
+    "setup.transcribeGroq": "\u0447\u0435\u0440\u0435\u0437 Groq; \u0434\u0432\u0438\u0436\u043E\u043A \u0440\u0435\u0447\u0438 \u0440\u0435\u0436\u0435\u0442 \u0438 \u0445\u0440\u0430\u043D\u0438\u0442 \u0437\u0430\u043F\u0438\u0441\u0438 \u0437\u0434\u0435\u0441\u044C, {engine}",
     "setup.item.translator": "\u041F\u0435\u0440\u0435\u0432\u043E\u0434\u0447\u0438\u043A {pair}",
     "setup.item.translatorNote": "Firefox Translations, \u043E\u0434\u0438\u043D \u0440\u0430\u0437 \xB7 \u0434\u0430\u043B\u044C\u0448\u0435 \u0431\u0435\u0437 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0430",
     "setup.item.dictionary": "\u0421\u043B\u043E\u0432\u0430\u0440\u044C",
@@ -2302,6 +2465,8 @@
     "tr.failed": "\u043E\u0448\u0438\u0431\u043A\u0430",
     "tr.recordingChip": "\u0437\u0430\u043F\u0438\u0441\u044C",
     "tr.waiting": "\u0432 \u043E\u0447\u0435\u0440\u0435\u0434\u0438",
+    "tr.notifyReady": "\u0420\u0430\u0441\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0430 \u0433\u043E\u0442\u043E\u0432\u0430",
+    "tr.notifyFailed": "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0434\u0435\u043B\u0430\u0442\u044C \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0443",
     "tr.opening": "\u041E\u0442\u043A\u0440\u044B\u0432\u0430\u044E\u2026",
     "tr.rename": "\u041F\u0435\u0440\u0435\u0438\u043C\u0435\u043D\u043E\u0432\u0430\u0442\u044C",
     "tr.couldNot": "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043E\u0432\u0430\u0442\u044C",
@@ -2310,6 +2475,14 @@
     "tr.background": "\u041E\u043A\u043D\u043E \u043C\u043E\u0436\u043D\u043E \u0437\u0430\u043A\u0440\u044B\u0442\u044C: \u0440\u0430\u0431\u043E\u0442\u0430 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u0441\u044F \u0432 \u0444\u043E\u043D\u0435.",
     "tr.busyLighter": "\u0412\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u043D\u044F\u0442\u0430 \u0434\u0440\u0443\u0433\u0438\u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430\u043C\u0438, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0451\u0442 \u043E\u0431\u043B\u0435\u0433\u0447\u0451\u043D\u043D\u0430\u044F \u043C\u043E\u0434\u0435\u043B\u044C ({model}).",
     "tr.busyProcessor": "\u0412\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u043D\u044F\u0442\u0430 \u0434\u0440\u0443\u0433\u0438\u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430\u043C\u0438, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0451\u0442 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440: \u044D\u0442\u043E \u0434\u043E\u043B\u044C\u0448\u0435.",
+    "tr.waitingGroq": "\u0416\u0434\u0443, \u043A\u043E\u0433\u0434\u0430 \u0443 Groq \u0441\u043D\u043E\u0432\u0430 \u0431\u0443\u0434\u0435\u0442 \u043C\u0435\u0441\u0442\u043E\u2026",
+    "tr.goesOnAt": "\u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u0441\u044F \u0432 {time}",
+    "tr.goesOnSoon": "\u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 \u043C\u0438\u043D\u0443\u0442\u0443",
+    "tr.byGroqNow": "\u0420\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0451\u0442 Groq \u043F\u043E \u0432\u0430\u0448\u0435\u043C\u0443 \u043A\u043B\u044E\u0447\u0443: \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0435\u0447\u044C.",
+    "tr.groqOffline": "Groq \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0451\u0442 \u044D\u0442\u043E\u0442 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440.",
+    "tr.byGroqDone": "\u0420\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u043D\u043E \u0432 Groq \u043F\u043E \u0432\u0430\u0448\u0435\u043C\u0443 \u043A\u043B\u044E\u0447\u0443.",
+    "tr.namesFromMeet": "\u0418\u043C\u0435\u043D\u0430 \u0432\u0437\u044F\u0442\u044B \u0438\u0437 \u0441\u0430\u043C\u043E\u0433\u043E Google Meet, \u0438\u0437 \u0435\u0433\u043E \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u043E\u0432 \u0432\u043E \u0432\u0440\u0435\u043C\u044F \u0437\u0432\u043E\u043D\u043A\u0430.",
+    "tr.groqOfflineDone": "Groq \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u044D\u0442\u043E \u0437\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043C\u043E\u0434\u0435\u043B\u044C {model} \u043D\u0430 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435.",
     "tr.lighterDone": "\u0412\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0431\u044B\u043B\u0430 \u0437\u0430\u043D\u044F\u0442\u0430, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u044D\u0442\u043E \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043E\u0431\u043B\u0435\u0433\u0447\u0451\u043D\u043D\u0430\u044F \u043C\u043E\u0434\u0435\u043B\u044C ({model}).",
     "tr.lighterAgain": "\u041A\u043E\u0433\u0434\u0430 \u043A\u0430\u0440\u0442\u0430 \u043E\u0441\u0432\u043E\u0431\u043E\u0434\u0438\u0442\u0441\u044F, \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0443 \u043C\u043E\u0436\u043D\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C \u0442\u043E\u0447\u043D\u043E\u0439 \u043C\u043E\u0434\u0435\u043B\u044C\u044E.",
     "tr.startsAfter": "\u041D\u0430\u0447\u043D\u0451\u0442\u0441\u044F, \u043A\u043E\u0433\u0434\u0430 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0430\u044F.",
@@ -2586,6 +2759,77 @@
     "keys.backToAria": "{label}: \u0432\u0435\u0440\u043D\u0443\u0442\u044C {key}",
     "keys.takenProgram": "\u0417\u0430\u043D\u044F\u0442\u043E \u0434\u0440\u0443\u0433\u043E\u0439 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u043E\u0439; \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u043E\u0435.",
     "keys.set": "\u0417\u0430\u0434\u0430\u0442\u044C",
+    "page.keys": "\u041A\u043B\u044E\u0447\u0438 \u0441\u0435\u0440\u0432\u0438\u0441\u043E\u0432",
+    "apikeys.navNote": "Groq \u0438 Hugging Face: \u0434\u043B\u044F \u0447\u0435\u0433\u043E \u043A\u0430\u0436\u0434\u044B\u0439 \u043A\u043B\u044E\u0447 \u0438 \u0447\u0442\u043E \u043E\u043D \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442",
+    "apikeys.lineNote": "\u0445\u0440\u0430\u043D\u0438\u0442\u0441\u044F \u0432\u043C\u0435\u0441\u0442\u0435 \u0441 \u0434\u0440\u0443\u0433\u0438\u043C\u0438 \u043A\u043B\u044E\u0447\u0430\u043C\u0438 \u0432 \u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445",
+    "apikeys.groqWhat": "\u0421 \u0432\u0430\u0448\u0438\u043C \u043A\u043B\u044E\u0447\u043E\u043C Groq \u0435\u0433\u043E \u0441\u0435\u0440\u0432\u0435\u0440\u044B \u0434\u0435\u043B\u0430\u044E\u0442 \u0442\u043E \u0436\u0435, \u0447\u0442\u043E \u043C\u043E\u0434\u0435\u043B\u0438 \u043D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435: \u0431\u044B\u0441\u0442\u0440\u0435\u0435, \u0431\u0435\u0437 \u0441\u043A\u0430\u0447\u0438\u0432\u0430\u043D\u0438\u044F \u0438 \u0431\u0435\u0437 \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u044B. \u0412\u044B \u0441\u0430\u043C\u0438 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442\u0435, \u0447\u0442\u043E \u0442\u0443\u0434\u0430 \u0443\u0445\u043E\u0434\u0438\u0442; \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u043E\u0435 \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u0437\u0434\u0435\u0441\u044C.",
+    "apikeys.price": "\u0423 Groq \u0435\u0441\u0442\u044C \u0431\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u044B\u0439 \u0442\u0430\u0440\u0438\u0444, \u0435\u0433\u043E \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043D\u0430 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0434\u0435\u043D\u044C. \u041F\u043E\u043A\u0430 \u043A \u0430\u043A\u043A\u0430\u0443\u043D\u0442\u0443 Groq \u043D\u0435 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u0430 \u043A\u0430\u0440\u0442\u0430, \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0441\u043F\u0438\u0441\u044B\u0432\u0430\u0435\u0442\u0441\u044F: \u043F\u043E\u0441\u043B\u0435 \u043B\u0438\u043C\u0438\u0442\u0430 Groq \u043F\u0440\u043E\u0441\u0442\u043E \u0436\u0434\u0451\u0442, \u043F\u043E\u043A\u0430 \u043E\u043D \u043E\u0431\u043D\u043E\u0432\u0438\u0442\u0441\u044F, \u0430 \u041A\u0440\u044F\u043A\u043B \u0442\u0435\u043C \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C \u0431\u0435\u0440\u0451\u0442 \u043C\u043E\u0434\u0435\u043B\u0438 \u044D\u0442\u043E\u0433\u043E \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0430. \u0415\u0441\u043B\u0438 \u043F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u043F\u043B\u0430\u0442\u043D\u044B\u0439 \u0442\u0430\u0440\u0438\u0444 Groq, \u043E\u043D \u0431\u0435\u0440\u0451\u0442 \u0434\u0435\u043D\u044C\u0433\u0438 \u0437\u0430 \u0442\u043E, \u0447\u0442\u043E \u0432\u044B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043B\u0438.",
+    "apikeys.noEncryption": "Windows \u043D\u0435 \u0434\u0430\u0451\u0442 \u0448\u0438\u0444\u0440\u043E\u0432\u0430\u043D\u0438\u044F \u0434\u043B\u044F \u044D\u0442\u043E\u0439 \u0443\u0447\u0451\u0442\u043D\u043E\u0439 \u0437\u0430\u043F\u0438\u0441\u0438, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u043A\u043B\u044E\u0447 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043D\u0435\u043B\u044C\u0437\u044F.",
+    "apikeys.groqKey": "\u041A\u043B\u044E\u0447 Groq",
+    "apikeys.saved": "\u0421\u043E\u0445\u0440\u0430\u043D\u0451\u043D \xB7 \u2026{tail}",
+    "apikeys.notSaved": "\u041D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D",
+    "apikeys.checking": "\u041F\u0440\u043E\u0432\u0435\u0440\u044F\u044E \u0432 Groq\u2026",
+    "apikeys.bad": "Groq \u043D\u0435 \u043F\u0440\u0438\u043D\u044F\u043B \u044D\u0442\u043E\u0442 \u043A\u043B\u044E\u0447",
+    "apikeys.offline": "Groq \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D; \u043A\u043B\u044E\u0447 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u0441\u044F \u043F\u0440\u0438 \u043F\u0435\u0440\u0432\u043E\u043C \u0437\u0430\u043F\u0440\u043E\u0441\u0435",
+    "apikeys.works": "\u0420\u0430\u0431\u043E\u0442\u0430\u0435\u0442",
+    "apikeys.checkAgain": "\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C",
+    "apikeys.replace": "\u0417\u0430\u043C\u0435\u043D\u0438\u0442\u044C",
+    "apikeys.delete": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C",
+    "apikeys.save": "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C",
+    "apikeys.step1": "\u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 console.groq.com/keys",
+    "apikeys.step1Rest": " \u0438 \u0432\u043E\u0439\u0434\u0438\u0442\u0435 \u0447\u0435\u0440\u0435\u0437 Google \u0438\u043B\u0438 \u043F\u043E\u0447\u0442\u0443. \u041A\u0430\u0440\u0442\u0443 \u043D\u0435 \u0441\u043F\u0440\u0430\u0448\u0438\u0432\u0430\u044E\u0442.",
+    "apikeys.step2": "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 Create API Key \u0438 \u043D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0435\u0433\u043E ",
+    "apikeys.step2Rest": ", \u0447\u0442\u043E\u0431\u044B \u0437\u043D\u0430\u0442\u044C, \u0447\u0442\u043E \u044D\u0442\u043E \u0437\u0430 \u043A\u043B\u044E\u0447.",
+    "apikeys.step3": "\u0421\u043A\u043E\u043F\u0438\u0440\u0443\u0439\u0442\u0435 \u043A\u043B\u044E\u0447 \u0438 \u0432\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0441\u044E\u0434\u0430:",
+    "apikeys.useGroq": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C Groq \u0434\u043B\u044F \u0432\u0441\u0435\u0433\u043E",
+    "apikeys.useGroqNote": "\u0434\u0438\u043A\u0442\u043E\u0432\u043A\u0430, \u0437\u0430\u043F\u0438\u0441\u0438 \u0438 \u0432\u0441\u0442\u0440\u0435\u0447\u0438, \u0442\u043E\u0447\u043D\u044B\u0439 \u043F\u0435\u0440\u0435\u0432\u043E\u0434, \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u0433\u043E, \u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u0438 \u043F\u0440\u0430\u0432\u043A\u0430 \u0442\u0435\u043A\u0441\u0442\u0430",
+    "apikeys.useAll": "\u0414\u043B\u044F \u0432\u0441\u0435\u0433\u043E",
+    "apikeys.useNone": "\u0412\u0441\u0451 \u043D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435",
+    "apikeys.partDictate": "\u0414\u0438\u043A\u0442\u043E\u0432\u043A\u0430 \u0447\u0435\u0440\u0435\u0437 Groq",
+    "apikeys.partDictateNote": "\u043F\u0435\u0447\u0430\u0442\u044C \u0433\u043E\u043B\u043E\u0441\u043E\u043C, \u0441 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u043E\u043C \u0438 \u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u0440\u0435\u0447\u0438; \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u043E\u0441\u0442\u0430\u044E\u0442\u0441\u044F \u043D\u0430 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435",
+    "apikeys.partTranscribe": "\u0417\u0430\u043F\u0438\u0441\u0438 \u0438 \u0432\u0441\u0442\u0440\u0435\u0447\u0438 \u0447\u0435\u0440\u0435\u0437 Groq",
+    "apikeys.partTranscribeNote": "\u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0435\u0447\u044C, \u0431\u0435\u0437 \u043F\u0430\u0443\u0437; \u043A\u0442\u043E \u043A\u043E\u0433\u0434\u0430 \u0433\u043E\u0432\u043E\u0440\u0438\u043B \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435",
+    "apikeys.partLlm": "\u042F\u0437\u044B\u043A\u043E\u0432\u0430\u044F \u043C\u043E\u0434\u0435\u043B\u044C \u0447\u0435\u0440\u0435\u0437 Groq",
+    "apikeys.partLlmNote": "\u0442\u043E\u0447\u043D\u044B\u0439 \u043F\u0435\u0440\u0435\u0432\u043E\u0434, \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u0433\u043E, \u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u0438 \u043F\u0440\u0430\u0432\u043A\u0430 \u0442\u0435\u043A\u0441\u0442\u0430; \xAB\u0411\u044B\u0441\u0442\u0440\u044B\u0439\xBB \u043F\u0435\u0440\u0435\u0432\u043E\u0434 \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u0437\u0434\u0435\u0441\u044C",
+    "apikeys.partScreen": "\u0422\u0435\u043A\u0441\u0442 \u0441\u043E \u0441\u043A\u0440\u0438\u043D\u0448\u043E\u0442\u043E\u0432 \u0447\u0435\u0440\u0435\u0437 Groq",
+    "apikeys.partScreenNote": "\u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0430 \u0443\u0445\u043E\u0434\u0438\u0442 \u0432 Groq, \u043E\u043D \u0447\u0438\u0442\u0430\u0435\u0442 \u0435\u0451 \u043D\u0430\u043C\u043D\u043E\u0433\u043E \u043B\u0443\u0447\u0448\u0435 Windows; \u043D\u0435 \u0432\u0445\u043E\u0434\u0438\u0442 \u0432 \xAB\u0414\u043B\u044F \u0432\u0441\u0435\u0433\u043E\xBB, \u0432\u0435\u0434\u044C \u043D\u0430 \u044D\u043A\u0440\u0430\u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u0447\u0442\u043E \u0443\u0433\u043E\u0434\u043D\u043E. \u0411\u0435\u0437 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0430 \u0447\u0438\u0442\u0430\u0435\u0442 Windows",
+    "apikeys.usage": "\u0421\u0435\u0433\u043E\u0434\u043D\u044F \u0432 Groq",
+    "apikeys.usageNone": "\u0421\u0435\u0433\u043E\u0434\u043D\u044F \u0432 Groq \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0443\u0445\u043E\u0434\u0438\u043B\u043E",
+    "apikeys.usageNoneNote": "\u0431\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u044B\u0439 \u0442\u0430\u0440\u0438\u0444 \u0441\u0447\u0438\u0442\u0430\u0435\u0442 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 24 \u0447\u0430\u0441\u0430",
+    "apikeys.useDictation": "\u0414\u0438\u043A\u0442\u043E\u0432\u043A\u0430",
+    "apikeys.useRecordings": "\u0417\u0430\u043F\u0438\u0441\u0438 \u0438 \u0432\u0441\u0442\u0440\u0435\u0447\u0438",
+    "apikeys.useTexts": "\u041F\u0435\u0440\u0435\u0432\u043E\u0434 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430",
+    "apikeys.useTalk": "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440",
+    "apikeys.useEdit": "\u041F\u0440\u0430\u0432\u043A\u0430 \u0442\u0435\u043A\u0441\u0442\u0430",
+    "apikeys.requests": "\u0437\u0430\u043F\u0440\u043E\u0441\u043E\u0432: {n} \u0438\u0437 {of}",
+    "apikeys.groqLeft": "\u041F\u043E \u0441\u043B\u043E\u0432\u0430\u043C Groq, \u043D\u0430 \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u043F\u0440\u043E\u0441\u043E\u0432: {n}, \u0441 \u0443\u0447\u0451\u0442\u043E\u043C \u0440\u0430\u0441\u0445\u043E\u0434\u0430 \u0432\u043D\u0435 \u041A\u0440\u044F\u043A\u043B\u0430",
+    "apikeys.sound": "\u0437\u0432\u0443\u043A\u0430: {used} \u0438\u0437 {of}",
+    "apikeys.tokens": "\u0441\u043B\u043E\u0432: {used} \u0442\u044B\u0441. \u0438\u0437 {of} \u0442\u044B\u0441. \u0442\u043E\u043A\u0435\u043D\u043E\u0432",
+    "apikeys.hours": "{h} \u0447 {m} \u043C\u0438\u043D",
+    "apikeys.minutes": "{m} \u043C\u0438\u043D",
+    "apikeys.leaves": "\u0422\u043E, \u0447\u0442\u043E \u0432\u044B \u0437\u0434\u0435\u0441\u044C \u0432\u043A\u043B\u044E\u0447\u0438\u043B\u0438, \u0443\u0445\u043E\u0434\u0438\u0442 \u0441 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0430: \u0437\u0432\u0443\u043A \u0432\u0430\u0448\u0438\u0445 \u0444\u0440\u0430\u0437 \u0438 \u0437\u0430\u043F\u0438\u0441\u0435\u0439 \u0438 \u0442\u0435\u043A\u0441\u0442\u044B, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432\u044B \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0438\u0442\u0435, \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u0442\u0435 \u0438\u043B\u0438 \u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0435 \u041A\u0440\u044F\u043A\u043B\u0443, \u0438 \u0441\u043A\u0440\u0438\u043D\u0448\u043E\u0442\u044B, \u0441 \u043A\u043E\u0442\u043E\u0440\u044B\u0445 \u0432\u044B \u0431\u0435\u0440\u0451\u0442\u0435 \u0442\u0435\u043A\u0441\u0442. Groq \u043D\u0435 \u043E\u0431\u0443\u0447\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u043D\u0438\u0445 \u0438 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E \u0438\u0445 \u043D\u0435 \u0445\u0440\u0430\u043D\u0438\u0442.",
+    "apikeys.privacy": "\u041F\u043E\u043B\u0438\u0442\u0438\u043A\u0430 \u043A\u043E\u043D\u0444\u0438\u0434\u0435\u043D\u0446\u0438\u0430\u043B\u044C\u043D\u043E\u0441\u0442\u0438 Groq",
+    "apikeys.safe": "\u041A\u0430\u0436\u0434\u044B\u0439 \u043A\u043B\u044E\u0447 \u0448\u0438\u0444\u0440\u0443\u0435\u0442\u0441\u044F \u0441\u0440\u0435\u0434\u0441\u0442\u0432\u0430\u043C\u0438 Windows \u043F\u043E\u0434 \u0432\u0430\u0448\u0443 \u0443\u0447\u0451\u0442\u043D\u0443\u044E \u0437\u0430\u043F\u0438\u0441\u044C \u0438 \u0445\u0440\u0430\u043D\u0438\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435; \u0432\u0438\u0434\u043D\u044B \u043B\u0438\u0448\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 \u0447\u0435\u0442\u044B\u0440\u0435 \u0437\u043D\u0430\u043A\u0430, \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u044B, \u043E\u0442\u0447\u0451\u0442\u044B \u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0435 \u0438 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u044B\u0435 \u043A\u043E\u043F\u0438\u0438 \u043E\u043D \u043D\u0435 \u043F\u043E\u043F\u0430\u0434\u0430\u0435\u0442. \u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u043F\u043E\u0434 \u0442\u043E\u0439 \u0436\u0435 \u0443\u0447\u0451\u0442\u043D\u043E\u0439 \u0437\u0430\u043F\u0438\u0441\u044C\u044E Windows \u0432\u0441\u0451 \u0436\u0435 \u043C\u043E\u0436\u0435\u0442 \u0435\u0433\u043E \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u044C, \u043A\u0430\u043A \u0438 \u043F\u0430\u0440\u043E\u043B\u0438 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430: \u0437\u0430\u0432\u0435\u0434\u0438\u0442\u0435 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u044B\u0439 \u043A\u043B\u044E\u0447 \u0434\u043B\u044F \u041A\u0440\u044F\u043A\u043B\u0430 \u0438 \u043F\u0440\u0438 \u0441\u043E\u043C\u043D\u0435\u043D\u0438\u0438 \u0443\u0434\u0430\u043B\u0438\u0442\u0435 \u0435\u0433\u043E \u043D\u0430 \u0441\u0430\u0439\u0442\u0435 Groq.",
+    "apikeys.hfWhat": "Hugging Face \u0434\u0430\u0451\u0442 \u043C\u043E\u0434\u0435\u043B\u044C, \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u0440\u0430\u0437\u043B\u0438\u0447\u0430\u0435\u0442 \u0433\u043E\u043B\u043E\u0441\u0430 (\xAB\u041A\u0442\u043E \u043A\u043E\u0433\u0434\u0430 \u0433\u043E\u0432\u043E\u0440\u0438\u043B\xBB). \u041A\u043B\u044E\u0447 \u043D\u0443\u0436\u0435\u043D \u043E\u0434\u0438\u043D \u0440\u0430\u0437, \u0447\u0442\u043E\u0431\u044B \u0435\u0451 \u0441\u043A\u0430\u0447\u0430\u0442\u044C; \u0432\u0430\u0448\u0438 \u0437\u0430\u043F\u0438\u0441\u0438 \u0442\u0443\u0434\u0430 \u043D\u0435 \u0443\u0445\u043E\u0434\u044F\u0442.",
+    "apikeys.hfNoEngine": "\u043F\u043E\u043D\u0430\u0434\u043E\u0431\u0438\u0442\u0441\u044F \u0434\u043B\u044F \xAB\u041A\u0442\u043E \u043A\u043E\u0433\u0434\u0430 \u0433\u043E\u0432\u043E\u0440\u0438\u043B\xBB, \u043A\u043E\u0433\u0434\u0430 \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D \u0434\u0432\u0438\u0436\u043E\u043A \u0440\u0435\u0447\u0438",
+    "apikeys.hfNoSpeakers": "\u043F\u043E\u043D\u0430\u0434\u043E\u0431\u0438\u0442\u0441\u044F, \u043A\u043E\u0433\u0434\u0430 \u0441\u043A\u0430\u0447\u0430\u043D\u0430 \u0447\u0430\u0441\u0442\u044C \xAB\u041A\u0442\u043E \u043A\u043E\u0433\u0434\u0430 \u0433\u043E\u0432\u043E\u0440\u0438\u043B\xBB",
+    "models.groq": "\u0427\u0435\u0440\u0435\u0437 Groq, \u043F\u043E \u0432\u0430\u0448\u0435\u043C\u0443 \u043A\u043B\u044E\u0447\u0443",
+    "models.groqNote": "\u0447\u0435\u0440\u0435\u0437 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442, \u0431\u044B\u0441\u0442\u0440\u043E \u043D\u0430 \u043B\u044E\u0431\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435, \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0441\u043A\u0430\u0447\u0438\u0432\u0430\u0442\u044C; {what} \u0443\u0445\u043E\u0434\u0438\u0442 \u0432 Groq",
+    "models.groqText": "\u0442\u0435\u043A\u0441\u0442",
+    "models.groqSound": "\u0437\u0432\u0443\u043A",
+    "models.groqNoKey": "\u043D\u0443\u0436\u0435\u043D \u0432\u0430\u0448 \u043A\u043B\u044E\u0447 Groq",
+    "models.addKey": "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u043A\u043B\u044E\u0447",
+    "models.groqSharesCheck": "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u0433\u043E, \u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u0438 \u043F\u0440\u0430\u0432\u043A\u0430 \u0442\u0435\u043A\u0441\u0442\u0430 \u0442\u043E\u0436\u0435 \u0438\u0434\u0443\u0442 \u0447\u0435\u0440\u0435\u0437 Groq",
+    "models.groqSharesTranslate": "\u0442\u043E\u0447\u043D\u044B\u0439 \u043F\u0435\u0440\u0435\u0432\u043E\u0434 \u0438 \u043F\u0440\u0430\u0432\u043A\u0430 \u0442\u0435\u043A\u0441\u0442\u0430 \u0442\u043E\u0436\u0435 \u0438\u0434\u0443\u0442 \u0447\u0435\u0440\u0435\u0437 Groq",
+    "models.groqFallback": "\u0411\u0435\u0437 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0430 \u0438\u043B\u0438 \u043F\u043E\u0441\u043B\u0435 \u043B\u0438\u043C\u0438\u0442\u0430 Groq \u041A\u0440\u044F\u043A\u043B \u0431\u0435\u0440\u0451\u0442 \u043C\u043E\u0434\u0435\u043B\u044C \u043D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435, \u0435\u0441\u043B\u0438 \u043E\u043D\u0430 \u0441\u043A\u0430\u0447\u0430\u043D\u0430; \u043F\u0435\u0440\u0435\u0432\u043E\u0434 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u0442 \u043D\u0430 {fast}.",
+    "models.speechGroqDictate": "Whisper large-v3 \u0432 Groq: \u043E\u043A\u043E\u043B\u043E \u0441\u0435\u043A\u0443\u043D\u0434\u044B \u043D\u0430 \u0444\u0440\u0430\u0437\u0443",
+    "models.speechGroqTranscribe": "Whisper turbo \u0432 Groq: \u0447\u0430\u0441 \u0437\u0430\u043F\u0438\u0441\u0438 \u0437\u0430 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043C\u0438\u043D\u0443\u0442, \u0434\u043E 8 \u0447\u0430\u0441\u043E\u0432 \u0432 \u0434\u0435\u043D\u044C",
+    "models.whereRuns": "\u0413\u0434\u0435 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442",
+    "models.runsHere": "\u041D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435",
+    "models.runsHereNote": "\u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0443\u0445\u043E\u0434\u0438\u0442 \u0441 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0430; \u043C\u043E\u0434\u0435\u043B\u044C \u043D\u0438\u0436\u0435 \u0441\u043A\u0430\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u043E\u0434\u0438\u043D \u0440\u0430\u0437",
+    "models.groqStandby": "\u0421\u0435\u0439\u0447\u0430\u0441 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 Groq: \u043C\u043E\u0434\u0435\u043B\u044C, \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u0430\u044F \u0437\u0434\u0435\u0441\u044C, \u0432\u043A\u043B\u044E\u0447\u0430\u0435\u0442\u0441\u044F, \u043A\u043E\u0433\u0434\u0430 Groq \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D.",
+    "settings.versionMoved": "\u043D\u043E\u0432\u044B\u0435 \u0432\u0435\u0440\u0441\u0438\u0438 \u0438 \u0443\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0435 \u043E \u043D\u0438\u0445 \u2014 \u0432 \u0440\u0430\u0437\u0434\u0435\u043B\u0435 \xAB\u041E \u041A\u0440\u044F\u043A\u043B\u0435\xBB",
+    "about.offlineGroq": "\u0432\u0430\u0448 \u0442\u0435\u043A\u0441\u0442 \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043D\u0430 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435, \u043A\u0440\u043E\u043C\u0435 \u0442\u043E\u0433\u043E, \u0447\u0442\u043E \u0432\u044B \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u043B\u0438 \u0432 Groq \u0441\u0432\u043E\u0438\u043C \u043A\u043B\u044E\u0447\u043E\u043C (\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u203A \u041A\u043B\u044E\u0447\u0438 \u0441\u0435\u0440\u0432\u0438\u0441\u043E\u0432)",
     "listen.tryKey": "\u0412\u044B\u0434\u0435\u043B\u0438\u0442\u0435 \u044D\u0442\u043E\u0442 \u0442\u0435\u043A\u0441\u0442 \u0438 {how}.",
     "listen.tryTwice": "\u0412\u044B\u0434\u0435\u043B\u0438\u0442\u0435 \u044D\u0442\u043E\u0442 \u0442\u0435\u043A\u0441\u0442 \u0438 \u0434\u0432\u0430\u0436\u0434\u044B \u043D\u0430\u0436\u043C\u0438\u0442\u0435 Ctrl + C.",
     "listen.tryNone": "\u0417\u0430\u0434\u0430\u0439\u0442\u0435 \u043A\u043B\u0430\u0432\u0438\u0448\u0443 \u0432\u044B\u0448\u0435 (\u043C\u043E\u0436\u043D\u043E Ctrl + C \u0434\u0432\u0430\u0436\u0434\u044B), \u0437\u0430\u0442\u0435\u043C \u0432\u044B\u0434\u0435\u043B\u0438\u0442\u0435 \u044D\u0442\u043E\u0442 \u0442\u0435\u043A\u0441\u0442.",
@@ -2817,6 +3061,22 @@
     "dictate.panel": "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u043F\u0430\u043D\u0435\u043B\u044C \u043F\u0440\u0438 \u0434\u0438\u043A\u0442\u043E\u0432\u043A\u0435",
     "dictate.panelNote": "\u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u043E: \u0437\u0430\u043F\u0438\u0441\u044C \u0432\u0438\u0434\u043D\u0430 \u043F\u043E \u043A\u0440\u0430\u0441\u043D\u043E\u0439 \u0442\u043E\u0447\u043A\u0435 \u0432 \u0442\u0440\u0435\u0435, \u043E\u0448\u0438\u0431\u043A\u0438 \u0432\u0441\u0451 \u0440\u0430\u0432\u043D\u043E \u043F\u043E\u044F\u0432\u044F\u0442\u0441\u044F \u043D\u0430 \u043F\u0430\u0440\u0443 \u0441\u0435\u043A\u0443\u043D\u0434",
     "dictate.escNote": "\u0421\u043B\u043E\u0432\u0430 \u043F\u043E\u044F\u0432\u043B\u044F\u044E\u0442\u0441\u044F, \u043F\u043E\u043A\u0430 \u0432\u044B \u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0435. Esc \u043E\u0442\u043C\u0435\u043D\u044F\u0435\u0442 \u0444\u0440\u0430\u0437\u0443, \u043F\u043E\u043A\u0430 \u0435\u0451 \u043D\u0435 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043B\u0438.",
+    "dictate.sound": "\u0417\u0432\u0443\u043A\u0438 \u0432 \u043D\u0430\u0447\u0430\u043B\u0435 \u0438 \u043A\u043E\u0433\u0434\u0430 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D",
+    "dictate.soundNote": "\u0442\u0438\u0445\u0430\u044F \u043D\u043E\u0442\u0430, \u043A\u043E\u0433\u0434\u0430 \u043D\u0430\u0447\u0430\u043B\u0430\u0441\u044C \u0437\u0430\u043F\u0438\u0441\u044C, \u0438 \u0435\u0449\u0451 \u043E\u0434\u043D\u0430, \u043A\u043E\u0433\u0434\u0430 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D: \u0447\u0442\u043E\u0431\u044B \u043D\u0435 \u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u043D\u0430 \u044D\u043A\u0440\u0430\u043D",
+    "typed.title": "\u041D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043D\u044B\u0439 \u0442\u0435\u043A\u0441\u0442",
+    "typed.titleNote": "\u043F\u0440\u043E\u0431\u0435\u043B \u043F\u043E\u0441\u043B\u0435 \u0444\u0440\u0430\u0437\u044B, \u0442\u043E\u0447\u043A\u0430 \u0432 \u043A\u043E\u043D\u0446\u0435, \u0431\u0443\u043A\u0432\u0430 \u0451",
+    "typed.space": "\u041F\u0440\u043E\u0431\u0435\u043B \u043F\u043E\u0441\u043B\u0435 \u043A\u0430\u0436\u0434\u043E\u0439 \u0444\u0440\u0430\u0437\u044B",
+    "typed.spaceNote": "\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u0444\u0440\u0430\u0437\u0430 \u0438\u043B\u0438 \u0441\u043B\u043E\u0432\u043E \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u044E\u0442\u0441\u044F \u0431\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B\u0430, \u043D\u0430\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0440\u0443\u043A\u0430\u043C\u0438",
+    "typed.endStop": "\u0422\u043E\u0447\u043A\u0430 \u043F\u043E\u0441\u043B\u0435 \u043E\u0434\u043D\u043E\u0433\u043E \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u044F",
+    "typed.endStopNote": "\u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u043E: \xAB\u0411\u0443\u0434\u0443 \u0432 \u043F\u044F\u0442\u044C.\xBB \u043F\u0435\u0447\u0430\u0442\u0430\u0435\u0442\u0441\u044F \u043A\u0430\u043A \xAB\u0411\u0443\u0434\u0443 \u0432 \u043F\u044F\u0442\u044C\xBB; \u0434\u0432\u0430 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u044F \u0438 \u0431\u043E\u043B\u044C\u0448\u0435 \u0442\u043E\u0447\u043A\u0443 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u044E\u0442, \u043A\u0430\u043A \u0438 ? \u0438 !",
+    "typed.yo": "\u0411\u0443\u043A\u0432\u0430 \u0451 \u0432 \u0440\u0443\u0441\u0441\u043A\u043E\u043C \u0442\u0435\u043A\u0441\u0442\u0435",
+    "typed.yoHeard": "\u041A\u0430\u043A \u0443\u0441\u043B\u044B\u0448\u0430\u043D\u043E",
+    "typed.yoHeardNote": "\u043A\u0430\u043A \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043C\u043E\u0434\u0435\u043B\u044C \u0440\u0435\u0447\u0438; \u043E\u043D\u0430 \u0441\u0442\u0430\u0432\u0438\u0442 \u0451 \u0440\u0435\u0434\u043A\u043E",
+    "typed.yoAlways": "\u0412\u0441\u0435\u0433\u0434\u0430",
+    "typed.yoAlwaysNote": "\u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u0432\u0435\u0437\u0434\u0435, \u0433\u0434\u0435 \u0441\u043B\u043E\u0432\u043E \u043F\u0438\u0448\u0435\u0442\u0441\u044F \u0441 \u0451 \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u0434\u043D\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C: \u0435\u0449\u0451, \u0435\u0451, \u0438\u0434\u0451\u0442. \xAB\u0412\u0441\u0435\xBB \u0438 \xAB\u0432\u0441\u0451\xBB \u043E\u0441\u0442\u0430\u044E\u0442\u0441\u044F \u043A\u0430\u043A \u0443\u0441\u043B\u044B\u0448\u0430\u043D\u043E",
+    "typed.yoNever": "\u041D\u0438\u043A\u043E\u0433\u0434\u0430",
+    "typed.yoNeverNote": "\u043A\u0430\u0436\u0434\u0430\u044F \u0451 \u043F\u0435\u0447\u0430\u0442\u0430\u0435\u0442\u0441\u044F \u043A\u0430\u043A \u0435",
+    "typed.exact": "\u042D\u0442\u0438 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0442\u043E\u0447\u043D\u044B\u0435 \u0438 \u043C\u0433\u043D\u043E\u0432\u0435\u043D\u043D\u044B\u0435: \u0431\u0435\u0437 \u043C\u043E\u0434\u0435\u043B\u0438, \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u043E \u043D\u0430 \u043B\u044E\u0431\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435. \u041E\u043D\u0438 \u043F\u0440\u0438\u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F \u0442\u0435\u043A\u0441\u0442\u0430 \u0438 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430.",
     "dictate.privacy": "\u0420\u0435\u0447\u044C \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0451\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435; \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0438\u043A\u0443\u0434\u0430 \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442\u0441\u044F.",
     "vocab.wordPlaceholder": "\u0421\u043B\u043E\u0432\u043E",
     "vocab.wordAria": "\u0418\u043C\u044F \u0438\u043B\u0438 \u0442\u0435\u0440\u043C\u0438\u043D",
@@ -3050,6 +3310,7 @@
     "storage.keep": "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C",
     "storage.usedBy": "\u043D\u0443\u0436\u043D\u043E \u0434\u043B\u044F: {users}",
     "storage.reserve": "\u0437\u0430\u043F\u0430\u0441 \u0434\u043B\u044F: {reserve}, \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440\u0435, \u0435\u0441\u043B\u0438 \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u043F\u043E\u0434\u0432\u0435\u0434\u0451\u0442",
+    "storage.standby": "\u0441\u0435\u0439\u0447\u0430\u0441 \u044D\u0442\u043E \u0434\u0435\u043B\u0430\u0435\u0442 Groq; \u043B\u0435\u0436\u0438\u0442 \u043F\u0440\u043E \u0437\u0430\u043F\u0430\u0441, \u0435\u0441\u043B\u0438 Groq \u0431\u0443\u0434\u0435\u0442 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D",
     "storage.userTranslate": "\u041F\u0435\u0440\u0435\u0432\u043E\u0434",
     "storage.userListen": "\u041F\u0435\u0440\u0435\u0432\u043E\u0434",
     "storage.userCheck": "\u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439",
@@ -3164,7 +3425,18 @@
     "report.computerNote": "\u041F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440, \u043F\u0430\u043C\u044F\u0442\u044C, \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430, \u0432\u0435\u0440\u0441\u0438\u0438 Windows \u0438 \u041A\u0440\u044F\u043A\u043B\u0430",
     "report.settings": "\u0412\u0430\u0448\u0438 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438",
     "report.settingsNote": "\u0412\u0430\u0448\u0438 \u0441\u043F\u0438\u0441\u043A\u0438 \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0441\u0447\u0438\u0442\u0430\u043D\u044B: \u0441\u043B\u043E\u0432\u0430 \xAB\u041D\u0435 \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C\xBB, \u0438\u043C\u0435\u043D\u0430 \u0438 \u0442\u0435\u0440\u043C\u0438\u043D\u044B, \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B",
-    "report.never": "\u041D\u0438\u043A\u043E\u0433\u0434\u0430 \u043D\u0435 \u043F\u043E\u043F\u0430\u0434\u0430\u044E\u0442: \u0432\u0430\u0448\u0438 \u0442\u0435\u043A\u0441\u0442\u044B, \u0441\u043B\u043E\u0432\u0430, \u043E\u0448\u0438\u0431\u043A\u0438, \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u044B, \u0444\u0440\u0430\u0437\u044B, \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0438 \u0438\u043B\u0438 \u043A\u043B\u044E\u0447 Hugging Face. \u0412\u0430\u0448\u0435 \u0438\u043C\u044F \u0432 Windows \u0438 \u0438\u043C\u044F \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0430 \u0437\u0430\u043C\u0435\u043D\u0435\u043D\u044B. \u041D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442\u0441\u044F, \u043F\u043E\u043A\u0430 \u0432\u044B \u0441\u0430\u043C\u0438 \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u0435.",
+    "report.capture": "\u041F\u0440\u043E\u0431\u043B\u0435\u043C\u0430 \u0441 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043D\u044B\u043C \u0442\u0435\u043A\u0441\u0442\u043E\u043C",
+    "report.captureOn": "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u0434\u0438\u043A\u0442\u043E\u0432\u043A\u0443 \u0434\u043B\u044F \u043E\u0442\u0447\u0451\u0442\u0430",
+    "report.captureNote": "\u041A\u0440\u044F\u043A\u043B \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442 \u0437\u0432\u0443\u043A \u0438 \u0442\u0435\u043A\u0441\u0442 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0445 \u0444\u0440\u0430\u0437, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432\u044B \u043F\u0440\u043E\u0434\u0438\u043A\u0442\u0443\u0435\u0442\u0435 (\u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 {n}), \u043D\u0430 \u044D\u0442\u043E\u043C \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0435, \u0438 \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0441\u0430\u043C. \u041E\u043D\u0438 \u043F\u043E\u043F\u0430\u0434\u0443\u0442 \u0432 \u0444\u0430\u0439\u043B \u043E\u0442\u0447\u0451\u0442\u0430 \u043D\u0438\u0436\u0435.",
+    "report.captureLeft": "\u0418\u0434\u0451\u0442 \u0437\u0430\u043F\u0438\u0441\u044C: \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u0444\u0440\u0430\u0437 \u2014 {n}. \u041A\u0430\u0436\u0434\u0443\u044E \u0442\u0430\u043A\u0443\u044E \u0444\u0440\u0430\u0437\u0443 \u043E\u0442\u043C\u0435\u0447\u0430\u0435\u0442 \u0437\u043D\u0430\u0447\u043E\u043A \u0436\u0443\u043A\u0430 \u0432 \u043F\u0430\u043D\u0435\u043B\u0438 \u0434\u0438\u043A\u0442\u043E\u0432\u043A\u0438.",
+    "report.captureFull": "\u0421\u043F\u0438\u0441\u043E\u043A \u0437\u0430\u043F\u043E\u043B\u043D\u0435\u043D. \u0423\u0434\u0430\u043B\u0438\u0442\u0435 \u0447\u0430\u0441\u0442\u044C \u0444\u0440\u0430\u0437, \u0447\u0442\u043E\u0431\u044B \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u043D\u043E\u0432\u044B\u0435.",
+    "report.captured": "\u0417\u0430\u043F\u0438\u0441\u0430\u043D\u043D\u044B\u0435 \u0444\u0440\u0430\u0437\u044B",
+    "report.capturedNote": "\u041E\u043D\u0438 \u043F\u043E\u043F\u0430\u0434\u0443\u0442 \u0432 \u0444\u0430\u0439\u043B \u043E\u0442\u0447\u0451\u0442\u0430 \u0432\u043C\u0435\u0441\u0442\u0435 \u0441\u043E \u0437\u0432\u0443\u043A\u043E\u043C. \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u0444\u0440\u0430\u0437\u0443, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0441\u043B\u0443\u0448\u0430\u0442\u044C; \u0443\u0434\u0430\u043B\u0438\u0442\u0435 \u0442\u0435, \u0447\u0442\u043E \u043D\u0435 \u0445\u043E\u0442\u0438\u0442\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C.",
+    "report.captureNothing": "\u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043E",
+    "report.captureHeard": "\u0420\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u043D\u043E: {heard}",
+    "report.captureClear": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0432\u0441\u0435",
+    "report.captureSeconds": "{n} \u0441",
+    "report.never": "\u041D\u0438\u043A\u043E\u0433\u0434\u0430 \u043D\u0435 \u043F\u043E\u043F\u0430\u0434\u0430\u044E\u0442: \u0432\u0430\u0448\u0438 \u0442\u0435\u043A\u0441\u0442\u044B, \u0441\u043B\u043E\u0432\u0430, \u043E\u0448\u0438\u0431\u043A\u0438, \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u044B, \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0438 \u0438\u043B\u0438 \u043A\u043B\u044E\u0447 Hugging Face, \u0430 \u0442\u0430\u043A\u0436\u0435 \u0432\u0441\u0451, \u0447\u0442\u043E \u0432\u044B \u0434\u0438\u043A\u0442\u043E\u0432\u0430\u043B\u0438, \u043A\u0440\u043E\u043C\u0435 \u0444\u0440\u0430\u0437, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432\u044B \u0441\u0430\u043C\u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u043B\u0438 \u0434\u043B\u044F \u043E\u0442\u0447\u0451\u0442\u0430 \u0432\u044B\u0448\u0435. \u0412\u0430\u0448\u0435 \u0438\u043C\u044F \u0432 Windows \u0438 \u0438\u043C\u044F \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0430 \u0437\u0430\u043C\u0435\u043D\u0435\u043D\u044B. \u041D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442\u0441\u044F, \u043F\u043E\u043A\u0430 \u0432\u044B \u0441\u0430\u043C\u0438 \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u0435.",
     "report.folder": "\u041F\u0430\u043F\u043A\u0430 \u041A\u0440\u044F\u043A\u043B\u0430",
     "report.folderNote": "\u0413\u0434\u0435 \u043B\u0435\u0436\u0430\u0442 \u0436\u0443\u0440\u043D\u0430\u043B\u044B, \u0447\u0442\u043E\u0431\u044B \u043F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0438\u0445 \u0441\u0430\u043C\u043E\u0441\u0442\u043E\u044F\u0442\u0435\u043B\u044C\u043D\u043E",
     "report.stopped": "\u0415\u0441\u043B\u0438 \u0447\u0442\u043E-\u0442\u043E \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043B\u043E \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C",
@@ -3347,6 +3619,8 @@
     "card.voiceReady": "\u041F\u0440\u0438\u0440\u043E\u0434\u043D\u0438\u0439 \u0433\u043E\u043B\u043E\u0441 \u0433\u043E\u0442\u043E\u0432\u0438\u0439. \u041D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \xAB\u0421\u043B\u0443\u0445\u0430\u0442\u0438\xBB, \u0449\u043E\u0431 \u043F\u043E\u0447\u0443\u0442\u0438 \u0439\u043E\u0433\u043E.",
     "card.busyCard": "\u0412\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u0439\u043D\u044F\u0442\u0430, \u0442\u043E\u043C\u0443 \u0446\u0435 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0432 \xAB\u0428\u0432\u0438\u0434\u043A\u0438\u0439\xBB. \xAB{level}\xBB \u043F\u043E\u0432\u0435\u0440\u043D\u0435\u0442\u044C\u0441\u044F, \u0449\u043E\u0439\u043D\u043E \u0432\u043E\u043D\u0430 \u0437\u0432\u0456\u043B\u044C\u043D\u0438\u0442\u044C\u0441\u044F.",
     "card.busyProcessor": "\u041F\u0440\u043E\u0446\u0435\u0441\u043E\u0440 \u0437\u0430\u0439\u043D\u044F\u0442\u0438\u0439, \u0442\u043E\u043C\u0443 \u0446\u0435 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0432 \xAB\u0428\u0432\u0438\u0434\u043A\u0438\u0439\xBB. \xAB{level}\xBB \u043F\u043E\u0432\u0435\u0440\u043D\u0435\u0442\u044C\u0441\u044F, \u0449\u043E\u0439\u043D\u043E \u0432\u0456\u043D \u0437\u0432\u0456\u043B\u044C\u043D\u0438\u0442\u044C\u0441\u044F.",
+    "card.busyRemote": "Groq \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432 (\u043D\u0435\u043C\u0430\u0454 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u0430\u0431\u043E \u043B\u0456\u043C\u0456\u0442 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E), \u0442\u043E\u043C\u0443 \u0446\u0435 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0432 \xAB\u0428\u0432\u0438\u0434\u043A\u0438\u0439\xBB.",
+    "card.readByGroq": "\u0422\u0435\u043A\u0441\u0442 \u043D\u0430 \u0446\u0456\u0439 \u043A\u0430\u0440\u0442\u0438\u043D\u0446\u0456 \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0432 Groq",
     "card.useAnyway": "\u0423\u0441\u0435 \u043E\u0434\u043D\u043E \xAB{level}\xBB",
     "card.hideTranslation": "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434 ({lang})",
     "card.showTranslation": "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434 ({lang})",
@@ -3498,7 +3772,21 @@
     "dict.engineDown": "\u0420\u0443\u0448\u0456\u0439 \u043C\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u043D\u0435 \u0437\u043C\u0456\u0433 \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0438\u0441\u044F. \u041D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u043F\u0440\u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0443.",
     "dict.fastCard": "\u041D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u043E \xAB\u0428\u0432\u0438\u0434\u043A\u0438\u043C\xBB: \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u0439\u043D\u044F\u0442\u0430",
     "dict.fastProcessor": "\u041D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u043E \xAB\u0428\u0432\u0438\u0434\u043A\u0438\u043C\xBB: \u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440 \u0437\u0430\u0439\u043D\u044F\u0442\u0438\u0439",
+    "dict.fastRemote": "\u041D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u043E \xAB\u0428\u0432\u0438\u0434\u043A\u0438\u043C\xBB: Groq \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432",
+    "dict.byGroq": "\u0420\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0454 Groq \xB7 {model}, \u0437\u0430 \u0432\u0430\u0448\u0438\u043C \u043A\u043B\u044E\u0447\u0435\u043C: \u0437\u0432\u0443\u043A \u0456\u0434\u0435 \u0437 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0430",
+    "dict.byGroqPauses": "\u0421\u043B\u0443\u0445\u0430\u044E\u2026 Groq \u0437\u0430\u043F\u0438\u0441\u0443\u0454 \u043D\u0430 \u043A\u043E\u0436\u043D\u0456\u0439 \u043F\u0430\u0443\u0437\u0456",
+    "dict.remoteHere": "Groq \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432, \u0442\u043E\u043C\u0443 \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0432 \u0446\u0435\u0439 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440",
+    "dict.remoteAgain": "\u041D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u043A\u043B\u0430\u0432\u0456\u0448\u0443 \xAB\u043D\u0430\u0434\u0440\u0443\u043A\u0443\u0432\u0430\u0442\u0438 \u0449\u0435 \u0440\u0430\u0437\xBB, \u0449\u043E\u0431 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u0437\u043D\u043E\u0432\u0443.",
+    "dict.editRemote": "\u041D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u043E \u044F\u043A \u0441\u043A\u0430\u0437\u0430\u043D\u043E: Groq \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432",
+    "remote.key": "Groq \u043D\u0435 \u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u0432\u0430\u0448 \u043A\u043B\u044E\u0447.",
+    "remote.nokey": "\u041A\u043B\u044E\u0447 Groq \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.",
+    "remote.limit": "\u0411\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u0438\u0439 \u043B\u0456\u043C\u0456\u0442 Groq \u043F\u043E\u043A\u0438 \u0432\u0438\u0447\u0435\u0440\u043F\u0430\u043D\u043E.",
+    "remote.offline": "\u041D\u0435\u043C\u0430\u0454 \u0437\u0432\u2019\u044F\u0437\u043A\u0443 \u0437 Groq.",
+    "remote.timeout": "Groq \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432 \u0432\u0447\u0430\u0441\u043D\u043E.",
+    "remote.server": "\u0423 Groq \u043F\u043E\u043C\u0438\u043B\u043A\u0430.",
+    "remote.format": "\u041C\u043E\u0434\u0435\u043B\u044C Groq \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u043B\u0430 \u043D\u0435 \u0432 \u0442\u043E\u043C\u0443 \u0432\u0438\u0433\u043B\u044F\u0434\u0456.",
     "dict.tuck": "\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u0432 \u0442\u0440\u0435\u0439: \u0437\u0430\u043F\u0438\u0441 \u0442\u0440\u0438\u0432\u0430\u0454",
+    "dict.kept": "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u043B\u044F \u0437\u0432\u0456\u0442\u0443 \u043F\u0440\u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0443",
     "dict.editing": "\u0420\u0435\u0434\u0430\u0433\u0443\u044E\u2026",
     "dict.editNoModel": "\u041D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u043E \u044F\u043A \u0441\u043A\u0430\u0437\u0430\u043D\u043E: \u043C\u043E\u0434\u0435\u043B\u044C \u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u0430",
     "dict.editCard": "\u041D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u043E \u044F\u043A \u0441\u043A\u0430\u0437\u0430\u043D\u043E: \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u0439\u043D\u044F\u0442\u0430",
@@ -3529,6 +3817,7 @@
     "edit.model": "\u041C\u043E\u0434\u0435\u043B\u044C",
     "badge.fastCard": "\u0428\u0432\u0438\u0434\u043A\u0438\u0439 \xB7 \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u0439\u043D\u044F\u0442\u0430",
     "badge.fastProcessor": "\u0428\u0432\u0438\u0434\u043A\u0438\u0439 \xB7 \u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440 \u0437\u0430\u0439\u043D\u044F\u0442\u0438\u0439",
+    "badge.fastRemote": "\u0428\u0432\u0438\u0434\u043A\u0438\u0439 \xB7 Groq \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432",
     "settings.uiLanguage": "\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443",
     "settings.uiLanguageNote": "\u043C\u0435\u043D\u044E \u0439 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u041A\u0440\u044F\u043A\u043B\u0430; \u0442\u0435, \u0447\u043E\u0433\u043E \u0432\u0456\u043D \u043D\u0430\u0432\u0447\u0430\u0454, \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0430\u043D\u0433\u043B\u0456\u0439\u0441\u044C\u043A\u043E\u044E",
     "ui.recommended": "\u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u043E\u0432\u0430\u043D\u043E",
@@ -3644,6 +3933,16 @@
     "setup.why.speakersSlow": "\u043C\u043E\u0436\u043B\u0438\u0432\u043E, \u0430\u043B\u0435 \u0442\u0443\u0442 \u043F\u043E\u0432\u0456\u043B\u044C\u043D\u043E: \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440\u0456 \u0433\u043E\u043B\u043E\u0441\u0438 \u0433\u043E\u0434\u0438\u043D\u0438 \u0437\u0430\u043F\u0438\u0441\u0443 \u0437\u0430\u0439\u043C\u0430\u044E\u0442\u044C \u2248{time}",
     "setup.why.startWithWindows": "\u043A\u043B\u0430\u0432\u0456\u0448\u0456 \u043F\u0440\u0430\u0446\u044E\u044E\u0442\u044C \u0437 \u043F\u0435\u0440\u0448\u043E\u0457 \u0445\u0432\u0438\u043B\u0438\u043D\u0438",
     "setup.why.printScreen": "\u0435\u043A\u0440\u0430\u043D \u0437\u0430\u0432\u043C\u0438\u0440\u0430\u0454, \u043E\u0431\u0432\u043E\u0434\u0438\u0442\u0435 \u0447\u0430\u0441\u0442\u0438\u043D\u0443, \u043C\u0430\u043B\u044E\u0454\u0442\u0435, Ctrl+C",
+    "setup.why.local": "\u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0432\u043C\u0456\u0449\u0443\u0454 \u043C\u043E\u0434\u0435\u043B\u0456 \u0446\u0456\u043B\u043A\u043E\u043C, \u0442\u043E\u043C\u0443 \u0442\u0443\u0442 \u0432\u043E\u043D\u0438 \u0448\u0432\u0438\u0434\u043A\u0456",
+    "setup.why.groq": "\u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u043D\u0435 \u0432\u043C\u0456\u0449\u0443\u0454 \u043C\u043E\u0432\u043D\u0443 \u043C\u043E\u0434\u0435\u043B\u044C \u0446\u0456\u043B\u043A\u043E\u043C, \u0442\u043E\u043C\u0443 Groq \u0442\u0443\u0442 \u043D\u0430\u0431\u0430\u0433\u0430\u0442\u043E \u0448\u0432\u0438\u0434\u0448\u0438\u0439",
+    "setup.runWhere": "\u0414\u0435 \u043F\u0440\u0430\u0446\u044E\u044E\u0442\u044C \u043C\u043E\u0434\u0435\u043B\u0456",
+    "setup.runHere": "\u041D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456",
+    "setup.runHereNote": "\u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0434\u043E 12 \u0413\u0411, \u0448\u0432\u0438\u0434\u043A\u043E \u0437 \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u043E\u044E \u0432\u0456\u0434 4 \u0413\u0411; \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0439\u0434\u0435 \u0437 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0430",
+    "setup.runGroq": "\u0427\u0435\u0440\u0435\u0437 Groq, \u0437\u0430 \u0432\u0430\u0448\u0438\u043C \u043A\u043B\u044E\u0447\u0435\u043C",
+    "setup.runGroqNote": "\u0448\u0432\u0438\u0434\u043A\u043E \u043D\u0430 \u0431\u0443\u0434\u044C-\u044F\u043A\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456, \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u0432\u0430\u0442\u0438 \u043C\u0430\u0439\u0436\u0435 \u043D\u0456\u0447\u043E\u0433\u043E; \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442, \u0456 \u0442\u0435, \u0449\u043E \u0432\u0438 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u0442\u0435, \u0456\u0434\u0435 \u0432 Groq. \u0411\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E\u0433\u043E \u0442\u0430\u0440\u0438\u0444\u0443 Groq \u0432\u0438\u0441\u0442\u0430\u0447\u0430\u0454 \u043D\u0430 \u0440\u043E\u0431\u043E\u0447\u0438\u0439 \u0434\u0435\u043D\u044C",
+    "setup.groqNeedsKey": "\u0412\u0441\u0442\u0430\u0432\u0442\u0435 \u043A\u043B\u044E\u0447, \u0449\u043E\u0431 \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438, \u0430\u0431\u043E \u0432\u0438\u0431\u0435\u0440\u0456\u0442\u044C \xAB\u041D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456\xBB. \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u043C\u043E\u0436\u043D\u0430 \u0431\u0443\u0434\u044C-\u043A\u043E\u043B\u0438 \u0432 \xAB\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u203A \u041A\u043B\u044E\u0447\u0456 \u0441\u0435\u0440\u0432\u0456\u0441\u0456\u0432\xBB.",
+    "setup.dictateGroq": "\u0447\u0435\u0440\u0435\u0437 Groq: \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u0432\u0430\u0442\u0438",
+    "setup.transcribeGroq": "\u0447\u0435\u0440\u0435\u0437 Groq; \u0440\u0443\u0448\u0456\u0439 \u043C\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0440\u0456\u0436\u0435 \u0456 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454 \u0437\u0430\u043F\u0438\u0441\u0438 \u0442\u0443\u0442, {engine}",
     "setup.item.translator": "\u041F\u0435\u0440\u0435\u043A\u043B\u0430\u0434\u0430\u0447 {pair}",
     "setup.item.translatorNote": "Firefox Translations, \u043E\u0434\u0438\u043D \u0440\u0430\u0437 \xB7 \u0434\u0430\u043B\u0456 \u0431\u0435\u0437 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443",
     "setup.item.dictionary": "\u0421\u043B\u043E\u0432\u043D\u0438\u043A",
@@ -3866,6 +4165,8 @@
     "tr.failed": "\u043F\u043E\u043C\u0438\u043B\u043A\u0430",
     "tr.recordingChip": "\u0437\u0430\u043F\u0438\u0441",
     "tr.waiting": "\u0443 \u0447\u0435\u0440\u0437\u0456",
+    "tr.notifyReady": "\u0420\u043E\u0437\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0430 \u0433\u043E\u0442\u043E\u0432\u0430",
+    "tr.notifyFailed": "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0440\u043E\u0437\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0443",
     "tr.opening": "\u0412\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u044E\u2026",
     "tr.rename": "\u041F\u0435\u0440\u0435\u0439\u043C\u0435\u043D\u0443\u0432\u0430\u0442\u0438",
     "tr.couldNot": "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0440\u043E\u0437\u0448\u0438\u0444\u0440\u0443\u0432\u0430\u0442\u0438",
@@ -3874,6 +4175,14 @@
     "tr.background": "\u0412\u0456\u043A\u043D\u043E \u043C\u043E\u0436\u043D\u0430 \u0437\u0430\u043A\u0440\u0438\u0442\u0438: \u0440\u043E\u0431\u043E\u0442\u0430 \u0442\u0440\u0438\u0432\u0430\u0442\u0438\u043C\u0435 \u0443 \u0444\u043E\u043D\u0456.",
     "tr.busyLighter": "\u0412\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u0439\u043D\u044F\u0442\u0430 \u0456\u043D\u0448\u0438\u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430\u043C\u0438, \u0442\u043E\u043C\u0443 \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0454 \u043F\u043E\u043B\u0435\u0433\u0448\u0435\u043D\u0430 \u043C\u043E\u0434\u0435\u043B\u044C ({model}).",
     "tr.busyProcessor": "\u0412\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0437\u0430\u0439\u043D\u044F\u0442\u0430 \u0456\u043D\u0448\u0438\u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430\u043C\u0438, \u0442\u043E\u043C\u0443 \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0454 \u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440: \u0446\u0435 \u0434\u043E\u0432\u0448\u0435.",
+    "tr.waitingGroq": "\u0427\u0435\u043A\u0430\u044E, \u043A\u043E\u043B\u0438 \u0432 Groq \u0437\u043D\u043E\u0432\u0443 \u0431\u0443\u0434\u0435 \u043C\u0456\u0441\u0446\u0435\u2026",
+    "tr.goesOnAt": "\u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u044C\u0441\u044F \u043E {time}",
+    "tr.goesOnSoon": "\u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u044C\u0441\u044F \u0437\u0430 \u0445\u0432\u0438\u043B\u0438\u043D\u0443",
+    "tr.byGroqNow": "\u0420\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0454 Groq \u0437\u0430 \u0432\u0430\u0448\u0438\u043C \u043A\u043B\u044E\u0447\u0435\u043C: \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u0442\u044C\u0441\u044F \u043B\u0438\u0448\u0435 \u043C\u043E\u0432\u043B\u0435\u043D\u043D\u044F.",
+    "tr.groqOffline": "Groq \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432, \u0442\u043E\u043C\u0443 \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0454 \u0446\u0435\u0439 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440.",
+    "tr.byGroqDone": "\u0420\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u043D\u043E \u0432 Groq \u0437\u0430 \u0432\u0430\u0448\u0438\u043C \u043A\u043B\u044E\u0447\u0435\u043C.",
+    "tr.namesFromMeet": "\u0406\u043C\u0435\u043D\u0430 \u0432\u0437\u044F\u0442\u043E \u0456\u0437 \u0441\u0430\u043C\u043E\u0433\u043E Google Meet, \u0437 \u0439\u043E\u0433\u043E \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432 \u043F\u0456\u0434 \u0447\u0430\u0441 \u0434\u0437\u0432\u0456\u043D\u043A\u0430.",
+    "tr.groqOfflineDone": "Groq \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0432, \u0442\u043E\u043C\u0443 \u0446\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043C\u043E\u0434\u0435\u043B\u044C {model} \u043D\u0430 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456.",
     "tr.lighterDone": "\u0412\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u0431\u0443\u043B\u0430 \u0437\u0430\u0439\u043D\u044F\u0442\u0430, \u0442\u043E\u043C\u0443 \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043F\u043E\u043B\u0435\u0433\u0448\u0435\u043D\u0430 \u043C\u043E\u0434\u0435\u043B\u044C ({model}).",
     "tr.lighterAgain": "\u041A\u043E\u043B\u0438 \u043A\u0430\u0440\u0442\u0430 \u0437\u0432\u0456\u043B\u044C\u043D\u0438\u0442\u044C\u0441\u044F, \u0440\u043E\u0437\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0443 \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0438 \u0442\u043E\u0447\u043D\u043E\u044E \u043C\u043E\u0434\u0435\u043B\u043B\u044E.",
     "tr.startsAfter": "\u041F\u043E\u0447\u043D\u0435\u0442\u044C\u0441\u044F, \u043A\u043E\u043B\u0438 \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C\u0441\u044F \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044F.",
@@ -4150,6 +4459,77 @@
     "keys.backToAria": "{label}: \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 {key}",
     "keys.takenProgram": "\u0417\u0430\u0439\u043D\u044F\u0442\u043E \u0456\u043D\u0448\u043E\u044E \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043E\u044E; \u0432\u0438\u0431\u0435\u0440\u0456\u0442\u044C \u0456\u043D\u0448\u0435.",
     "keys.set": "\u0417\u0430\u0434\u0430\u0442\u0438",
+    "page.keys": "\u041A\u043B\u044E\u0447\u0456 \u0441\u0435\u0440\u0432\u0456\u0441\u0456\u0432",
+    "apikeys.navNote": "Groq \u0456 Hugging Face: \u0434\u043B\u044F \u0447\u043E\u0433\u043E \u043A\u043E\u0436\u0435\u043D \u043A\u043B\u044E\u0447 \u0456 \u0449\u043E \u0432\u0456\u043D \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454",
+    "apikeys.lineNote": "\u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F \u0440\u0430\u0437\u043E\u043C \u0437 \u0456\u043D\u0448\u0438\u043C\u0438 \u043A\u043B\u044E\u0447\u0430\u043C\u0438 \u0432 \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445",
+    "apikeys.groqWhat": "\u0417 \u0432\u0430\u0448\u0438\u043C \u043A\u043B\u044E\u0447\u0435\u043C Groq \u0439\u043E\u0433\u043E \u0441\u0435\u0440\u0432\u0435\u0440\u0438 \u0440\u043E\u0431\u043B\u044F\u0442\u044C \u0442\u0435 \u0441\u0430\u043C\u0435, \u0449\u043E \u043C\u043E\u0434\u0435\u043B\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456: \u0448\u0432\u0438\u0434\u0448\u0435, \u0431\u0435\u0437 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u0456 \u0431\u0435\u0437 \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0438. \u0412\u0438 \u0441\u0430\u043C\u0456 \u043E\u0431\u0438\u0440\u0430\u0454\u0442\u0435, \u0449\u043E \u0442\u0443\u0434\u0438 \u0439\u0434\u0435; \u0440\u0435\u0448\u0442\u0430 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0442\u0443\u0442.",
+    "apikeys.price": "\u0423 Groq \u0454 \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u0438\u0439 \u0442\u0430\u0440\u0438\u0444, \u0439\u043E\u0433\u043E \u0432\u0438\u0441\u0442\u0430\u0447\u0430\u0454 \u043D\u0430 \u0440\u043E\u0431\u043E\u0447\u0438\u0439 \u0434\u0435\u043D\u044C. \u041F\u043E\u043A\u0438 \u0434\u043E \u0430\u043A\u0430\u0443\u043D\u0442\u0430 Groq \u043D\u0435 \u043F\u0440\u0438\u0432\u2019\u044F\u0437\u0430\u043D\u0430 \u043A\u0430\u0440\u0442\u043A\u0430, \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0441\u043F\u0438\u0441\u0443\u0454\u0442\u044C\u0441\u044F: \u043F\u0456\u0441\u043B\u044F \u043B\u0456\u043C\u0456\u0442\u0443 Groq \u043F\u0440\u043E\u0441\u0442\u043E \u0447\u0435\u043A\u0430\u0454, \u043F\u043E\u043A\u0438 \u0432\u0456\u043D \u043E\u043D\u043E\u0432\u0438\u0442\u044C\u0441\u044F, \u0430 \u041A\u0440\u044F\u043A\u043B \u0442\u0438\u043C \u0447\u0430\u0441\u043E\u043C \u0431\u0435\u0440\u0435 \u043C\u043E\u0434\u0435\u043B\u0456 \u0446\u044C\u043E\u0433\u043E \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0430. \u042F\u043A\u0449\u043E \u043F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u043F\u043B\u0430\u0442\u043D\u0438\u0439 \u0442\u0430\u0440\u0438\u0444 Groq, \u0432\u0456\u043D \u0431\u0435\u0440\u0435 \u0433\u0440\u043E\u0448\u0456 \u0437\u0430 \u0442\u0435, \u0449\u043E \u0432\u0438 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u043B\u0438.",
+    "apikeys.noEncryption": "Windows \u043D\u0435 \u0434\u0430\u0454 \u0448\u0438\u0444\u0440\u0443\u0432\u0430\u043D\u043D\u044F \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u043E\u0431\u043B\u0456\u043A\u043E\u0432\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0441\u0443, \u0442\u043E\u043C\u0443 \u043A\u043B\u044E\u0447 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043D\u0435 \u043C\u043E\u0436\u043D\u0430.",
+    "apikeys.groqKey": "\u041A\u043B\u044E\u0447 Groq",
+    "apikeys.saved": "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \xB7 \u2026{tail}",
+    "apikeys.notSaved": "\u041D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E",
+    "apikeys.checking": "\u041F\u0435\u0440\u0435\u0432\u0456\u0440\u044F\u044E \u0432 Groq\u2026",
+    "apikeys.bad": "Groq \u043D\u0435 \u043F\u0440\u0438\u0439\u043D\u044F\u0432 \u0446\u0435\u0439 \u043A\u043B\u044E\u0447",
+    "apikeys.offline": "Groq \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439; \u043A\u043B\u044E\u0447 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u0447\u0430\u0441 \u043F\u0435\u0440\u0448\u043E\u0433\u043E \u0437\u0430\u043F\u0438\u0442\u0443",
+    "apikeys.works": "\u041F\u0440\u0430\u0446\u044E\u0454",
+    "apikeys.checkAgain": "\u041F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438",
+    "apikeys.replace": "\u0417\u0430\u043C\u0456\u043D\u0438\u0442\u0438",
+    "apikeys.delete": "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438",
+    "apikeys.save": "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438",
+    "apikeys.step1": "\u0412\u0456\u0434\u043A\u0440\u0438\u0439\u0442\u0435 console.groq.com/keys",
+    "apikeys.step1Rest": " \u0456 \u0443\u0432\u0456\u0439\u0434\u0456\u0442\u044C \u0447\u0435\u0440\u0435\u0437 Google \u0430\u0431\u043E \u043F\u043E\u0448\u0442\u0443. \u041A\u0430\u0440\u0442\u043A\u0443 \u043D\u0435 \u043F\u0438\u0442\u0430\u044E\u0442\u044C.",
+    "apikeys.step2": "\u041D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C Create API Key \u0456 \u043D\u0430\u0437\u0432\u0456\u0442\u044C \u0439\u043E\u0433\u043E ",
+    "apikeys.step2Rest": ", \u0449\u043E\u0431 \u0437\u043D\u0430\u0442\u0438, \u0449\u043E \u0446\u0435 \u0437\u0430 \u043A\u043B\u044E\u0447.",
+    "apikeys.step3": "\u0421\u043A\u043E\u043F\u0456\u044E\u0439\u0442\u0435 \u043A\u043B\u044E\u0447 \u0456 \u0432\u0441\u0442\u0430\u0432\u0442\u0435 \u0441\u044E\u0434\u0438:",
+    "apikeys.useGroq": "\u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 Groq \u0434\u043B\u044F \u0432\u0441\u044C\u043E\u0433\u043E",
+    "apikeys.useGroqNote": "\u0434\u0438\u043A\u0442\u0443\u0432\u0430\u043D\u043D\u044F, \u0437\u0430\u043F\u0438\u0441\u0438 \u0439 \u0437\u0443\u0441\u0442\u0440\u0456\u0447\u0456, \u0442\u043E\u0447\u043D\u0438\u0439 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434, \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0430 \u0430\u043D\u0433\u043B\u0456\u0439\u0441\u044C\u043A\u043E\u0457, \u0420\u043E\u0437\u043C\u043E\u0432\u0430 \u0456 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u0442\u0435\u043A\u0441\u0442\u0443",
+    "apikeys.useAll": "\u0414\u043B\u044F \u0432\u0441\u044C\u043E\u0433\u043E",
+    "apikeys.useNone": "\u0423\u0441\u0435 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456",
+    "apikeys.partDictate": "\u0414\u0438\u043A\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u0447\u0435\u0440\u0435\u0437 Groq",
+    "apikeys.partDictateNote": "\u0434\u0440\u0443\u043A \u0433\u043E\u043B\u043E\u0441\u043E\u043C, \u0437 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434\u043E\u043C \u0456 \u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430 \u043C\u043E\u0432\u043B\u0435\u043D\u043D\u044F; \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F \u043D\u0430 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456",
+    "apikeys.partTranscribe": "\u0417\u0430\u043F\u0438\u0441\u0438 \u0439 \u0437\u0443\u0441\u0442\u0440\u0456\u0447\u0456 \u0447\u0435\u0440\u0435\u0437 Groq",
+    "apikeys.partTranscribeNote": "\u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u0442\u044C\u0441\u044F \u043B\u0438\u0448\u0435 \u043C\u043E\u0432\u043B\u0435\u043D\u043D\u044F, \u0431\u0435\u0437 \u043F\u0430\u0443\u0437; \u0445\u0442\u043E \u043A\u043E\u043B\u0438 \u0433\u043E\u0432\u043E\u0440\u0438\u0432 \u0432\u0438\u0437\u043D\u0430\u0447\u0430\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456",
+    "apikeys.partLlm": "\u041C\u043E\u0432\u043D\u0430 \u043C\u043E\u0434\u0435\u043B\u044C \u0447\u0435\u0440\u0435\u0437 Groq",
+    "apikeys.partLlmNote": "\u0442\u043E\u0447\u043D\u0438\u0439 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434, \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0430 \u0430\u043D\u0433\u043B\u0456\u0439\u0441\u044C\u043A\u043E\u0457, \u0420\u043E\u0437\u043C\u043E\u0432\u0430 \u0456 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u0442\u0435\u043A\u0441\u0442\u0443; \xAB\u0428\u0432\u0438\u0434\u043A\u0438\u0439\xBB \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0442\u0443\u0442",
+    "apikeys.partScreen": "\u0422\u0435\u043A\u0441\u0442 \u0437\u0456 \u0441\u043A\u0440\u0438\u043D\u0448\u043E\u0442\u0456\u0432 \u0447\u0435\u0440\u0435\u0437 Groq",
+    "apikeys.partScreenNote": "\u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0430 \u0439\u0434\u0435 \u0432 Groq, \u0432\u0456\u043D \u0447\u0438\u0442\u0430\u0454 \u0457\u0457 \u043D\u0430\u0431\u0430\u0433\u0430\u0442\u043E \u043A\u0440\u0430\u0449\u0435 \u0437\u0430 Windows; \u043D\u0435 \u0432\u0445\u043E\u0434\u0438\u0442\u044C \u0443 \xAB\u0414\u043B\u044F \u0432\u0441\u044C\u043E\u0433\u043E\xBB, \u0430\u0434\u0436\u0435 \u043D\u0430 \u0435\u043A\u0440\u0430\u043D\u0456 \u043C\u043E\u0436\u0435 \u0431\u0443\u0442\u0438 \u0449\u043E \u0437\u0430\u0432\u0433\u043E\u0434\u043D\u043E. \u0411\u0435\u0437 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u0447\u0438\u0442\u0430\u0454 Windows",
+    "apikeys.usage": "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432 Groq",
+    "apikeys.usageNone": "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0434\u043E Groq \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u043B\u043E\u0441\u044F",
+    "apikeys.usageNoneNote": "\u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u0438\u0439 \u0442\u0430\u0440\u0438\u0444 \u0440\u0430\u0445\u0443\u0454 \u043E\u0441\u0442\u0430\u043D\u043D\u0456 24 \u0433\u043E\u0434\u0438\u043D\u0438",
+    "apikeys.useDictation": "\u0414\u0438\u043A\u0442\u0443\u0432\u0430\u043D\u043D\u044F",
+    "apikeys.useRecordings": "\u0417\u0430\u043F\u0438\u0441\u0438 \u0439 \u0437\u0443\u0441\u0442\u0440\u0456\u0447\u0456",
+    "apikeys.useTexts": "\u041F\u0435\u0440\u0435\u043A\u043B\u0430\u0434 \u0456 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0430",
+    "apikeys.useTalk": "\u0420\u043E\u0437\u043C\u043E\u0432\u0430",
+    "apikeys.useEdit": "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u0442\u0435\u043A\u0441\u0442\u0443",
+    "apikeys.requests": "\u0437\u0430\u043F\u0438\u0442\u0456\u0432: {n} \u0437 {of}",
+    "apikeys.groqLeft": "\u0417\u0430 \u0441\u043B\u043E\u0432\u0430\u043C\u0438 Groq, \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F \u0437\u0430\u043F\u0438\u0442\u0456\u0432: {n}, \u0437 \u0443\u0440\u0430\u0445\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u0432\u0438\u0442\u0440\u0430\u0442 \u043F\u043E\u0437\u0430 \u041A\u0440\u044F\u043A\u043B\u043E\u043C",
+    "apikeys.sound": "\u0437\u0432\u0443\u043A\u0443: {used} \u0437 {of}",
+    "apikeys.tokens": "\u0441\u043B\u0456\u0432: {used} \u0442\u0438\u0441. \u0437 {of} \u0442\u0438\u0441. \u0442\u043E\u043A\u0435\u043D\u0456\u0432",
+    "apikeys.hours": "{h} \u0433\u043E\u0434 {m} \u0445\u0432",
+    "apikeys.minutes": "{m} \u0445\u0432",
+    "apikeys.leaves": "\u0422\u0435, \u0449\u043E \u0432\u0438 \u0442\u0443\u0442 \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u043B\u0438, \u0439\u0434\u0435 \u0437 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0430: \u0437\u0432\u0443\u043A \u0432\u0430\u0448\u0438\u0445 \u0444\u0440\u0430\u0437 \u0456 \u0437\u0430\u043F\u0438\u0441\u0456\u0432 \u0456 \u0442\u0435\u043A\u0441\u0442\u0438, \u044F\u043A\u0456 \u0432\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434\u0430\u0454\u0442\u0435, \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u044F\u0454\u0442\u0435 \u0430\u0431\u043E \u043A\u0430\u0436\u0435\u0442\u0435 \u041A\u0440\u044F\u043A\u043B\u0443, \u0456 \u0441\u043A\u0440\u0438\u043D\u0448\u043E\u0442\u0438, \u0437 \u044F\u043A\u0438\u0445 \u0432\u0438 \u0431\u0435\u0440\u0435\u0442\u0435 \u0442\u0435\u043A\u0441\u0442. Groq \u043D\u0435 \u043D\u0430\u0432\u0447\u0430\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u043D\u0438\u0445 \u0456 \u0437\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C \u0457\u0445 \u043D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454.",
+    "apikeys.privacy": "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u043A\u043E\u043D\u0444\u0456\u0434\u0435\u043D\u0446\u0456\u0439\u043D\u043E\u0441\u0442\u0456 Groq",
+    "apikeys.safe": "\u041A\u043E\u0436\u0435\u043D \u043A\u043B\u044E\u0447 \u0448\u0438\u0444\u0440\u0443\u0454\u0442\u044C\u0441\u044F \u0437\u0430\u0441\u043E\u0431\u0430\u043C\u0438 Windows \u043F\u0456\u0434 \u0432\u0430\u0448 \u043E\u0431\u043B\u0456\u043A\u043E\u0432\u0438\u0439 \u0437\u0430\u043F\u0438\u0441 \u0456 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F \u043B\u0438\u0448\u0435 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456; \u0432\u0438\u0434\u043D\u043E \u043B\u0438\u0448\u0435 \u043E\u0441\u0442\u0430\u043D\u043D\u0456 \u0447\u043E\u0442\u0438\u0440\u0438 \u0437\u043D\u0430\u043A\u0438, \u0443 \u0436\u0443\u0440\u043D\u0430\u043B\u0438, \u0437\u0432\u0456\u0442\u0438 \u043F\u0440\u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0443 \u0439 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u0456 \u043A\u043E\u043F\u0456\u0457 \u0432\u0456\u043D \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u043F\u043B\u044F\u0454. \u041F\u0440\u043E\u0433\u0440\u0430\u043C\u0430 \u043F\u0456\u0434 \u0442\u0438\u043C \u0441\u0430\u043C\u0438\u043C \u043E\u0431\u043B\u0456\u043A\u043E\u0432\u0438\u043C \u0437\u0430\u043F\u0438\u0441\u043E\u043C Windows \u0443\u0441\u0435 \u0436 \u043C\u043E\u0436\u0435 \u0439\u043E\u0433\u043E \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438, \u044F\u043A \u0456 \u043F\u0430\u0440\u043E\u043B\u0456 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430: \u0441\u0442\u0432\u043E\u0440\u0456\u0442\u044C \u043E\u043A\u0440\u0435\u043C\u0438\u0439 \u043A\u043B\u044E\u0447 \u0434\u043B\u044F \u041A\u0440\u044F\u043A\u043B\u0430 \u0456 \u0432 \u0440\u0430\u0437\u0456 \u0441\u0443\u043C\u043D\u0456\u0432\u0443 \u0432\u0438\u0434\u0430\u043B\u0456\u0442\u044C \u0439\u043E\u0433\u043E \u043D\u0430 \u0441\u0430\u0439\u0442\u0456 Groq.",
+    "apikeys.hfWhat": "Hugging Face \u0434\u0430\u0454 \u043C\u043E\u0434\u0435\u043B\u044C, \u044F\u043A\u0430 \u0440\u043E\u0437\u0440\u0456\u0437\u043D\u044F\u0454 \u0433\u043E\u043B\u043E\u0441\u0438 (\xAB\u0425\u0442\u043E \u043A\u043E\u043B\u0438 \u0433\u043E\u0432\u043E\u0440\u0438\u0432\xBB). \u041A\u043B\u044E\u0447 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u043E\u0434\u0438\u043D \u0440\u0430\u0437, \u0449\u043E\u0431 \u0457\u0457 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438; \u0432\u0430\u0448\u0456 \u0437\u0430\u043F\u0438\u0441\u0438 \u0442\u0443\u0434\u0438 \u043D\u0435 \u0439\u0434\u0443\u0442\u044C.",
+    "apikeys.hfNoEngine": "\u0437\u043D\u0430\u0434\u043E\u0431\u0438\u0442\u044C\u0441\u044F \u0434\u043B\u044F \xAB\u0425\u0442\u043E \u043A\u043E\u043B\u0438 \u0433\u043E\u0432\u043E\u0440\u0438\u0432\xBB, \u043A\u043E\u043B\u0438 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u0440\u0443\u0448\u0456\u0439 \u043C\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
+    "apikeys.hfNoSpeakers": "\u0437\u043D\u0430\u0434\u043E\u0431\u0438\u0442\u044C\u0441\u044F, \u043A\u043E\u043B\u0438 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E \u0447\u0430\u0441\u0442\u0438\u043D\u0443 \xAB\u0425\u0442\u043E \u043A\u043E\u043B\u0438 \u0433\u043E\u0432\u043E\u0440\u0438\u0432\xBB",
+    "models.groq": "\u0427\u0435\u0440\u0435\u0437 Groq, \u0437\u0430 \u0432\u0430\u0448\u0438\u043C \u043A\u043B\u044E\u0447\u0435\u043C",
+    "models.groqNote": "\u0447\u0435\u0440\u0435\u0437 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442, \u0448\u0432\u0438\u0434\u043A\u043E \u043D\u0430 \u0431\u0443\u0434\u044C-\u044F\u043A\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456, \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u0432\u0430\u0442\u0438; {what} \u0456\u0434\u0435 \u0432 Groq",
+    "models.groqText": "\u0442\u0435\u043A\u0441\u0442",
+    "models.groqSound": "\u0437\u0432\u0443\u043A",
+    "models.groqNoKey": "\u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0432\u0430\u0448 \u043A\u043B\u044E\u0447 Groq",
+    "models.addKey": "\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u043B\u044E\u0447",
+    "models.groqSharesCheck": "\u041F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0430 \u0430\u043D\u0433\u043B\u0456\u0439\u0441\u044C\u043A\u043E\u0457, \u0420\u043E\u0437\u043C\u043E\u0432\u0430 \u0456 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u0442\u0435\u043A\u0441\u0442\u0443 \u0442\u0435\u0436 \u0456\u0434\u0443\u0442\u044C \u0447\u0435\u0440\u0435\u0437 Groq",
+    "models.groqSharesTranslate": "\u0442\u043E\u0447\u043D\u0438\u0439 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434 \u0456 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u0442\u0435\u043A\u0441\u0442\u0443 \u0442\u0435\u0436 \u0456\u0434\u0443\u0442\u044C \u0447\u0435\u0440\u0435\u0437 Groq",
+    "models.groqFallback": "\u0411\u0435\u0437 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u0430\u0431\u043E \u043F\u0456\u0441\u043B\u044F \u043B\u0456\u043C\u0456\u0442\u0443 Groq \u041A\u0440\u044F\u043A\u043B \u0431\u0435\u0440\u0435 \u043C\u043E\u0434\u0435\u043B\u044C \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456, \u044F\u043A\u0449\u043E \u0457\u0457 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E; \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u0442\u044C \u043D\u0430 {fast}.",
+    "models.speechGroqDictate": "Whisper large-v3 \u0443 Groq: \u0431\u043B\u0438\u0437\u044C\u043A\u043E \u0441\u0435\u043A\u0443\u043D\u0434\u0438 \u043D\u0430 \u0444\u0440\u0430\u0437\u0443",
+    "models.speechGroqTranscribe": "Whisper turbo \u0443 Groq: \u0433\u043E\u0434\u0438\u043D\u0430 \u0437\u0430\u043F\u0438\u0441\u0443 \u0437\u0430 \u043A\u0456\u043B\u044C\u043A\u0430 \u0445\u0432\u0438\u043B\u0438\u043D, \u0434\u043E 8 \u0433\u043E\u0434\u0438\u043D \u043D\u0430 \u0434\u0435\u043D\u044C",
+    "models.whereRuns": "\u0414\u0435 \u043F\u0440\u0430\u0446\u044E\u0454",
+    "models.runsHere": "\u041D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456",
+    "models.runsHereNote": "\u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0439\u0434\u0435 \u0437 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0430; \u043C\u043E\u0434\u0435\u043B\u044C \u043D\u0438\u0436\u0447\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u0454\u0442\u044C\u0441\u044F \u043E\u0434\u0438\u043D \u0440\u0430\u0437",
+    "models.groqStandby": "\u0417\u0430\u0440\u0430\u0437 \u043F\u0440\u0430\u0446\u044E\u0454 Groq: \u043C\u043E\u0434\u0435\u043B\u044C, \u0432\u0438\u0431\u0440\u0430\u043D\u0430 \u0442\u0443\u0442, \u0432\u043C\u0438\u043A\u0430\u0454\u0442\u044C\u0441\u044F, \u043A\u043E\u043B\u0438 Groq \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439.",
+    "settings.versionMoved": "\u043D\u043E\u0432\u0456 \u0432\u0435\u0440\u0441\u0456\u0457 \u0442\u0430 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043F\u0440\u043E \u043D\u0438\u0445 \u2014 \u0443 \u0440\u043E\u0437\u0434\u0456\u043B\u0456 \xAB\u041F\u0440\u043E \u041A\u0440\u044F\u043A\u043B\xBB",
+    "about.offlineGroq": "\u0432\u0430\u0448 \u0442\u0435\u043A\u0441\u0442 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456, \u043A\u0440\u0456\u043C \u0442\u043E\u0433\u043E, \u0449\u043E \u0432\u0438 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043B\u0438 \u0434\u043E Groq \u0441\u0432\u043E\u0457\u043C \u043A\u043B\u044E\u0447\u0435\u043C (\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u203A \u041A\u043B\u044E\u0447\u0456 \u0441\u0435\u0440\u0432\u0456\u0441\u0456\u0432)",
     "listen.tryKey": "\u0412\u0438\u0434\u0456\u043B\u0456\u0442\u044C \u0446\u0435\u0439 \u0442\u0435\u043A\u0441\u0442 \u0456 {how}.",
     "listen.tryTwice": "\u0412\u0438\u0434\u0456\u043B\u0456\u0442\u044C \u0446\u0435\u0439 \u0442\u0435\u043A\u0441\u0442 \u0456 \u0434\u0432\u0456\u0447\u0456 \u043D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C Ctrl + C.",
     "listen.tryNone": "\u0417\u0430\u0434\u0430\u0439\u0442\u0435 \u043A\u043B\u0430\u0432\u0456\u0448\u0443 \u0432\u0433\u043E\u0440\u0456 (\u043C\u043E\u0436\u043D\u0430 Ctrl + C \u0434\u0432\u0456\u0447\u0456), \u043F\u043E\u0442\u0456\u043C \u0432\u0438\u0434\u0456\u043B\u0456\u0442\u044C \u0446\u0435\u0439 \u0442\u0435\u043A\u0441\u0442.",
@@ -4381,6 +4761,22 @@
     "dictate.panel": "\u041F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u043F\u0430\u043D\u0435\u043B\u044C \u043F\u0456\u0434 \u0447\u0430\u0441 \u0434\u0438\u043A\u0442\u0443\u0432\u0430\u043D\u043D\u044F",
     "dictate.panelNote": "\u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043E: \u0437\u0430\u043F\u0438\u0441 \u0432\u0438\u0434\u043D\u043E \u0437\u0430 \u0447\u0435\u0440\u0432\u043E\u043D\u043E\u044E \u043A\u0440\u0430\u043F\u043A\u043E\u044E \u0432 \u0442\u0440\u0435\u0457, \u043F\u043E\u043C\u0438\u043B\u043A\u0438 \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0437\u2019\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u043D\u0430 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434",
     "dictate.escNote": "\u0421\u043B\u043E\u0432\u0430 \u0437\u2019\u044F\u0432\u043B\u044F\u044E\u0442\u044C\u0441\u044F, \u043F\u043E\u043A\u0438 \u0432\u0438 \u0433\u043E\u0432\u043E\u0440\u0438\u0442\u0435. Esc \u0441\u043A\u0430\u0441\u043E\u0432\u0443\u0454 \u0444\u0440\u0430\u0437\u0443, \u0434\u043E\u043A\u0438 \u0457\u0457 \u043D\u0435 \u043D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u043E.",
+    "dictate.sound": "\u0417\u0432\u0443\u043A\u0438 \u043D\u0430 \u043F\u043E\u0447\u0430\u0442\u043A\u0443 \u0456 \u043A\u043E\u043B\u0438 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u043E",
+    "dictate.soundNote": "\u0442\u0438\u0445\u0430 \u043D\u043E\u0442\u0430, \u043A\u043E\u043B\u0438 \u043F\u043E\u0447\u0430\u0432\u0441\u044F \u0437\u0430\u043F\u0438\u0441, \u0456 \u0449\u0435 \u043E\u0434\u043D\u0430, \u043A\u043E\u043B\u0438 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u043E: \u0449\u043E\u0431 \u043D\u0435 \u0434\u0438\u0432\u0438\u0442\u0438\u0441\u044F \u043D\u0430 \u0435\u043A\u0440\u0430\u043D",
+    "typed.title": "\u041D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442",
+    "typed.titleNote": "\u043F\u0440\u043E\u0431\u0456\u043B \u043F\u0456\u0441\u043B\u044F \u0444\u0440\u0430\u0437\u0438, \u043A\u0440\u0430\u043F\u043A\u0430 \u0432 \u043A\u0456\u043D\u0446\u0456, \u0440\u043E\u0441\u0456\u0439\u0441\u044C\u043A\u0430 \u043B\u0456\u0442\u0435\u0440\u0430 \u0451",
+    "typed.space": "\u041F\u0440\u043E\u0431\u0456\u043B \u043F\u0456\u0441\u043B\u044F \u043A\u043E\u0436\u043D\u043E\u0457 \u0444\u0440\u0430\u0437\u0438",
+    "typed.spaceNote": "\u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0430 \u0444\u0440\u0430\u0437\u0430 \u0447\u0438 \u0441\u043B\u043E\u0432\u043E \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0443\u044E\u0442\u044C\u0441\u044F \u0431\u0435\u0437 \u043F\u0440\u043E\u0431\u0456\u043B\u0443, \u043D\u0430\u0431\u0440\u0430\u043D\u043E\u0433\u043E \u0440\u0443\u043A\u0430\u043C\u0438",
+    "typed.endStop": "\u041A\u0440\u0430\u043F\u043A\u0430 \u043F\u0456\u0441\u043B\u044F \u043E\u0434\u043D\u043E\u0433\u043E \u0440\u0435\u0447\u0435\u043D\u043D\u044F",
+    "typed.endStopNote": "\u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043E: \xAB\u0411\u0443\u0434\u0443 \u043E \u043F\u2019\u044F\u0442\u0456\u0439.\xBB \u0434\u0440\u0443\u043A\u0443\u0454\u0442\u044C\u0441\u044F \u044F\u043A \xAB\u0411\u0443\u0434\u0443 \u043E \u043F\u2019\u044F\u0442\u0456\u0439\xBB; \u0434\u0432\u0430 \u0440\u0435\u0447\u0435\u043D\u043D\u044F \u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043A\u0440\u0430\u043F\u043A\u0443 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C, \u044F\u043A \u0456 ? \u0442\u0430 !",
+    "typed.yo": "\u041B\u0456\u0442\u0435\u0440\u0430 \u0451 \u0432 \u0440\u043E\u0441\u0456\u0439\u0441\u044C\u043A\u043E\u043C\u0443 \u0442\u0435\u043A\u0441\u0442\u0456",
+    "typed.yoHeard": "\u042F\u043A \u043F\u043E\u0447\u0443\u0442\u043E",
+    "typed.yoHeardNote": "\u044F\u043A \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0430 \u043C\u043E\u0434\u0435\u043B\u044C \u043C\u043E\u0432\u043B\u0435\u043D\u043D\u044F; \u0432\u043E\u043D\u0430 \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0451 \u0440\u0456\u0434\u043A\u043E",
+    "typed.yoAlways": "\u0417\u0430\u0432\u0436\u0434\u0438",
+    "typed.yoAlwaysNote": "\u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0454\u0442\u044C\u0441\u044F \u0432\u0441\u044E\u0434\u0438, \u0434\u0435 \u0441\u043B\u043E\u0432\u043E \u043F\u0438\u0448\u0435\u0442\u044C\u0441\u044F \u0437 \u0451 \u043B\u0438\u0448\u0435 \u043E\u0434\u043D\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C: \u0435\u0449\u0451, \u0435\u0451, \u0438\u0434\u0451\u0442. \xAB\u0412\u0441\u0435\xBB \u0456 \xAB\u0432\u0441\u0451\xBB \u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F \u044F\u043A \u043F\u043E\u0447\u0443\u0442\u043E",
+    "typed.yoNever": "\u041D\u0456\u043A\u043E\u043B\u0438",
+    "typed.yoNeverNote": "\u043A\u043E\u0436\u043D\u0430 \u0451 \u0434\u0440\u0443\u043A\u0443\u0454\u0442\u044C\u0441\u044F \u044F\u043A \u0435",
+    "typed.exact": "\u0426\u0456 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0442\u043E\u0447\u043D\u0456 \u0439 \u043C\u0438\u0442\u0442\u0454\u0432\u0456: \u0431\u0435\u0437 \u043C\u043E\u0434\u0435\u043B\u0456, \u043E\u0434\u043D\u0430\u043A\u043E\u0432\u043E \u043D\u0430 \u0431\u0443\u0434\u044C-\u044F\u043A\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456. \u0412\u043E\u043D\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u043E\u0432\u0443\u044E\u0442\u044C\u0441\u044F \u043F\u0456\u0441\u043B\u044F \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u0442\u0435\u043A\u0441\u0442\u0443 \u0442\u0430 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434\u0443.",
     "dictate.privacy": "\u041C\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456; \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0456\u043A\u0443\u0434\u0438 \u043D\u0435 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u0442\u044C\u0441\u044F.",
     "vocab.wordPlaceholder": "\u0421\u043B\u043E\u0432\u043E",
     "vocab.wordAria": "\u0406\u043C\u2019\u044F \u0430\u0431\u043E \u0442\u0435\u0440\u043C\u0456\u043D",
@@ -4614,6 +5010,7 @@
     "storage.keep": "\u0417\u0430\u043B\u0438\u0448\u0438\u0442\u0438",
     "storage.usedBy": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0435 \u0434\u043B\u044F: {users}",
     "storage.reserve": "\u0437\u0430\u043F\u0430\u0441 \u0434\u043B\u044F: {reserve}, \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440\u0456, \u044F\u043A\u0449\u043E \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u043F\u0456\u0434\u0432\u0435\u0434\u0435",
+    "storage.standby": "\u0437\u0430\u0440\u0430\u0437 \u0446\u0435 \u0440\u043E\u0431\u0438\u0442\u044C Groq; \u043B\u0435\u0436\u0438\u0442\u044C \u043F\u0440\u043E \u0437\u0430\u043F\u0430\u0441, \u044F\u043A\u0449\u043E Groq \u0431\u0443\u0434\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439",
     "storage.userTranslate": "\u041F\u0435\u0440\u0435\u043A\u043B\u0430\u0434",
     "storage.userListen": "\u041F\u0435\u0440\u0435\u043A\u043B\u0430\u0434",
     "storage.userCheck": "\u0410\u043D\u0433\u043B\u0456\u0439\u0441\u044C\u043A\u0430",
@@ -4728,7 +5125,18 @@
     "report.computerNote": "\u041F\u0440\u043E\u0446\u0435\u0441\u043E\u0440, \u043F\u0430\u043C\u2019\u044F\u0442\u044C, \u0432\u0456\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430, \u0432\u0435\u0440\u0441\u0456\u0457 Windows \u0456 \u041A\u0440\u044F\u043A\u043B\u0430",
     "report.settings": "\u0412\u0430\u0448\u0456 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F",
     "report.settingsNote": "\u0412\u0430\u0448\u0456 \u0441\u043F\u0438\u0441\u043A\u0438 \u043B\u0438\u0448\u0435 \u043F\u043E\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E: \u0441\u043B\u043E\u0432\u0430 \xAB\u041D\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u0438\xBB, \u0456\u043C\u0435\u043D\u0430 \u0439 \u0442\u0435\u0440\u043C\u0456\u043D\u0438, \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0438",
-    "report.never": "\u041D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u043F\u043B\u044F\u044E\u0442\u044C: \u0432\u0430\u0448\u0456 \u0442\u0435\u043A\u0441\u0442\u0438, \u0441\u043B\u043E\u0432\u0430, \u043F\u043E\u043C\u0438\u043B\u043A\u0438, \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434\u0438, \u0444\u0440\u0430\u0437\u0438, \u0440\u043E\u0437\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0438 \u0447\u0438 \u043A\u043B\u044E\u0447 Hugging Face. \u0412\u0430\u0448\u0435 \u0456\u043C\u2019\u044F \u0443 Windows \u0442\u0430 \u0456\u043C\u2019\u044F \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0430 \u0437\u0430\u043C\u0456\u043D\u0435\u043D\u043E. \u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u0442\u044C\u0441\u044F, \u0434\u043E\u043A\u0438 \u0432\u0438 \u0441\u0430\u043C\u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0448\u043B\u0435\u0442\u0435.",
+    "report.capture": "\u041F\u0440\u043E\u0431\u043B\u0435\u043C\u0430 \u0437 \u043D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u0438\u043C \u0442\u0435\u043A\u0441\u0442\u043E\u043C",
+    "report.captureOn": "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0434\u0438\u043A\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u0434\u043B\u044F \u0437\u0432\u0456\u0442\u0443",
+    "report.captureNote": "\u041A\u0440\u044F\u043A\u043B \u0437\u0431\u0435\u0440\u0435\u0436\u0435 \u0437\u0432\u0443\u043A \u0456 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0445 \u0444\u0440\u0430\u0437, \u044F\u043A\u0456 \u0432\u0438 \u043F\u0440\u043E\u0434\u0438\u043A\u0442\u0443\u0454\u0442\u0435 (\u043D\u0435 \u0431\u0456\u043B\u044C\u0448\u0435 {n}), \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0456, \u0456 \u0437\u0443\u043F\u0438\u043D\u0438\u0442\u044C\u0441\u044F \u0441\u0430\u043C. \u0412\u043E\u043D\u0438 \u043F\u043E\u0442\u0440\u0430\u043F\u043B\u044F\u0442\u044C \u0443 \u0444\u0430\u0439\u043B \u0437\u0432\u0456\u0442\u0443 \u043D\u0438\u0436\u0447\u0435.",
+    "report.captureLeft": "\u0422\u0440\u0438\u0432\u0430\u0454 \u0437\u0430\u043F\u0438\u0441: \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F \u0444\u0440\u0430\u0437 \u2014 {n}. \u041A\u043E\u0436\u043D\u0443 \u0442\u0430\u043A\u0443 \u0444\u0440\u0430\u0437\u0443 \u043F\u043E\u0437\u043D\u0430\u0447\u0430\u0454 \u0437\u043D\u0430\u0447\u043E\u043A \u0436\u0443\u043A\u0430 \u043D\u0430 \u043F\u0430\u043D\u0435\u043B\u0456 \u0434\u0438\u043A\u0442\u0443\u0432\u0430\u043D\u043D\u044F.",
+    "report.captureFull": "\u0421\u043F\u0438\u0441\u043E\u043A \u0437\u0430\u043F\u043E\u0432\u043D\u0435\u043D\u043E. \u0412\u0438\u0434\u0430\u043B\u0456\u0442\u044C \u0447\u0430\u0441\u0442\u0438\u043D\u0443 \u0444\u0440\u0430\u0437, \u0449\u043E\u0431 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043D\u043E\u0432\u0456.",
+    "report.captured": "\u0417\u0430\u043F\u0438\u0441\u0430\u043D\u0456 \u0444\u0440\u0430\u0437\u0438",
+    "report.capturedNote": "\u0412\u043E\u043D\u0438 \u043F\u043E\u0442\u0440\u0430\u043F\u043B\u044F\u0442\u044C \u0443 \u0444\u0430\u0439\u043B \u0437\u0432\u0456\u0442\u0443 \u0440\u0430\u0437\u043E\u043C \u0437\u0456 \u0437\u0432\u0443\u043A\u043E\u043C. \u041D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u043D\u0430 \u0444\u0440\u0430\u0437\u0443, \u0449\u043E\u0431 \u043F\u0440\u043E\u0441\u043B\u0443\u0445\u0430\u0442\u0438; \u0432\u0438\u0434\u0430\u043B\u0456\u0442\u044C \u0442\u0456, \u044F\u043A\u0456 \u043D\u0435 \u0445\u043E\u0447\u0435\u0442\u0435 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0442\u0438.",
+    "report.captureNothing": "\u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043D\u0430\u0434\u0440\u0443\u043A\u043E\u0432\u0430\u043D\u043E",
+    "report.captureHeard": "\u0420\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u043D\u043E: {heard}",
+    "report.captureClear": "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0432\u0441\u0456",
+    "report.captureSeconds": "{n} \u0441",
+    "report.never": "\u041D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u043F\u043B\u044F\u044E\u0442\u044C: \u0432\u0430\u0448\u0456 \u0442\u0435\u043A\u0441\u0442\u0438, \u0441\u043B\u043E\u0432\u0430, \u043F\u043E\u043C\u0438\u043B\u043A\u0438, \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434\u0438, \u0440\u043E\u0437\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0438 \u0447\u0438 \u043A\u043B\u044E\u0447 Hugging Face, \u0430 \u0442\u0430\u043A\u043E\u0436 \u0443\u0441\u0435, \u0449\u043E \u0432\u0438 \u0434\u0438\u043A\u0442\u0443\u0432\u0430\u043B\u0438, \u043A\u0440\u0456\u043C \u0444\u0440\u0430\u0437, \u044F\u043A\u0456 \u0432\u0438 \u0441\u0430\u043C\u0456 \u0437\u0430\u043F\u0438\u0441\u0430\u043B\u0438 \u0434\u043B\u044F \u0437\u0432\u0456\u0442\u0443 \u0432\u0438\u0449\u0435. \u0412\u0430\u0448\u0435 \u0456\u043C\u2019\u044F \u0443 Windows \u0442\u0430 \u0456\u043C\u2019\u044F \u043A\u043E\u043C\u043F\u2019\u044E\u0442\u0435\u0440\u0430 \u0437\u0430\u043C\u0456\u043D\u0435\u043D\u043E. \u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u043D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u0442\u044C\u0441\u044F, \u0434\u043E\u043A\u0438 \u0432\u0438 \u0441\u0430\u043C\u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0448\u043B\u0435\u0442\u0435.",
     "report.folder": "\u041F\u0430\u043F\u043A\u0430 \u041A\u0440\u044F\u043A\u043B\u0430",
     "report.folderNote": "\u0414\u0435 \u043B\u0435\u0436\u0430\u0442\u044C \u0436\u0443\u0440\u043D\u0430\u043B\u0438, \u0449\u043E\u0431 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0457\u0445 \u0441\u0430\u043C\u043E\u0441\u0442\u0456\u0439\u043D\u043E",
     "report.stopped": "\u042F\u043A\u0449\u043E \u0449\u043E\u0441\u044C \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043B\u043E \u043F\u0440\u0430\u0446\u044E\u0432\u0430\u0442\u0438",
@@ -5072,6 +5480,11 @@
     return { advised: most.where === "card" ? "most" : accurate.where === "card" ? "accurate" : "fast", accurate, most };
   }
 
+  // src/dicttext.ts
+  var YO_MODES = ["heard", "always", "never"];
+  var PUNCTUATION = `[{}()|<>=_"'\xAB\xBB\u201E\u201C#$^%&*+:;,?!\\u2011\\-[\\]]`;
+  var WORD = new RegExp(`[\u0410-\u042F\u0401\u0430-\u044F\u0451][\u0430-\u044F\u0451]+(?![\u0430-\u044F\u0451]|\\.[ \\u00A0\\t]+([\u0430-\u044F\u0451]|[\u0410-\u042F\u0401]{2}|${PUNCTUATION})|\\.${PUNCTUATION})`, "g");
+
   // src/recordmodel.ts
   var VIDEO_SOUND = { mic: false, system: true, micName: "" };
   var ZOOM_SCALES = [1.5, 2, 2.5];
@@ -5157,6 +5570,10 @@
     dictateEdit: false,
     dictateEditStyle: "clean",
     dictateEditOwn: "",
+    dictateSpace: true,
+    dictateEndStop: true,
+    dictateYo: "heard",
+    dictateSound: false,
     talkBounds: null,
     dictationBadge: { dx: 0, dy: 0 },
     dictationPanel: true,
@@ -5164,6 +5581,7 @@
     translationLevel: "fast",
     model: "accurate",
     speechPrefer: "accuracy",
+    remote: { dictate: false, transcribe: false, llm: false, screen: false },
     dictationModel: "",
     transcriptsModel: "",
     speakersDevice: "auto",
@@ -5183,6 +5601,65 @@
   var keptForm = (text) => text.trim().toLowerCase();
   function myLanguages(s) {
     return [...new Set([findLanguage(s.native)?.code ?? "", "en", ...s.languages].filter(Boolean))];
+  }
+
+  // src/i18n/engine.ts
+  var EXACT = {
+    "The speech engine is not running": "engine.notRunning",
+    "No sound": "engine.noSound",
+    "Nothing was heard": "talk.nothingHeard",
+    "Too long for dictation: transcribe it instead": "engine.tooLong",
+    "No such dictation": "engine.noDictation",
+    "No downloaded model to test": "engine.noModelToTest",
+    "A test is running": "engine.testRunning",
+    "No such model": "engine.noModel",
+    "In use: the transcripts model": "engine.usedByTranscripts",
+    "In use: the dictation model": "engine.usedByDictation",
+    "In use: loaded": "engine.usedLoaded",
+    "In use: downloading": "engine.usedDownloading",
+    "In use: the speed test runs": "engine.usedTest",
+    "Paste a Hugging Face key first": "engine.pasteKey",
+    "Add a Hugging Face key first": "engine.addKey",
+    "No such transcript": "engine.noTranscript",
+    "This recording is still being transcribed": "engine.stillTranscribing",
+    "This recording is being transcribed right now": "engine.transcribingNow",
+    "A note has one voice": "engine.oneVoice",
+    "Install the speakers part first": "engine.installSpeakers",
+    "The sound of this recording was not kept": "engine.soundNotKept",
+    "This meeting can no longer be split: its words were not kept": "engine.cannotSplit",
+    "Only a failed transcription can be tried again": "engine.onlyFailed",
+    "The source sound is gone": "engine.sourceGone",
+    "Choose a knowledge base folder first": "engine.chooseFolder",
+    "File not found": "engine.fileNotFound",
+    "Not an audio or video file": "engine.notMedia",
+    "The recording is too large": "engine.tooLarge",
+    "The recording has ended": "engine.ended",
+    "Nothing to transcribe": "engine.nothing",
+    "The speech engine is not installed": "engine.notInstalled",
+    "An install is running": "engine.installRunning",
+    "Hugging Face answered with an error": "engine.hfError",
+    "No connection to Hugging Face": "engine.hfOffline"
+  };
+  var WITH_REASON = [
+    [/^Not a recording: (.+)$/s, (m) => t("engine.notRecording", { why: m[1] ?? "" })],
+    [/^Could not recognize: (.+)$/s, (m) => t("engine.notRecognized", { why: m[1] ?? "" })],
+    [/^Could not remove (\S+): (.+)$/s, (m) => t("engine.notRemoved", { name: m[1] ?? "", why: m[2] ?? "" })],
+    [/^The speech engine keeps stopping \((.+?)\): see (.+)$/s, (m) => t("engine.keepsStopping", { code: m[1] ?? "", log: m[2] ?? "" })],
+    [/^Port (\d+) is used by another program: quit it, then press Restart$/, (m) => t("engine.portTaken", { port: m[1] ?? "" })],
+    [/^Installing the speech engine failed \((.+?)\): (.*)$/s, (m) => t("engine.installFailed", { code: m[1] ?? "", why: m[2] ?? "" })],
+    [/^Could not unpack the Python manager: (.*)$/s, (m) => t("engine.unpackFailed", { why: m[1] ?? "" })],
+    [/^Hugging Face answered (.+)$/s, (m) => t("engine.hfAnswered", { status: m[1] ?? "" })],
+    [/^The download failed: (.+)$/s, (m) => t("engine.downloadFailed", { why: m[1] ?? "" })],
+    [/^(.+) did not arrive whole$/s, (m) => t("engine.notWhole", { name: m[1] ?? "" })]
+  ];
+  function engineMessage(text) {
+    const key = EXACT[text];
+    if (key) return t(key);
+    for (const [pattern, say] of WITH_REASON) {
+      const m = text.match(pattern);
+      if (m) return say(m);
+    }
+    return text;
   }
 
   // src/vocabulary.ts
@@ -5478,6 +5955,8 @@
     "copy-check": '<path d="m12 15 2 2 4-4" /> <rect width="14" height="14" x="8" y="8" rx="2" ry="2" /> <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />',
     "maximize-2": '<path d="M15 3h6v6" /> <path d="m21 3-7 7" /> <path d="m3 21 7-7" /> <path d="M9 21H3v-6" />',
     "minimize-2": '<path d="m14 10 7-7" /> <path d="M20 10h-6V4" /> <path d="m3 21 7-7" /> <path d="M4 14h6v6" />',
+    "cloud": '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />',
+    "key-round": '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" /> <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />',
     "plus": '<path d="M5 12h14" /> <path d="M12 5v14" />',
     "x": '<path d="M18 6 6 18" /> <path d="m6 6 12 12" />',
     "minus": '<path d="M5 12h14" />',
@@ -5875,6 +6354,11 @@
     });
     return field;
   }
+  function liveOf(field) {
+    const id = field.dataset.live;
+    if (!id || field.isConnected) return field;
+    return document.querySelector(`${field.localName}[data-live="${id}"]`) ?? field;
+  }
   function tiles(list2) {
     return el(
       "div",
@@ -5930,7 +6414,8 @@
   }
   function listPage(o) {
     const norm = o.normalize ?? ((text) => text.trim());
-    const add = (field2) => {
+    const add = (typed) => {
+      const field2 = liveOf(typed);
       const item = norm(field2.value);
       if (!item) return field2.focus();
       field2.value = "";
@@ -6224,7 +6709,9 @@
       transcribe: chosen.fits && !rough ? { on: true, why: t(plan.offers.gpu ? "setup.why.transcribeCard" : "setup.why.transcribe", { model: chosen.label, time: hourCpu }) } : { on: false, why: t(rough ? "setup.why.transcribeRough" : "setup.why.transcribeSlow", { model: chosen.label, time: hourCpu }) },
       speakers: plan.offers.speakersGpu && plan.speakers.cuda !== void 0 ? { on: true, why: t("setup.why.speakers", { time: minutes(plan.speakers.cuda) }) } : { on: false, why: t("setup.why.speakersSlow", { time: minutes(plan.speakers.cpu) }) },
       startWithWindows: { on: true, why: t("setup.why.startWithWindows") },
-      printScreen: { on: true, why: t("setup.why.printScreen") }
+      printScreen: { on: true, why: t("setup.why.printScreen") },
+      // The models on this computer where the graphics card holds the language model whole (4 GB of its own); else Groq.
+      groq: !d.at ? { on: false, why: t("setup.lookingCard") } : translationAdvice(d).accurate.where === "card" ? { on: false, why: t("setup.why.local") } : { on: true, why: t("setup.why.groq") }
     };
   }
   function recommendedChoice(v) {
@@ -6240,10 +6727,11 @@
       speakersOn: v.speech.plan.speakers.advised,
       startWithWindows: true,
       printScreen: r.printScreen.on,
-      test: true
+      test: true,
+      groq: r.groq.on
     };
   }
-  var speechNeeded = (c) => c.dictate || c.transcribe;
+  var speechNeeded = (c) => c.dictate && !c.groq || c.transcribe;
   function speakersWhere(c, v) {
     return c.speakersOn === "cuda" && c.gpu && v.speech.pack.nvidia && v.speech.plan.offers.speakersGpu ? "cuda" : "cpu";
   }
@@ -6289,7 +6777,7 @@
       });
       disk += onDisk;
       const downloaded = new Set(s.health?.downloaded ?? s.plan.dictation.choices.filter((x) => x.downloaded).map((x) => x.model));
-      const want = [...c.dictate ? [s.plan.dictation.chosen] : [], ...c.transcribe ? [s.plan.transcripts.chosen] : []];
+      const want = c.groq ? [] : [...c.dictate ? [s.plan.dictation.chosen] : [], ...c.transcribe ? [s.plan.transcripts.chosen] : []];
       for (const m of want) {
         if (models.includes(m.model)) continue;
         models.push(m.model);
@@ -6353,6 +6841,15 @@
     }
     return { patch: patch2, changes, download: changes.reduce((n, c) => n + c.mb, 0), model: fetchModel, natural: fetchNatural, parts };
   }
+
+  // src/remote/plan.ts
+  var GROQ_SPEECH = { dictation: "whisper-large-v3", recordings: "whisper-large-v3-turbo" };
+  var GROQ_MODELS = [GROQ_SPEECH.dictation, GROQ_SPEECH.recordings, "openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"];
+  var GROQ_FREE = {
+    speech: { perMinute: 20, perDay: 2e3, secondsPerHour: 7200, secondsPerDay: 28800 },
+    chat: { perMinute: 30, perDay: 1e3, tokensPerMinute: 8e3, tokensPerDay: 2e5 }
+  };
+  var isSpeechModel = (model) => model.startsWith("whisper-");
 
   // src/webview/speech.ts
   var SpeechError = class extends Error {
@@ -6707,9 +7204,13 @@
   function speakerRows(v) {
     const s = v.speech;
     const out = [...speakersDeviceRows(v), ...speakersInstallRows(v)];
-    if (!hasPart(v, "speakers")) return out;
-    if (!running(v)) return [...out, card("lock", t("speech.voicesModel"), [t("speech.voicesLater")], null)];
-    return [...out, grp(t("speech.voicesModel")), ...keyRows(v)];
+    return out;
+  }
+  function hfKeyRows(v) {
+    if (!installed(v)) return [row(t("speech.hfKey"), [t("apikeys.hfNoEngine")], null)];
+    if (!hasPart(v, "speakers")) return [row(t("speech.hfKey"), [t("apikeys.hfNoSpeakers")], null)];
+    if (!running(v)) return [card("lock", t("speech.hfKey"), [t("speech.voicesLater")], null)];
+    return keyRows(v);
   }
   function speakersDeviceRows(v) {
     const s = v.speech;
@@ -6798,7 +7299,9 @@
       field.blur();
       draft = "";
       replacing = false;
-      if (await saveEngine({ hfToken: value })) follow("checking");
+      post({ type: "saveKey", service: "huggingface", key: value });
+      field.value = "";
+      follow("checking");
     };
     field.addEventListener("keydown", (event) => {
       if (event.key === "Enter") void saveKey2();
@@ -6834,6 +7337,131 @@
     if (hasPart(v, "speakers") && state !== "needs-token" && state !== "bad-token" && state !== "no-access" && state !== "failed") return null;
     const why = !hasPart(v, "speakers") ? t("speech.missingPart") : t("speech.missingKey");
     return aside("users", why, " ", linkBtn(t("speech.setUp"), go2));
+  }
+
+  // src/webview/keys.ts
+  var GROQ_KEYS = "https://console.groq.com/keys";
+  var GROQ_PRIVACY = "https://groq.com/privacy-policy";
+  var replacing2 = false;
+  var MODEL_JOB = {
+    "whisper-large-v3": () => t("apikeys.useDictation"),
+    "whisper-large-v3-turbo": () => t("apikeys.useRecordings"),
+    "openai/gpt-oss-120b": () => t("apikeys.useTexts"),
+    "qwen/qwen3.8-27b": () => t("apikeys.useTalk"),
+    "openai/gpt-oss-20b": () => t("apikeys.useEdit")
+  };
+  function duration(seconds2) {
+    const m = Math.round(seconds2 / 60);
+    return m >= 60 ? t("apikeys.hours", { h: Math.floor(m / 60), m: m % 60 }) : t("apikeys.minutes", { m });
+  }
+  function usageRows(v) {
+    const used = v.keys.usage.filter((u) => u.day.requests > 0);
+    if (!used.length) return [row(t("apikeys.usageNone"), [t("apikeys.usageNoneNote")], null)];
+    return used.map((u) => {
+      const speech = isSpeechModel(u.model);
+      const plan = speech ? GROQ_FREE.speech : GROQ_FREE.chat;
+      const requests = t("apikeys.requests", { n: numberText(u.day.requests), of: numberText(u.limit ?? plan.perDay) });
+      const amount = speech ? t("apikeys.sound", { used: duration(u.day.seconds), of: duration(GROQ_FREE.speech.secondsPerDay) }) : t("apikeys.tokens", { used: numberText(Math.round(u.day.tokens / 1e3)), of: numberText(GROQ_FREE.chat.tokensPerDay / 1e3) });
+      const left = u.left !== void 0 ? [t("apikeys.groqLeft", { n: numberText(u.left) })] : [];
+      return row(MODEL_JOB[u.model]?.() ?? u.model, [`${requests} \xB7 ${amount}`, ...left], null);
+    });
+  }
+  function groqKeyRow(v) {
+    const k = v.keys.groq;
+    const state = k.check === "checking" ? t("apikeys.checking") : k.check === "bad" ? t("apikeys.bad") : k.check === "offline" ? t("apikeys.offline") : k.check === "ok" ? t("apikeys.works") : "";
+    if (k.set && !replacing2) {
+      return [
+        row(
+          t("apikeys.groqKey"),
+          [el("small", { class: k.check === "bad" ? "kstate bad" : k.check === "ok" ? "kstate ok" : "kstate" }, t("apikeys.saved", { tail: k.tail ?? "" }), state ? ` \xB7 ${state}` : "")],
+          el(
+            "span",
+            { class: "kchg" },
+            linkBtn(t("apikeys.checkAgain"), () => post({ type: "checkKey", service: "groq" })),
+            linkBtn(t("apikeys.replace"), () => {
+              replacing2 = true;
+              redraw2();
+            }),
+            linkBtn(t("apikeys.delete"), () => post({ type: "removeKey", service: "groq" }))
+          )
+        )
+      ];
+    }
+    const field = el("input", {
+      type: "password",
+      class: "field wide",
+      placeholder: "gsk_\u2026",
+      autocomplete: "off",
+      spellcheck: "false",
+      "aria-label": t("apikeys.groqKey")
+    });
+    const send = () => {
+      const key = field.value.trim();
+      if (!key) return field.focus();
+      field.value = "";
+      replacing2 = false;
+      post({ type: "saveKey", service: "groq", key });
+    };
+    field.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") send();
+      if (event.key === "Escape" && replacing2) {
+        event.preventDefault();
+        replacing2 = false;
+        redraw2();
+      }
+    });
+    const note = k.check === "checking" ? t("apikeys.checking") : k.check === "bad" ? t("apikeys.bad") : t("apikeys.notSaved");
+    return [
+      row(t("apikeys.groqKey"), [el("small", { class: k.check === "bad" ? "kstate bad" : "kstate" }, note)], null),
+      el(
+        "ol",
+        { class: "steps" },
+        el("li", {}, link(GROQ_KEYS, t("apikeys.step1")), t("apikeys.step1Rest")),
+        el("li", {}, t("apikeys.step2"), el("b", {}, "Kryakl"), t("apikeys.step2Rest")),
+        el("li", {}, t("apikeys.step3"), el("span", { class: "kline" }, el("span", { class: "kchg" }, field, btn(t("apikeys.save"), send, "primary"))))
+      )
+    ];
+  }
+  function partRows(s) {
+    const set = (part) => (on) => post({ type: "remote", part, on });
+    return [
+      toggleCard("mic", t("apikeys.partDictate"), s.remote.dictate, set("dictate"), t("apikeys.partDictateNote")),
+      toggleCard("file-audio", t("apikeys.partTranscribe"), s.remote.transcribe, set("transcribe"), t("apikeys.partTranscribeNote")),
+      toggleCard("languages", t("apikeys.partLlm"), s.remote.llm, set("llm"), t("apikeys.partLlmNote")),
+      toggleCard("scan-text", t("apikeys.partScreen"), s.remote.screen, set("screen"), t("apikeys.partScreenNote"))
+    ];
+  }
+  var redraw2 = () => void 0;
+  function keysPage(v, again) {
+    redraw2 = again;
+    const s = v.settings;
+    const all = s.remote.dictate && s.remote.transcribe && s.remote.llm;
+    const out = [grp("Groq"), el("p", { class: "para" }, t("apikeys.groqWhat")), aside("info", t("apikeys.price"))];
+    if (!v.keys.usable) out.push(warn(t("apikeys.noEncryption")));
+    out.push(...groqKeyRow(v));
+    if (v.keys.groq.set) {
+      out.push(
+        card("cloud", t("apikeys.useGroq"), [t("apikeys.useGroqNote")], all ? linkBtn(t("apikeys.useNone"), () => post({ type: "useGroq", on: false })) : btn(t("apikeys.useAll"), () => post({ type: "useGroq", on: true }), "primary")),
+        ...partRows(s),
+        grp(t("apikeys.usage")),
+        ...usageRows(v)
+      );
+    }
+    out.push(
+      aside("cloud", t("apikeys.leaves"), " ", link(GROQ_PRIVACY, t("apikeys.privacy"))),
+      aside("lock", t("apikeys.safe")),
+      grp("Hugging Face"),
+      el("p", { class: "para" }, t("apikeys.hfWhat")),
+      ...hfKeyRows(v)
+    );
+    return out;
+  }
+  function groqKeyRows(v, again) {
+    redraw2 = again;
+    return [...groqKeyRow(v), aside("info", t("apikeys.price")), aside("cloud", t("apikeys.leaves"), " ", link(GROQ_PRIVACY, t("apikeys.privacy"))), aside("lock", t("apikeys.safe"))];
+  }
+  function keyState(v) {
+    return v.keys.groq.set ? t("apikeys.saved", { tail: v.keys.groq.tail ?? "" }) : t("apikeys.notSaved");
   }
 
   // src/webview/setup.ts
@@ -6873,7 +7501,7 @@
       started = true;
       go2(4);
     };
-    const room = step === 3 ? cost(c, v).fits : true;
+    const room = step === 3 ? cost(c, v).fits : step === 2 ? !c.groq || v.keys.groq.set : true;
     const next = step === 3 ? btn([lucide("download", "s"), t("setup.download")], download, "primary") : step === 4 ? btn(t("setup.finish"), finish, "primary") : btn([t("setup.next"), lucide("chevron-right", "s")], () => go2(step + 1), "primary");
     if (!room) next.disabled = true;
     return [
@@ -6952,6 +7580,7 @@
       ),
       card("memory-stick", t("setup.memory"), [t("size.gb", { n: d.ramGb })], null),
       card("monitor", t("setup.graphicsCard"), [cardNote2], null),
+      ...whereStep(v, h, c, r),
       grp(t("setup.means")),
       verdict,
       s.plan.offers.gpu ? advised(
@@ -6968,6 +7597,21 @@
         r.gpu
       ) : null,
       looking ? aside("info", t("setup.stillLooking")) : null
+    ].filter((n) => n !== null);
+  }
+  function whereStep(v, h, c, r) {
+    const pick = (groq) => () => {
+      c.groq = groq;
+      h.redraw();
+    };
+    const label = (text, advisedHere) => el("span", {}, text, advisedHere ? recommended() : null);
+    const known = v.speech.device.at !== 0;
+    return [
+      grp(t("setup.runWhere")),
+      radioRow(label(t("setup.runHere"), known && !r.groq.on), [t("setup.runHereNote"), known && !r.groq.on ? r.groq.why : null], !c.groq, pick(false)),
+      radioRow(label(t("setup.runGroq"), r.groq.on), [t("setup.runGroqNote"), r.groq.on ? r.groq.why : null], c.groq, pick(true)),
+      ...c.groq ? groqKeyRows(v, h.redraw) : [],
+      c.groq && !v.keys.groq.set ? aside("info", t("setup.groqNeedsKey")) : null
     ].filter((n) => n !== null);
   }
   function needStep(v, h, c, r) {
@@ -7029,7 +7673,7 @@
           t("dict.type"),
           c.dictate,
           flip("dictate"),
-          t("setup.dictateNote", { why: r.dictate.why, engine: sizeText(engineMb), model: dictateModel.label, size: dictateModel.downloaded ? t("setup.here") : sizeText(dictateModel.mb) })
+          c.groq ? t("setup.dictateGroq") : t("setup.dictateNote", { why: r.dictate.why, engine: sizeText(engineMb), model: dictateModel.label, size: dictateModel.downloaded ? t("setup.here") : sizeText(dictateModel.mb) })
         ),
         r.dictate
       ),
@@ -7039,7 +7683,7 @@
           t("setup.transcribe"),
           c.transcribe,
           flip("transcribe"),
-          t(c.dictate ? "setup.transcribeNote" : "setup.transcribeNoteEngine", {
+          c.groq ? t("setup.transcribeGroq", { engine: sizeText(engineMb) }) : t(c.dictate ? "setup.transcribeNote" : "setup.transcribeNoteEngine", {
             why: r.transcribe.why,
             model: transcribeModel.label,
             size: transcribeModel.downloaded ? t("setup.here") : sizeText(transcribeModel.mb),
@@ -7097,6 +7741,7 @@
       // The advice stays "automatic", so it follows the computer; another choice is kept as made.
       speakersDevice: speakersWhere(c, v) === v.speech.plan.speakers.advised ? "auto" : speakersWhere(c, v)
     });
+    if (c.groq && v.keys.groq.set) h.post({ type: "useGroq", on: true });
     const t2 = v.translatorState.status;
     if (t2 === "absent" || t2 === "failed") h.post({ type: "prepareTranslator" });
     const d = v.dictionary.status;
@@ -7682,6 +8327,7 @@
   function openTranscript(id) {
     if (id !== tx.openId) stopPlayer();
     tx.openId = id;
+    post({ type: "transcriptShown", id });
     tx.deleting = tx.exporting = tx.redoing = tx.againing = false;
     if (id && tx.row?.id !== id) {
       tx.row = void 0;
@@ -7699,6 +8345,7 @@
   }
   function leaveTranscripts() {
     stopPlayer();
+    post({ type: "transcriptShown", id: "" });
   }
   var busy = (status) => status === "queued" || status === "working";
   async function loadTranscript() {
@@ -7785,9 +8432,10 @@
     return card2;
   }
   function updateProgress(card2, r) {
-    const at = STAGES.findIndex((s) => s[0] === r.stage);
+    const waiting2 = r.stage === "waiting";
+    const at = STAGES.findIndex((s) => s[0] === (waiting2 ? "words" : r.stage));
     const lead = card2.querySelector(".plead");
-    if (lead) lead.textContent = r.status === "queued" ? t("tr.waitingTurn") : `${STAGES[at]?.[1] ?? t("tr.starting")}\u2026`;
+    if (lead) lead.textContent = r.status === "queued" ? t("tr.waitingTurn") : waiting2 ? t("tr.waitingGroq") : `${STAGES[at]?.[1] ?? t("tr.starting")}\u2026`;
     const track = card2.querySelector(".track");
     track?.classList.toggle("live", r.status === "working");
     const fill = track?.firstElementChild;
@@ -7798,13 +8446,15 @@
     const held = card2.querySelector(".pbusy");
     const why = r.status === "working" ? r.ran?.why : void 0;
     if (held) {
-      held.hidden = why !== "lighter" && why !== "processor";
-      held.textContent = why === "lighter" ? t("tr.busyLighter", { model: modelLabel(r.ran?.model) }) : why === "processor" ? t("tr.busyProcessor") : "";
+      const groq = r.status === "working" && r.ran?.device === "groq";
+      held.hidden = why !== "lighter" && why !== "processor" && why !== "offline" && !groq;
+      held.textContent = groq ? t("tr.byGroqNow") : why === "offline" ? t("tr.groqOffline") : why === "lighter" ? t("tr.busyLighter", { model: modelLabel(r.ran?.model) }) : why === "processor" ? t("tr.busyProcessor") : "";
     }
   }
   var modelLabel = (name = "") => MODELS.find((m) => m.name === name)?.label ?? name;
   function progressLine(r) {
     if (r.status === "queued") return t("tr.startsAfter");
+    if (r.stage === "waiting") return r.until ? t("tr.goesOnAt", { time: new Date(r.until * 1e3).toLocaleTimeString(uiLanguage(), { hour: "2-digit", minute: "2-digit" }) }) : t("tr.goesOnSoon");
     const [a, b] = WEIGHTS[r.stage] ?? [0, 1];
     const part = Math.min(1, Math.max(0, (r.progress - a) / (b - a)));
     const parts = [];
@@ -7936,11 +8586,13 @@
     if (lighter) out.push(lighter);
     const speakers = speakersNotice(v, tr);
     if (speakers) out.push(speakers);
+    if (tr.speakersBy === "meet") out.push(aside("users", t("tr.namesFromMeet")));
     return out;
   }
   function lighterNotice(r, tr) {
-    if (r.ran?.why !== "lighter") return null;
-    const said2 = t("tr.lighterDone", { model: modelLabel(r.ran.model) });
+    if (tr.by === "groq" || r.by === "groq") return aside("cloud", t("tr.byGroqDone"));
+    if (r.ran?.why !== "lighter" && r.ran?.why !== "offline") return null;
+    const said2 = r.ran.why === "offline" ? t("tr.groqOfflineDone", { model: modelLabel(r.ran.model) }) : t("tr.lighterDone", { model: modelLabel(r.ran.model) });
     if (tr.source === "meet") return aside("info", said2);
     if (tx.againing) {
       return aside(
@@ -8200,6 +8852,7 @@
     else if (tx.row && tx.row.status !== "done") void loadTranscript();
   }, 1500);
   function enterTranscripts() {
+    post({ type: "transcriptShown", id: tx.openId });
     if (tx.openId) void loadTranscript();
     else void loadRows();
   }
@@ -8846,8 +9499,11 @@
     talkWindow: { title: () => t("act.talkWindow"), body: talkWindowPage },
     notes: { title: () => t("dictate.notesFolder"), body: kbRows },
     edit: { title: () => t("edit.title"), body: editPage },
+    typed: { title: () => t("typed.title"), body: typedPage },
     meet: { title: () => t("meet.title"), body: meetPage },
-    speakers: { title: () => t("page.speakers"), body: speakerRows, valid: installed },
+    // The Hugging Face key lives on Settings › Keys with Groq's: a line leads there.
+    speakers: { title: () => t("page.speakers"), body: (v) => [...speakerRows(v), ...hasPart(v, "speakers") ? [keysLine(v, "huggingface")] : []], valid: installed },
+    keys: { title: () => t("page.keys"), body: (v) => keysPage(v, renderBody) },
     fixing: { title: () => t("page.fixing"), body: fixingPage },
     program: { title: () => programOpen, body: programPage, valid: () => !!programOpen },
     languages: { title: () => t("page.languages"), body: languagesPage },
@@ -8875,9 +9531,9 @@
     pBody.replaceChildren(...bodyOf(view));
     if (reduced.matches) return ghost.remove();
     const easing = "cubic-bezier(0.2, 0.8, 0.2, 1)";
-    const duration = 220;
-    const out = ghost.animate([{ transform: "none", opacity: 1 }, { transform: `translateX(${-48 * dir}px)`, opacity: 0 }], { duration, easing, fill: "forwards" });
-    const inn = pBody.animate([{ transform: `translateX(${48 * dir}px)`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration, easing });
+    const duration2 = 220;
+    const out = ghost.animate([{ transform: "none", opacity: 1 }, { transform: `translateX(${-48 * dir}px)`, opacity: 0 }], { duration: duration2, easing, fill: "forwards" });
+    const inn = pBody.animate([{ transform: `translateX(${48 * dir}px)`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration: duration2, easing });
     out.onfinish = () => ghost.remove();
     sliding = [out, inn];
   }
@@ -9003,6 +9659,7 @@
     { name: "english", sub: "talkWindow" },
     { name: "voice", sub: "notes" },
     { name: "voice", sub: "edit" },
+    { name: "voice", sub: "typed" },
     { name: "layout", sub: "fixing" },
     { name: "recordings", sub: "speakers" },
     { name: "recordings", sub: "meet" },
@@ -9013,6 +9670,8 @@
     { name: "layouts" },
     { name: "settings" },
     { name: "settings", sub: "languages" },
+    { name: "settings", sub: "keys" },
+    { name: "about" },
     { name: "models" },
     { name: "models", sub: "forTranslate" },
     { name: "models", sub: "forCheck" },
@@ -9456,7 +10115,7 @@
   function shareOffer(v) {
     const s = v.settings;
     const model = s.model;
-    if (s.translationLevel !== "fast" || v.models[model].status !== "ready" || s.shareOfferSeen.includes(model)) return null;
+    if (s.remote.llm || s.translationLevel !== "fast" || v.models[model].status !== "ready" || s.shareOfferSeen.includes(model)) return null;
     if (translationAdvice(v.speech.device)[model].slow) return null;
     const seen = () => save({ shareOfferSeen: [...s.shareOfferSeen, model] });
     const name = levelName(model);
@@ -9495,28 +10154,66 @@
       () => post({ type: "translationLevel", level: "fast" }),
       fetching ? pct(fast.progress) : null
     );
-    const share = (model) => t(s.model !== model ? "models.checkMoves" : s.translationLevel === model ? "models.checkShares" : "models.checkAlready");
+    const groq = s.remote.llm;
+    const share = (model) => t(groq || s.model !== model ? "models.checkMoves" : s.translationLevel === model ? "models.checkShares" : "models.checkAlready");
+    const pickLocal = (model) => () => (groq && post({ type: "remote", part: "llm", on: false }), post({ type: "translationLevel", level: model }));
+    const byGroq = groqChoice(
+      v,
+      groq && s.translationLevel !== "fast",
+      () => (post({ type: "remote", part: "llm", on: true }), s.translationLevel === "fast" && post({ type: "translationLevel", level: "accurate" })),
+      [t("models.groqNote", { what: t("models.groqText") }), t("models.groqSharesCheck")]
+    );
     return [
       shareOffer(v),
       grp(t("models.translateWith")),
       fastRow,
-      ...["accurate", "most"].map((model) => llmChoice(v, model, s.translationLevel === model, () => post({ type: "translationLevel", level: model }), share(model)))
+      ...["accurate", "most"].map((model) => llmChoice(v, model, !groq && s.translationLevel === model, pickLocal(model), share(model))),
+      byGroq,
+      groq ? aside("info", t("models.groqFallback", { fast: levelName("fast") })) : null
     ].filter((n) => n !== null);
+  }
+  function groqChoice(v, on, pick, notes) {
+    const key = v.keys.groq.set;
+    return radioRow(
+      el("span", { class: "groq" }, t("models.groq"), lucide("cloud")),
+      [...notes, key ? null : t("models.groqNoKey")],
+      on,
+      key ? pick : void 0,
+      key ? null : linkBtn(t("models.addKey"), () => go("settings", "keys"))
+    );
   }
   function checkChoicePage(v) {
     const s = v.settings;
     const share = (model) => s.translationLevel === model ? t("models.translateShares") : s.translationLevel === "fast" ? t("models.translateStays", { fast: levelName("fast") }) : t("models.translateMoves");
+    const groq = s.remote.llm;
+    const pickLocal = (model) => () => (groq && post({ type: "remote", part: "llm", on: false }), post({ type: "useModel", model }));
     return [
       grp(t("models.checkWith")),
-      ...["accurate", "most"].map((model) => llmChoice(v, model, s.model === model, () => post({ type: "useModel", model }), share(model))),
-      aside("info", t("models.fastOnly", { fast: levelName("fast") }))
+      ...["accurate", "most"].map((model) => llmChoice(v, model, !groq && s.model === model, pickLocal(model), share(model))),
+      groqChoice(v, groq, () => post({ type: "remote", part: "llm", on: true }), [
+        t("models.groqNote", { what: t("models.groqText") }),
+        s.translationLevel === "fast" ? t("models.translateStays", { fast: levelName("fast") }) : t("models.groqSharesTranslate")
+      ]),
+      groq ? aside("info", t("models.groqFallback", { fast: levelName("fast") })) : aside("info", t("models.fastOnly", { fast: levelName("fast") }))
     ];
   }
   function speechChoicePage(v, feature) {
     const name = feature === "dictation" ? TITLES.voice : TITLES.recordings;
+    const part = feature === "dictation" ? "dictate" : "transcribe";
+    const groq = v.settings.remote[part];
+    const where2 = [
+      grp(t("models.whereRuns")),
+      radioRow(t("models.runsHere"), [t("models.runsHereNote")], !groq, () => post({ type: "remote", part, on: false })),
+      groqChoice(v, groq, () => post({ type: "remote", part, on: true }), [
+        t(feature === "dictation" ? "models.speechGroqDictate" : "models.speechGroqTranscribe"),
+        t("models.groqNote", { what: t("models.groqSound") })
+      ]),
+      groq ? aside("info", t("models.groqStandby")) : null
+    ].filter((n) => n !== null);
     const offer = engineRows(v, feature === "dictation" ? "Dictate" : "Transcribe");
-    if (offer.length) return [grp(t("models.engine")), ...offer];
+    if (offer.length) return [...where2, grp(t("models.engine")), ...offer];
     return [
+      ...where2,
       testOffer(v),
       grp(t("models.speechWith", { name })),
       ...speechChoiceRows(v, feature),
@@ -9620,9 +10317,11 @@
   }
   function levelValue(v) {
     const level = v.settings.translationLevel;
+    if (v.settings.remote.llm && level !== "fast") return "Groq";
     return `${levelName(level)}${stateText(v.translation[level])}`;
   }
   function checkValue(v) {
+    if (v.settings.remote.llm) return "Groq";
     return `${levelName(v.settings.model)}${stateText(v.models[v.settings.model])}`;
   }
   function translatePage(v) {
@@ -9865,6 +10564,7 @@ ${whenSaid(e.at, Date.now())}`,
     ];
   }
   function speechValue(v, feature) {
+    if (v.settings.remote[feature === "dictation" ? "dictate" : "transcribe"]) return "Groq";
     if (!installed(v)) return t("dictate.needsEngine");
     const p = v.speech.plan[feature];
     const live = v.speech.health?.models[feature];
@@ -9891,10 +10591,36 @@ ${whenSaid(e.at, Date.now())}`,
       keyRow("againKey", t("dictate.againKey"), t("dictate.againNote"), !k.again),
       keyRow("noteKey", t("dict.note"), t("dictate.noteNote"), !k.note),
       toggle(t("dictate.panel"), s.dictationPanel, (dictationPanel) => save({ dictationPanel }), t("dictate.panelNote")),
+      toggle(
+        t("dictate.sound"),
+        s.dictateSound,
+        (dictateSound) => {
+          save({ dictateSound });
+          if (dictateSound) hearDictation();
+        },
+        t("dictate.soundNote")
+      ),
+      navCard(null, t("typed.title"), t("typed.titleNote"), null, () => openSub("typed"), "typed"),
       aside("info", t("dictate.escNote")),
       el("p", { class: "privacy" }, lucide("lock", "s"), t("dictate.privacy")),
       enginePlate([{ title: t("dictate.speechModel"), value: speechValue(v, "dictation"), open: () => go("models", "forDictate") }])
     ].filter((n) => n !== null);
+  }
+  function hearDictation() {
+    for (const [name, at] of [["start", 0], ["done", 700]]) {
+      setTimeout(() => void new Audio(`dictation-${name}.wav`).play().catch(() => void 0), at);
+    }
+  }
+  function typedPage(v) {
+    const s = v.settings;
+    const yo = { heard: ["typed.yoHeard", "typed.yoHeardNote"], always: ["typed.yoAlways", "typed.yoAlwaysNote"], never: ["typed.yoNever", "typed.yoNeverNote"] };
+    return [
+      toggle(t("typed.space"), s.dictateSpace, (dictateSpace) => save({ dictateSpace }), t("typed.spaceNote")),
+      toggle(t("typed.endStop"), s.dictateEndStop, (dictateEndStop) => save({ dictateEndStop }), t("typed.endStopNote")),
+      grp(t("typed.yo")),
+      ...YO_MODES.map((mode) => radioRow(t(yo[mode][0]), [t(yo[mode][1])], s.dictateYo === mode, () => save({ dictateYo: mode }))),
+      aside("info", t("typed.exact"))
+    ];
   }
   var ownTimer;
   function ownField(value) {
@@ -9957,14 +10683,14 @@ ${whenSaid(e.at, Date.now())}`,
     const word = liveField("word", t("vocab.wordPlaceholder"), t("vocab.wordAria"), (key) => key === "Enter" ? add() : clear());
     const heard2 = liveField("heard", t("vocab.heardPlaceholder"), t("vocab.heardAria"), (key) => key === "Enter" ? add() : clear());
     const clear = () => {
-      word.value = "";
-      heard2.value = "";
-      word.focus();
+      liveOf(word).value = "";
+      liveOf(heard2).value = "";
+      liveOf(word).focus();
     };
     const add = () => {
-      const w = word.value.replace(/\s+/g, " ").trim();
-      const h = heard2.value.replace(/\s+/g, " ").replace(/[()]/g, "").trim();
-      if (!w) return word.focus();
+      const w = liveOf(word).value.replace(/\s+/g, " ").trim();
+      const h = liveOf(heard2).value.replace(/\s+/g, " ").replace(/[()]/g, "").trim();
+      if (!w) return liveOf(word).focus();
       const line = h ? `${w} (${h})` : w;
       if (!parseEntry(line).word) return;
       const lines = (view?.settings.vocabulary ?? s.vocabulary).filter((l) => wordOf(l) !== w.toLowerCase());
@@ -9973,9 +10699,9 @@ ${whenSaid(e.at, Date.now())}`,
     };
     const edit = (line) => {
       const { word: w, heard: hs } = parseEntry(line);
-      word.value = w;
-      heard2.value = hs.join(", ");
-      word.focus();
+      liveOf(word).value = w;
+      liveOf(heard2).value = hs.join(", ");
+      liveOf(word).focus();
     };
     const items = s.vocabulary.map((line) => {
       const { word: w, heard: hs } = parseEntry(line);
@@ -10278,7 +11004,8 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
     const known = new Set(s.apps.map((a) => a.exe));
     const running2 = runningApps.filter((exe) => !known.has(exe));
     const suggest = v.lastApp && !known.has(v.lastApp) ? v.lastApp : "";
-    const addTyped = (field2) => {
+    const addTyped = (typed) => {
+      const field2 = liveOf(typed);
       const name = field2.value.trim().toLowerCase();
       field2.value = "";
       if (name) add(/\.exe$/.test(name) ? name : `${name}.exe`);
@@ -10628,7 +11355,7 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
       post({ type: "removeStored", id: p.id, item: p.item });
     };
     if (asking2 === key) return row(label, [storedNote(v, p), bad(t("storage.removeAsk", { loss: lossOf(p) }))], el("span", { class: "kchg" }, size2, linkBtn(t("storage.keep"), () => (asking2 = "", renderBody())), btn(t("kb.remove"), remove2, "danger")));
-    const used = p.users?.length ? t("storage.usedBy", { users: usersText(p.users) }) : p.reserve ? t("storage.reserve", { reserve: usersText(p.reserve.split(" and ")) }) : null;
+    const used = p.users?.length ? t("storage.usedBy", { users: usersText(p.users) }) : p.reserve ? t("storage.reserve", { reserve: usersText(p.reserve.split(" and ")) }) : p.standby ? t("storage.standby") : null;
     const shared = p.shared / 1e6;
     const freed = p.id === "speech" && shared >= 100 ? t("storage.frees", { free: size(p.bytes / 1e6 - shared), shared: size(shared) }) : null;
     const ask = !!p.users?.length || p.id === "speech";
@@ -10759,24 +11486,10 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
       ),
       toggleCard("power", t("settings.startWithWindows"), s.startWithWindows, (startWithWindows) => save({ startWithWindows })),
       toggleCard("pause", t("settings.pause"), s.paused, (paused) => save({ paused }), t("settings.pauseNote")),
-      // New versions are downloaded by hand from GitHub (the owner, 2026-10-30): nothing installs itself.
-      // Since 2026-11-19 Kryakl says when one is out (newversion.ts), and Check now asks GitHub at once.
-      card(
-        "rotate-cw",
-        t(v.dev ? "settings.versionDev" : "settings.version", { version: versionText(v.version) }),
-        [
-          versionLine(v.versionCheck),
-          v.dev ? t("settings.built", { build: v.build }) : t("settings.versionNote"),
-          isBeta(v.version) ? t("settings.betaNote") : null
-        ],
-        v.versionCheck.latest ? btn(t("version.download"), openNewVersion, "primary") : el(
-          "span",
-          { class: "kchg" },
-          linkBtn(t(v.versionCheck.checking ? "version.checking" : "version.check"), () => v.versionCheck.checking || post({ type: "checkVersion" })),
-          linkBtn(t("settings.newVersions"), () => post({ type: "openLink", url: RELEASES }))
-        )
-      ),
-      toggleCard("download", t("settings.versionNotice"), s.versionNotice, (versionNotice) => save({ versionNotice }), t("settings.versionNoticeNote")),
+      // Every key of an online service in one place (2026-11-23, the owner).
+      navCard("key-round", t("page.keys"), t("apikeys.navNote"), keyState(v), () => go("settings", "keys"), "keys", v.keys.groq.set),
+      // The version and new versions live on About (2026-11-23, the owner: "почему-то засунуто в Settings"); a line leads there.
+      navCard("rotate-cw", t(v.dev ? "settings.versionDev" : "settings.version", { version: versionText(v.version) }), t("settings.versionMoved"), v.versionCheck.latest ? t("version.out", { version: v.versionCheck.latest }) : null, () => go("about")),
       grp(t("settings.backup")),
       card(
         "file-text",
@@ -10787,6 +11500,10 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
       aside("info", t("settings.importNote")),
       card("rotate-ccw", t("settings.resetAll"), [t("settings.resetAllNote")], linkBtn(t("main.reset"), () => post({ type: "resetSettings" })))
     ].filter((n) => n !== null);
+  }
+  function keysLine(v, service) {
+    const k = v.keys[service];
+    return navCard("key-round", service === "groq" ? t("apikeys.groqKey") : t("speech.hfKey"), t("apikeys.lineNote"), k.set ? t("apikeys.saved", { tail: k.tail ?? "" }) : t("apikeys.notSaved"), () => go("settings", "keys"), "keys", k.set);
   }
   var AUTHOR_LINKS = [
     ["ikstro.com", "https://ikstro.com"],
@@ -10813,10 +11530,22 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
       linkChips(AUTHOR_LINKS),
       row(t("about.mail"), [], el("span", { class: "kchg" }, el("span", { class: "mail" }, AUTHOR_MAIL), btn(t("about.write"), () => post({ type: "openLink", url: `mailto:${AUTHOR_MAIL}` })))),
       grp(t("app.name")),
-      // A run from source says when it was built, so it is never taken for the last release.
-      row(t("about.versionTitle"), [v.dev ? t("settings.built", { build: v.build }) : null], el("span", { class: "v" }, v.dev ? `${versionText(v.version)} dev` : versionText(v.version))),
+      // New versions are downloaded by hand from GitHub (the owner, 2026-10-30): nothing installs itself.
+      // Since 2026-11-19 Kryakl says when one is out (newversion.ts), and Check now asks GitHub at once.
+      // Here since 2026-11-23 (the owner), was Settings. A run from source says when it was built, so it is never taken for the last release.
+      row(
+        t(v.dev ? "settings.versionDev" : "settings.version", { version: versionText(v.version) }),
+        [versionLine(v.versionCheck), v.dev ? t("settings.built", { build: v.build }) : t("settings.versionNote"), isBeta(v.version) ? t("settings.betaNote") : null],
+        v.versionCheck.latest ? btn(t("version.download"), openNewVersion, "primary") : el(
+          "span",
+          { class: "kchg" },
+          linkBtn(t(v.versionCheck.checking ? "version.checking" : "version.check"), () => v.versionCheck.checking || post({ type: "checkVersion" })),
+          linkBtn(t("settings.newVersions"), () => post({ type: "openLink", url: RELEASES }))
+        )
+      ),
+      toggle(t("settings.versionNotice"), v.settings.versionNotice, (versionNotice) => save({ versionNotice }), t("settings.versionNoticeNote")),
       row(t("about.license"), [], el("span", { class: "v" }, t("about.licenseValue"))),
-      row(t("about.offline"), [t("about.offlineNote"), `${t("about.online")} ${t("about.onlineList", { size: v.natural.size })}`]),
+      row(t("about.offline"), [v.keys.groq.set && (v.settings.remote.dictate || v.settings.remote.transcribe || v.settings.remote.llm) ? t("about.offlineGroq") : t("about.offlineNote"), `${t("about.online")} ${t("about.onlineList", { size: v.natural.size })}`]),
       row(t("about.bug"), [isBeta(v.version) ? t("about.bugNote") : null], btn(t("about.report"), () => go("report"))),
       linkChips([
         [t("about.newVersions"), RELEASES],
@@ -10829,6 +11558,42 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
   }
   var reported;
   var reportText = () => pBody.querySelector('textarea[data-live="report"]')?.value ?? "";
+  var heardCapture;
+  function hearCapture(id) {
+    heardCapture?.pause();
+    void window.tutorHost.call({ call: "capturedSound", id }).then((bytes) => {
+      if (!ArrayBuffer.isView(bytes)) return;
+      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)], { type: "audio/wav" }));
+      const audio2 = new Audio(url);
+      heardCapture = audio2;
+      audio2.addEventListener("ended", () => URL.revokeObjectURL(url));
+      void audio2.play().catch(() => void 0);
+    }, fault);
+  }
+  function captureRows(v) {
+    const c = v.captures;
+    const full = c.items.length >= c.most;
+    return [
+      grp(t("report.capture")),
+      toggleCard("mic", t("report.captureOn"), c.on, (on) => post({ type: "captureDictation", on }), c.on ? t("report.captureLeft", { n: c.left }) : t("report.captureNote", { n: c.most })),
+      full && !c.on ? warn(t("report.captureFull")) : null,
+      ...c.items.length ? [
+        grp(t("report.captured"), c.items.length, linkBtn(t("report.captureClear"), () => post({ type: "clearCaptures" }))),
+        lineList(
+          c.items.map((p) => ({
+            text: p.typed || `(${t("report.captureNothing")}${p.error ? `: ${engineMessage(p.error).replace(/\.$/, "")}` : ""})`,
+            more: `${whenSaid(new Date(p.at).toISOString(), Date.now())} \xB7 ${t("report.captureSeconds", { n: numberText(p.seconds) })}`,
+            title: t("report.captureHeard", { heard: p.heard || "\u2026" }),
+            open: () => hearCapture(p.id),
+            remove: () => post({ type: "forgetCapture", id: p.id }),
+            removeLabel: t("ui.remove", { item: p.typed || t("report.captureNothing") })
+          })),
+          "time"
+        ),
+        aside("info", t("report.capturedNote"))
+      ] : []
+    ].filter((n) => n !== null);
+  }
   function reportPage(v) {
     const send = (via) => {
       reported = void 0;
@@ -10845,6 +11610,7 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
     return [
       grp(t("report.what")),
       el("div", { class: "row add" }, field, el("small", {}, t("report.anyLanguage"))),
+      ...installed(v) ? captureRows(v) : [],
       grp(t("report.send")),
       row(t("report.email"), [t("report.emailNote", { email: REPORT_EMAIL })], btn([lucide("mail", "s"), t("report.emailBtn")], () => send("email"), "primary")),
       row(t("report.issue"), [t("report.issueNote")], btn([lucide("external-link", "s"), t("report.issueBtn")], () => send("github"))),

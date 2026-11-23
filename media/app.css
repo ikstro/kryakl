@@ -2005,6 +2005,19 @@ button.chip:hover {
   opacity: 0.55;
 }
 
+/* "By Groq" on a choice: the cloud after its name, as everything Groq did is marked. */
+.groq {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.groq > .lu {
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+}
+
 /* One choice of a few (an action's model on Models): a ring before the line, filled in the one in use; the whole line picks it. */
 .row.radio {
   align-items: flex-start;

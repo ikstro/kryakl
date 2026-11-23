@@ -2,6 +2,7 @@
 // (%APPDATA%\Kryakl). The learned language is English: the natural voice and
 // the word dictionaries are English ones.
 
+import { YO_MODES, type YoMode } from './dicttext'
 import { COPY_TWICE } from './hotkey'
 import { isUiLanguage, type UiLanguage } from './i18n'
 import { findLanguage, LANGUAGES } from './languages'
@@ -187,6 +188,12 @@ export type Settings = {
   dictateEditStyle: EditStyle
   /** Their own instruction, for the style `own`. */
   dictateEditOwn: string
+  /** How a dictated phrase is typed (dicttext.ts): a space after it; the full stop of a phrase of one sentence; the letter ё as heard, always where a word has one reading, or never. */
+  dictateSpace: boolean
+  dictateEndStop: boolean
+  dictateYo: YoMode
+  /** A sound as a dictation starts recording and another once its text is typed (media/dictation-*.wav); off until turned on. */
+  dictateSound: boolean
   /** Where the talk window was last left, in screen pixels; none until it is moved or sized (it opens by the bottom right of the screen). */
   talkBounds: { x: number; y: number; width: number; height: number } | null
   /**
@@ -213,6 +220,16 @@ export type Settings = {
   model: LlmModel
   /** Speech models: the most accurate this computer runs in time, or quicker ones. */
   speechPrefer: Prefer
+  /**
+   * What runs by the person's own Groq key in place of a model on this computer
+   * (2026-11-23; remote/groq.ts), each off until they turn it on, and only while
+   * a key is saved (remote/keys.ts): dictated phrases (notes and Talk's listening
+   * stay here), recordings and meetings, and the language model, which is the
+   * one model of Translate (when not Fast), Check my English, Talk and text editing;
+   * and a screenshot's text (`screen`), a switch of its own, never turned on by
+   * "Use Groq for everything", as a picture of the screen may hold anything.
+   */
+  remote: Remote
   /** A speech model the person picked for dictation and for transcripts (models.json names); empty: chosen for this computer. */
   dictationModel: string
   transcriptsModel: string
@@ -314,6 +331,10 @@ export const DEFAULTS: Settings = {
   dictateEdit: false,
   dictateEditStyle: 'clean',
   dictateEditOwn: '',
+  dictateSpace: true,
+  dictateEndStop: true,
+  dictateYo: 'heard',
+  dictateSound: false,
   talkBounds: null,
   dictationBadge: { dx: 0, dy: 0 },
   dictationPanel: true,
@@ -321,6 +342,7 @@ export const DEFAULTS: Settings = {
   translationLevel: 'fast',
   model: 'accurate',
   speechPrefer: 'accuracy',
+  remote: { dictate: false, transcribe: false, llm: false, screen: false },
   dictationModel: '',
   transcriptsModel: '',
   speakersDevice: 'auto',
@@ -353,6 +375,19 @@ function movedSelectKey(raw: unknown, r: Record<string, unknown>, selectKey: str
   if (!raw || typeof raw !== 'object' || r.keysVersion === KEYS_VERSION) return selectKey
   if (selectKey || r.doubleCopy === false || Object.values(r).includes(COPY_TWICE)) return selectKey
   return COPY_TWICE
+}
+
+/** What runs by the person's own Groq key in place of a model here (see `Settings.remote`). */
+export type Remote = { dictate: boolean; transcribe: boolean; llm: boolean; screen: boolean }
+
+/**
+ * `remote` tidied. The trial build of 2026-11-22 kept dictation's choice as
+ * `dictationProvider`: its "groq" is `dictate`, its other provider is gone.
+ */
+function remoteOf(raw: unknown, provider: unknown): Remote {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const on = (v: unknown, d = false) => (typeof v === 'boolean' ? v : d)
+  return { dictate: on(r.dictate, provider === 'groq'), transcribe: on(r.transcribe), llm: on(r.llm), screen: on(r.screen) }
 }
 
 export const VOCABULARY = { lines: 200, chars: 120 }
@@ -528,12 +563,18 @@ export function normalize(raw: unknown, native = DEFAULTS.native): Settings {
     dictateEdit: flag(r.dictateEdit, DEFAULTS.dictateEdit),
     dictateEditStyle: EDIT_STYLES.includes(r.dictateEditStyle as EditStyle) ? (r.dictateEditStyle as EditStyle) : DEFAULTS.dictateEditStyle,
     dictateEditOwn: typeof r.dictateEditOwn === 'string' ? r.dictateEditOwn.slice(0, EDIT_OWN_MAX) : DEFAULTS.dictateEditOwn,
+    dictateSpace: flag(r.dictateSpace, DEFAULTS.dictateSpace),
+    dictateEndStop: flag(r.dictateEndStop, DEFAULTS.dictateEndStop),
+    dictateYo: YO_MODES.find(m => m === r.dictateYo) ?? DEFAULTS.dictateYo,
+    dictateSound: flag(r.dictateSound, DEFAULTS.dictateSound),
     talkBounds: windowBounds(r.talkBounds),
     dictationBadge: badgeOffset(r.dictationBadge),
     dictationPanel: flag(r.dictationPanel, DEFAULTS.dictationPanel),
     vocabulary: vocabularyLines(r.vocabulary),
     ...levelAndModel(r.translationLevel, r.model),
     speechPrefer: r.speechPrefer === 'speed' ? 'speed' : 'accuracy',
+    // The trial build's `dictationProvider: 'groq'` turns Groq dictation on once; its 'whispertyping' is dropped.
+    remote: remoteOf(r.remote, (r as Record<string, unknown>).dictationProvider),
     dictationModel: key(r.dictationModel, DEFAULTS.dictationModel),
     transcriptsModel: key(r.transcriptsModel, DEFAULTS.transcriptsModel),
     speakersDevice: r.speakersDevice === 'cuda' || r.speakersDevice === 'cpu' ? r.speakersDevice : 'auto',

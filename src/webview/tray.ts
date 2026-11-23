@@ -213,6 +213,45 @@ function pauseButton(paused: boolean): HTMLElement {
   )
 }
 
+/** Which folding rows are open (2026-11-23): kept in the panel's own storage; closed at first. */
+type FoldId = 'words' | 'phrases'
+const FOLDS_KEY = 'tray.open'
+function openFolds(): Partial<Record<FoldId, boolean>> {
+  try {
+    return JSON.parse(localStorage.getItem(FOLDS_KEY) ?? '{}') ?? {}
+  } catch {
+    return {}
+  }
+}
+
+/** One row with a chevron that opens its rows in place, indented under it; the state is kept and the panel's height follows. */
+function fold(id: FoldId, icon: LucideName, label: string, ...rows: (HTMLElement | null)[]): HTMLElement {
+  const open = openFolds()[id] === true
+  const head = el(
+    'button',
+    {
+      class: 'cmd fold',
+      'data-nav': true,
+      'data-id': `fold-${id}`,
+      'aria-expanded': String(open),
+      onclick: () => {
+        try {
+          localStorage.setItem(FOLDS_KEY, JSON.stringify({ ...openFolds(), [id]: !open }))
+        } catch {
+          // Without storage the row still opens, for this drawing.
+        }
+        // Closing while the Keep field is open drops it, nothing added.
+        if (open && id === 'words' && keep.mode === 'field') keep = { mode: 'row' }
+        redraw()
+      },
+    },
+    lucide(icon, 's'),
+    el('span', { class: 'l' }, label),
+    lucide('chevron-right', 's'),
+  )
+  return el('section', { class: 'sec foldsec' }, head, open ? el('div', { class: 'sub' }, ...rows) : null)
+}
+
 /** A group of rows under its name, as the sidebar's groups are. */
 function group(label: string, ...rows: (HTMLElement | null)[]): HTMLElement {
   return el('section', { class: 'sec' }, el('div', { class: 'grp' }, label), ...rows)
@@ -274,14 +313,16 @@ function render(v: TrayView): void {
       toggle('layoutBadge', 'text-cursor', t('tray.layoutBadge'), v.layoutBadge),
       toggle('trayLayout', 'panel-bottom', t('tray.trayLayout'), v.trayLayout),
     ),
-    group(
+    fold(
+      'words',
+      'book-open',
       t('tray.yourWords'),
       v.keep.on ? keepRow(v) : null,
       v.speech.installed ? command('vocabulary', 'mic', t('tray.vocabulary'), 'vocabulary') : null,
       command('kept', 'list', t('tray.keptList'), 'kept'),
     ),
     v.speech.installed && v.phrases.length
-      ? group(t('tray.phrases'), ...v.phrases.map(phraseRow), command('phrases', 'history', t('tray.allPhrases'), 'phrases'))
+      ? fold('phrases', 'message-square-text', t('tray.phrases'), ...v.phrases.map(phraseRow), command('phrases', 'history', t('tray.allPhrases'), 'phrases'))
       : null,
     el(
       'footer',

@@ -11,9 +11,11 @@ on the computer can reach, and any Chrome extension too. So:
   extension/manifest.json), may only say hello and record a meeting. Its Origin
   proves nothing to the engine (any program here can send that header), so a
   caller by it may only start a `meet` recording, send its chunks (up to
-  `app.EXTENSION_RECORDING_MAX` a recording) and finish it.
+  `app.EXTENSION_RECORDING_MAX` a recording), finish it and ask how far its
+  transcript is (stage and progress of a `meet` recording, never its words).
 - Anything else gets /health's bare "ok" (the extension's first look may come
-  without an Origin) and nothing more.
+  without an Origin) and a meeting's progress (`open_status`, as the extension's
+  GET comes without one), and nothing more.
 
 `/health` with X-Krya-Nonce and no key answers HMAC(key, nonce) and nothing
 else: Kryakl checks it before it sends the key, so another program (another
@@ -53,7 +55,18 @@ _EXTENSION_ROUTES = [
     ("POST", re.compile(r"/recordings")),
     ("PUT", re.compile(r"/recordings/[^/]+/[^/]+/\d+")),
     ("POST", re.compile(r"/recordings/[^/]+/finish")),
+    # After the finish, how far the transcript is (app.recording_status: a meeting's alone, no words).
+    ("GET", re.compile(r"/recordings/[^/]+/status")),
 ]
+# The extension's GET comes without an Origin (Chrome adds none to a GET under host permissions), so this one is
+# served to a caller with neither key nor Origin too, as /health is: any program here could send the extension's
+# Origin anyway, and a web page's request without one (no-cors) cannot read the answer.
+_STATUS_ROUTE = re.compile(r"/recordings/[^/]+/status")
+
+
+def open_status(method: str, path: str) -> bool:
+    """A meeting's progress, asked without the key (the extension's popup and icon)."""
+    return method == "GET" and bool(_STATUS_ROUTE.fullmatch(path))
 # Kryakl's nonce is 32 hex digits; a longer one is not Kryakl's.
 NONCE_MAX = 128
 

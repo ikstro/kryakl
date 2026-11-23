@@ -120,8 +120,11 @@ def group(words: list[dict]) -> list[dict]:
     return [u for u in out if u["text"]]
 
 
-def renumber(utterances: list[dict]) -> dict:
-    """pyannote's SPEAKER_00… become S1, S2… in the order they first speak."""
+def renumber(utterances: list[dict], named: set[str] | None = None) -> dict:
+    """pyannote's SPEAKER_00… become S1, S2… in the order they first speak.
+
+    A label in `named` is a real name (Meet's captions): the speaker keeps it as its name.
+    """
     names: dict[str, str] = {}
     for u in utterances:
         if u["speaker"] == ME:
@@ -129,7 +132,10 @@ def renumber(utterances: list[dict]) -> dict:
         if u["speaker"] not in names:
             names[u["speaker"]] = f"S{len(names) + 1}"
         u["speaker"] = names[u["speaker"]]
-    speakers = {key: {"name": f"Speaker {key[1:]}"} for key in names.values()}
+    speakers = {
+        key: {"name": label if named and label in named else f"Speaker {key[1:]}"}
+        for label, key in names.items()
+    }
     if any(u["speaker"] == ME for u in utterances):
         speakers = {ME: {"name": "Me"}, **speakers}
     return speakers

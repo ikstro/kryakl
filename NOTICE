@@ -25,6 +25,13 @@ made quieter and pitched lower for the other layouts; string and duck are Kryakl
 Screenshot shutter (media/shutter.wav): "DSLR Camera Click" by akonze (https://freesound.org/people/akonze/sounds/157812/),
 Creative Commons CC0 1.0 (public domain), trimmed and made louder.
 
+Dictation's start and done sounds (media/dictation-start.wav, media/dictation-done.wav): Kryakl's own,
+synthesized (scripts/build-sounds.mjs).
+
+The letter ё in dictated text (media/yo/safe.txt): the "safe" dictionary of eyo-kernel 4.1.3
+by Denis Seleznev (https://github.com/e2yo/eyo-kernel), MIT License (media/yo/LICENSE); the words that
+are written with ё in one way only.
+
 Common words (media/common-en.txt: the 3000 most frequent English words, for the dotted line under the others;
 media/layout/{en,ru,uk}.txt: the most frequent English, Russian and Ukrainian words, which tell the keyboard layout a word was meant for;
 media/lang-words.json: the 200 most frequent words of 25 languages, which tell the language of a text)

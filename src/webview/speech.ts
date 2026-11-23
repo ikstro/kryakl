@@ -12,7 +12,8 @@ import { el, icon } from './dom'
 import { aside, bad, bar, btn, card, chip, grp, ib, link, linkBtn, post, radioRow, recommended, row, seg, toggleKnob } from './ui'
 
 export type Source = 'file' | 'mic' | 'meet' | 'note'
-export type Stage = '' | 'decode' | 'words' | 'speakers' | 'save'
+/** `waiting`: Groq's free limit for the hour is used up, the job goes on at `until` (engine/jobs.py). */
+export type Stage = '' | 'decode' | 'words' | 'speakers' | 'save' | 'waiting'
 
 /** A line of the engine's library (store.py LIST_COLUMNS), with the found words when searched. */
 export type Row = {
@@ -28,8 +29,15 @@ export type Row = {
   language: string
   speakers_status: string
   snippet?: string
-  /** What recognized it when the graphics card was busy (the engine's jobs.py): a lighter model, or the processor. */
-  ran?: { model: string; device?: string; why: '' | 'compact' | 'lighter' | 'processor' }
+  /**
+   * What recognized it when the graphics card was busy (the engine's jobs.py): a lighter model, or the processor;
+   * `device: 'groq'` while Groq hears it; `why: 'offline'`, this computer's model did, Groq not answering.
+   */
+  ran?: { model: string; device?: string; why: '' | 'compact' | 'lighter' | 'processor' | 'offline' }
+  /** Recognized by Groq with the person's own key. */
+  by?: 'groq'
+  /** While `stage` is `waiting`: when the job goes on (epoch seconds). */
+  until?: number
 }
 
 export type Utterance = { speaker: string; start: number; end: number; text: string; edited?: boolean }
@@ -49,6 +57,10 @@ export type Transcript = {
   /** The words' times are kept: speakers can be split later without recognizing the text again. */
   hasWords?: boolean
   edited?: string
+  /** Recognized by Groq with the person's own key. */
+  by?: 'groq'
+  /** The speakers' names came from Google Meet's captions, not the voice model. */
+  speakersBy?: 'meet'
 }
 
 /** The engine's own settings (engine/settings.py); the key itself never comes back, only whether there is one. */
@@ -559,9 +571,20 @@ const follow = (state: Diarization) => {
 export function speakerRows(v: AppView): HTMLElement[] {
   const s = v.speech
   const out: HTMLElement[] = [...speakersDeviceRows(v), ...speakersInstallRows(v)]
-  if (!hasPart(v, 'speakers')) return out
-  if (!running(v)) return [...out, card('lock', t('speech.voicesModel'), [t('speech.voicesLater')], null)]
-  return [...out, grp(t('speech.voicesModel')), ...keyRows(v)]
+  return out
+}
+
+/**
+ * The Hugging Face key, on Settings › Keys with the other keys (2026-11-23):
+ * its live state from the engine (checking, downloading, a bad key, no access
+ * to the model, ready) and the four steps to get one. Saved through main,
+ * which keeps it encrypted and hands it to the engine in memory only.
+ */
+export function hfKeyRows(v: AppView): HTMLElement[] {
+  if (!installed(v)) return [row(t('speech.hfKey'), [t('apikeys.hfNoEngine')], null)]
+  if (!hasPart(v, 'speakers')) return [row(t('speech.hfKey'), [t('apikeys.hfNoSpeakers')], null)]
+  if (!running(v)) return [card('lock', t('speech.hfKey'), [t('speech.voicesLater')], null)]
+  return keyRows(v)
 }
 
 export const DEVICE_NAMES = { cuda: 'graphics card', cpu: 'processor' } as const
@@ -659,7 +682,10 @@ function keyRows(v: AppView): HTMLElement[] {
     field.blur()
     draft = ''
     replacing = false
-    if (await saveEngine({ hfToken: value })) follow('checking')
+    // Through main, never straight to the engine: the key is kept encrypted there (remote/keys.ts).
+    post({ type: 'saveKey', service: 'huggingface', key: value })
+    field.value = ''
+    follow('checking')
   }
   field.addEventListener('keydown', event => {
     if (event.key === 'Enter') void saveKey()

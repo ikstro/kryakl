@@ -483,3 +483,33 @@ stream, 40 phrases a language, clean, fan
 | Model | ru | uk | en | clean | fan | all | wrong lang | case errors | end errors | s / phrase | p90 s | tail s | tail max | … inside | sentences opened |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Whisper turbo · card · stream | 6.2 | 17.5 | 23.7 | 9.2 | 22.8 | **16.0** | 0 / 78 | 2 / 78 | 0 / 78 | 3.16 | 4.14 | 0.12 | 0.42 | 0 / 78 | 18 / 78 |
+
+### groq-vs-local-turbo-local · 2026-11-23 1127 · db56dfe
+
+phrase, 30 phrases a language, clean, fan
+
+| Model | ru | uk | en | clean | fan | all | wrong lang | case errors | end errors | s / phrase | p90 s |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Whisper turbo · card | 6.0 | 10.2 | 5.7 | 6.3 | 8.0 | **7.1** | 0 / 180 | 2 / 180 | 0 / 180 | 1.16 | 1.24 |
+
+### groq-vs-local-turbo-groq-large-v3-timed · 2026-11-23 1136 · db56dfe
+
+phrase, 30 phrases a language, clean, fan
+
+| Model | ru | uk | en | clean | fan | all | wrong lang | case errors | end errors | s / phrase | p90 s |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| groq:whisper-large-v3 · cpu | 6.0 | 9.7 | 7.5 | 6.8 | 8.5 | **7.7** | 1 / 180 | 2 / 180 | 1 / 180 | 0.59 | 0.66 |
+
+Groq spent: groq:whisper-large-v3 182 requests, 2159 s billed
+
+### groq-vs-local-turbo-groq-turbo-timed · 2026-11-23 1146 · db56dfe
+
+phrase, 30 phrases a language, clean, fan
+
+| Model | ru | uk | en | clean | fan | all | wrong lang | case errors | end errors | s / phrase | p90 s |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| groq:whisper-large-v3-turbo · cpu | 6.4 | 10.6 | 7.0 | 6.9 | 8.8 | **7.9** | 0 / 180 | 2 / 180 | 1 / 180 | 0.48 | 0.55 |
+
+Groq spent: groq:whisper-large-v3-turbo 180 requests, 2139 s billed
+
+Groq against local turbo, 2026-11-23 (the three tables above, the same 180 phrases each: FLEURS ru, uk, en, 30 a language, clean and fan; names hint as the app gives it). Local turbo ran on this computer's GTX 1660 Ti in int8_float16 (the format the plan takes there), not the RTX 2080 SUPER. Groq went through `quality/groqrec.py` the way the app's dictation asks it (WAV, no language set for several, asked again in the person's own when heard as another, phantoms cut); its seconds are the round trip with the 3.1 s pacing left out. The same sets were run once before, with the pacing counted in the time: the same words, so each Groq model spent twice: 364 and 360 requests, 4318 and 4278 billed seconds of the day's 28,800.

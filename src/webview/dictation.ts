@@ -5,8 +5,10 @@
 // window follows the panel's height; the keys are on the Dictate page, not here.
 
 import { t, type Key } from '../i18n'
+import { engineMessage } from '../i18n/engine'
 import type { DictationMode, ToView, TutorHost } from '../protocol'
 import { el } from './dom'
+import { GROQ_SPEECH, speechModelName } from '../remote/plan'
 import { lucide } from './lucide'
 import { ChunkRecorder, micTrouble, PhraseRecorder, StreamRecorder, type StreamStatus } from './recorder'
 import { Wave } from './wave'
@@ -38,6 +40,24 @@ let time: HTMLElement | undefined
 let said = ''
 /** The model is being fetched: its progress stands in the time's place. */
 let fetching = false
+/** This phrase's sound is kept for a problem report (the person turned that on); and sounds mark the start and the typed text. */
+let keeping = false
+let sounds = false
+/** This phrase is heard by Groq, by the person's own key. */
+let remote = false
+/** A phrase heard by Groq that the engine here previews while it is spoken: its words, not Groq's pieces, are shown meanwhile. */
+let preview = false
+
+/** Dictation's two sounds: recording began, the text is typed. Made once, so the second play does not load again. */
+const SOUNDS = { start: new Audio('dictation-start.wav'), done: new Audio('dictation-done.wav') }
+/** About −4 dB under the files (the owner, 2026-11-23: the files too loud, 0.3 lost under music). */
+const SOUND_VOLUME = 0.6
+function play(sound: keyof typeof SOUNDS): void {
+  const audio = SOUNDS[sound]
+  audio.volume = SOUND_VOLUME
+  audio.currentTime = 0
+  void audio.play().catch(() => undefined)
+}
 
 function clock(seconds: number): string {
   const s = Math.floor(seconds)
@@ -98,6 +118,20 @@ function onStatus(status: StreamStatus): void {
   dot.title = status.pending > BEHIND ? 'catching up' : ''
 }
 
+/** Groq's text so far: in the panel while it records, and in the busy panel after the key while the last pieces come. */
+function heardByGroq(heard: string, pending: number): void {
+  if (!remote) return
+  // While it records, this computer's preview is what shows; Groq's text takes over after the key.
+  if (recorder) return preview ? undefined : onStatus({ heard, pending })
+  const text = heard.trim()
+  if (!text || !root.classList.contains('busy')) return
+  said = text
+  const shown = root.querySelector<HTMLElement>('.words')
+  if (shown) shown.textContent = text
+  else root.prepend(wordsOf(text))
+  toEnd(root.querySelector<HTMLElement>('.words')!)
+}
+
 /** The wave of the last three seconds of sound (wave.ts). */
 let wave: Wave | undefined
 
@@ -118,7 +152,15 @@ function recording(): void {
   words = wordsOf('', t('common.listening'))
   said = ''
   fetching = false
-  show('rec', words, dot, el('span', { class: 'what' }, t(TITLES[mode])), time, heard.canvas)
+  // Kept for a report: said in the status line all the while, so the person never records a phrase for it unknowingly.
+  const kept = keeping ? [el('span', { class: 'kept', title: t('dict.kept') }, lucide('bug', 's'))] : []
+  // Heard by Groq: said all the while too, as the sound leaves the computer.
+  const away = remote ? [el('span', { class: 'kept', title: t('dict.byGroq', { model: speechModelName(GROQ_SPEECH.dictation) }) }, lucide('cloud', 's'))] : []
+  // Groq hears it piece by piece, at the pauses (remote/dictstream.ts): said until the first words come,
+  // this computer's preview or Groq's first piece.
+  if (remote) words = wordsOf('', t('dict.byGroqPauses'))
+  show('rec', words, dot, el('span', { class: 'what' }, t(TITLES[mode])), ...kept, ...away, time, heard.canvas)
+  if (sounds) play('start')
   // A new phrase's window starts at its smallest: told the panel's height even when it is the last one's.
   postHeight(true)
   // One tick per 50 ms: the clock, and the levels. A stream hands over every 50 ms it heard;
@@ -132,15 +174,22 @@ function recording(): void {
   heard.start()
 }
 
-async function start(next: DictationMode, session?: string, expected: string[] = []): Promise<void> {
+async function start(next: DictationMode, session?: string, expected: string[] = [], keep = false, sound = false, byGroq = false): Promise<void> {
   mode = next
   dropped = false
+  keeping = keep
+  sounds = sound
+  remote = byGroq
+  preview = byGroq && !!session
   recorder =
     mode === 'note'
       ? new ChunkRecorder(host.call, { source: 'note', slice: 2000 })
-      : session
-        ? new StreamRecorder(host.call, session, expected, onStatus)
-        : new PhraseRecorder()
+      : byGroq
+        ? // The sound to the main process for Groq, and with a session to the engine here too, for the preview alone.
+          new StreamRecorder(host.call, session ?? '', expected, onStatus, (pcm, last) => host.post({ type: 'dictationPcm', pcm, last }))
+        : session
+          ? new StreamRecorder(host.call, session, expected, onStatus)
+          : new PhraseRecorder()
   said = ''
   fetching = false
   quiet()
@@ -171,11 +220,17 @@ async function stop(): Promise<void> {
   busy = r
   try {
     if (r instanceof ChunkRecorder) host.post({ type: 'dictationNote', id: await r.finish() })
-    else if (r instanceof StreamRecorder) {
+    else if (r instanceof StreamRecorder && remote) {
+      // Its tail goes to the main process with the rest of its sound, which hears it by Groq and keeps it for a report.
+      await r.finish()
+    } else if (r instanceof StreamRecorder) {
       const result = await r.finish()
+      if (!dropped && keeping) host.post({ type: 'dictationKept', pcm: r.sound() })
       if (!dropped) host.post({ type: 'dictationText', mode, text: result.text, language: result.language, sure: result.sure })
     } else host.post({ type: 'dictationAudio', mode, audio: await r.finish() })
   } catch (error) {
+    // A phrase that failed is kept for the report too, with what was captured of it.
+    if (!dropped && keeping && !remote && r instanceof StreamRecorder) host.post({ type: 'dictationKept', pcm: r.sound() })
     if (!dropped) host.post({ type: 'dictationFailed', message: error instanceof Error ? error.message : String(error) })
   } finally {
     if (busy === r) busy = undefined
@@ -210,15 +265,19 @@ window.addEventListener('message', event => {
   const message = event.data as ToView
   if (event.source !== window || !message || typeof message.type !== 'string') return
   if (message.type === 'dictation') {
-    if (message.command === 'start') void start(message.mode, message.session, message.expected)
+    if (message.command === 'start') void start(message.mode, message.session, message.expected, message.keep, message.sound, message.remote)
     else if (message.command === 'stop') void stop()
     else void cancel()
+  } else if (message.type === 'dictationSound') {
+    play(message.sound)
+  } else if (message.type === 'dictationHeard') {
+    heardByGroq(message.heard, message.pending)
   } else if (message.type === 'dictationEditing') {
     show('busy', said ? wordsOf(said) : null, el('span', { class: 'spin' }), el('span', { class: 'what' }, t('dict.editing')))
   } else if (message.type === 'dictationDone') {
     show('done', wordsOf(message.text), el('span', { class: 'check' }, '✓'), el('span', { class: 'what' }, message.note ?? (mode === 'note' ? t('dict.saved') : t('dict.typed'))))
   } else if (message.type === 'dictationError') {
-    show('error', wordsOf(message.message), el('span', { class: 'what' }, mode === 'note' ? t('dict.noteFailed') : t('dict.nothingTyped')))
+    show('error', wordsOf(engineMessage(message.message)), el('span', { class: 'what' }, mode === 'note' ? t('dict.noteFailed') : t('dict.nothingTyped')))
   } else if (message.type === 'dictationRest') {
     // Out of sight until the next phrase: nothing stays on the page to be drawn (the spinner turned on for good, 2026-11-18).
     quiet()

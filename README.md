@@ -2,7 +2,7 @@
 
 *Talk to the duck.* (Formerly Altype and 2Talker.) Website: [ikstro.com/kryakl](https://ikstro.com/kryakl/), where you can try it in the browser.
 
-Select any text, press your key, and hear it in English. A small Windows app for people learning English: it translates what you picked, reads the English aloud, and shows the translation under it; or, with another key, just translates it, like DeepL. Everything runs on your computer: nothing you read leaves it.
+Select any text, press your key, and hear it in English. A small Windows app for people learning English: it translates what you picked, reads the English aloud, and shows the translation under it; or, with another key, just translates it, like DeepL. Everything runs on your computer: nothing you read leaves it. Or, if you choose, the heavy models run on Groq's servers with your own Groq key, free on Groq's free plan: quick on any laptop, with nothing to download ([below](#models-by-your-own-key-groq)).
 
 ![A card with an English text on top, its translation under it, and a word's meanings](docs/card.png)
 
@@ -20,7 +20,7 @@ Select any text, press your key, and hear it in English. A small Windows app for
 
 Download `Kryakl-Setup-<version>.exe` from the [releases](https://github.com/ikstro/kryakl/releases) and run it. The installer is not signed (Kryakl is a free app), so Windows warns once: **More info → Run anyway**. Kryakl starts with Windows and lives in the tray. It installs over Altype and 2Talker and takes their words, settings and downloads along.
 
-**New versions.** Kryakl does not update itself: download the new installer from the [releases](https://github.com/ikstro/kryakl/releases) and run it. It installs over the version you have; your settings, words and downloads stay. Once a day Kryakl asks GitHub for the newest version's number and tells you when one is out (in the tray, on Home and in Settings → Version); nothing about you is sent, and Settings → Version turns it off.
+**New versions.** Kryakl does not update itself: download the new installer from the [releases](https://github.com/ikstro/kryakl/releases) and run it. It installs over the version you have; your settings, words and downloads stay. Once a day Kryakl asks GitHub for the newest version's number and tells you when one is out (in the tray, on Home and in About); nothing about you is sent, and a switch in About turns it off.
 
 The first translation downloads the translator for your language (about 85 MB for Russian ↔ English), once.
 
@@ -57,16 +57,35 @@ The keyboard helper looks only at the keys of what you are typing, since your la
 
 Press **Report** at the bottom of the tray menu (or open Kryakl › Report a problem), write what happened, then pick **Email** or **GitHub issue**. Kryakl saves `Kryakl report <date>.zip` in `Documents\Kryakl\Reports`, shows it in File Explorer and opens the message with your text in it: attach the zip and send it. Kryakl sends nothing by itself.
 
-The zip holds Kryakl's logs (Kryakl's own, the speech engine's, the translation model's), the processor, memory, graphics card and versions, and your settings with your own lists only counted. It never holds your texts, words, mistakes, translations, dictated phrases, transcripts or Hugging Face key; your Windows name and the computer's name are replaced. Open it before sending if you like: it is plain text.
+The zip holds Kryakl's logs (Kryakl's own, the speech engine's, the translation model's), the processor, memory, graphics card and versions, and your settings with your own lists only counted. It never holds your texts, words, mistakes, translations, dictated phrases, transcripts, your Groq key or your Hugging Face key; your Windows name and the computer's name are replaced. Open it before sending if you like: it is plain text.
+
+One exception, and only when you ask for it: when dictation types something wrong, turn on **Record dictation for the report** on that page and dictate again. Kryakl then keeps the next phrases (20 at most, for a day at most) with their sound, lists them on the page so you can hear each one and remove any, and puts the ones left into the zip.
+
+## Models by your own key: Groq
+
+You choose where the models run: on this computer (up to 12 GB to download, quick with a graphics card of 4 GB or more), or on [Groq](https://groq.com)'s servers with a key of your own (quick on any computer, but it needs the internet). The first run asks; **Settings › Service keys** and each choice on the **Models** page change it later, one action at a time:
+
+- **Voice typing** by Groq's Whisper large-v3, about a second a phrase;
+- **Recordings and meetings** by Groq's Whisper turbo; who spoke when stays on your computer;
+- **Accurate translation, Check my English, Talk and text editing** by Groq's language models. Fast translation, the voice and notes stay on your computer;
+- **Text from screenshots** by Groq's vision model, a switch of its own, as a screenshot may show anything: it reads dark code and small or Ukrainian text far better than Windows (2 words wrong in a hundred against 30). Without a connection Windows reads it.
+
+Getting a key: open [console.groq.com/keys](https://console.groq.com/keys), sign in (no card is asked for), press **Create API Key**, name it **Kryakl**, copy it and paste it into Kryakl. Groq has a free plan, and it is enough for a working day: 8 hours of speech a day on each speech model, and a thousand requests a day on each language model; Service keys shows the day's use. While no card is linked to your Groq account, nothing is charged: past the limit Groq only pauses until it lifts, and Kryakl uses this computer's models meanwhile. If you move to a paid Groq plan, Groq bills what you use.
+
+What leaves your computer: the sound of your phrases and recordings, and the texts you translate, check or say to the duck, only for the actions you turn on. Groq does not train on them and by default does not keep them ([its privacy policy](https://groq.com/privacy-policy)). A cloud icon marks everything Groq did. With no connection, or once the free day is spent, Kryakl uses the model on your computer if it is downloaded, and translation falls back to Fast.
+
+The key is encrypted by Windows for your account and stays on this computer; Kryakl shows only its last four letters and never puts it into a log, a problem report or a backup. A program running under your own Windows account could still read it, as it could your browser's saved passwords: make a key just for Kryakl, and delete it on Groq's site if in doubt. On the free plan no card is linked, so a stolen key cannot cost money.
+
+**Meetings with names.** On Google Meet, the extension also notes who is speaking from Meet's captions (only the name and when, never the words) and turns the captions on for the call if they were off. The transcript then carries the real names, and the voice model is not needed.
 
 ## Who spoke when: the Hugging Face key
 
-Telling speakers apart in a transcript uses pyannote's model, which Hugging Face hands out for free once you accept its terms. Kryakl asks for a key once, on the Who spoke when page, and shows these steps there too:
+Telling speakers apart in a transcript uses pyannote's model, which Hugging Face hands out for free once you accept its terms. Kryakl asks for a key once, in Settings › Service keys (the Who spoke when page leads there), and shows these steps there too:
 
 1. Sign up at [huggingface.co/join](https://huggingface.co/join), free.
 2. Open [the model's page](https://huggingface.co/pyannote/speaker-diarization-community-1) and fill in its form: Company or university, anything (your own name will do); Use case: **Meeting note taker**. Then **Agree and access repository**.
 3. Open [Access Tokens](https://huggingface.co/settings/tokens) → **Create new token** → type **Read** → copy the `hf_…` key.
-4. Paste it into Kryakl and press **Save**. The model downloads once; after that everything works offline, and the key is no longer needed. Kryakl keeps it only on your computer and never shows it again.
+4. Paste it into Kryakl and press **Save**. The model downloads once; after that everything works offline, and the key is no longer needed. Kryakl keeps it encrypted, only on your computer, and never shows it again.
 
 ## Meetings in Chrome: the extension
 
@@ -76,7 +95,7 @@ Kryakl records calls in Chrome with its own extension, loaded by hand once (Reco
 2. Press **Load unpacked** and pick `%LOCALAPPDATA%\Kryakl\chrome-extension`. Kryakl keeps its copy there: no update or reinstall touches that folder, and the extension takes a new version by itself.
 3. Allow the microphone once, on the page Kryakl opens; without it only the others' voices are recorded.
 
-On Google Meet, Microsoft Teams, Zoom, Jitsi and Whereby in Chrome, a plate in the page offers to record once the call connects: press **Alt+Shift+M** or the duck icon on Chrome's toolbar. The recording stops 15 s after you leave the call, and the transcript appears in Kryakl. Any other tab: the icon › **Record**. The extension's own window has a switch to turn the offers off. Calls in desktop apps (Zoom, Teams, Telegram) are not recorded yet.
+On Google Meet, Microsoft Teams, Zoom, Jitsi and Whereby in Chrome, a plate in the page offers to record once the call connects: press **Alt+Shift+M** or the duck icon on Chrome's toolbar. The recording stops by itself about 15 s after you leave the call, at once when you close the tab, or when you press the icon or the key again. While Kryakl makes the transcript, the icon shows how far it is ("42%") and a ✓ when it is done; the extension's window says the same, and Kryakl shows a Windows notification once the transcript is ready (a click opens it). Any other tab: the icon › **Record**. The extension's own window has a switch to turn the offers off. Calls in desktop apps (Zoom, Teams, Telegram) are not recorded yet.
 
 The page also reads Chrome's own files and says, per profile, what is wrong: Developer mode off, an old copy (its ID does not start with `phokhlmn`), the key held by another extension, a copy loaded from a folder that updates wipe.
 

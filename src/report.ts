@@ -6,12 +6,16 @@
 // words, mistakes, translations, phrases or transcripts, nor the Hugging Face
 // key (speech.json and speech-token are not taken). The Windows account's
 // name and the computer's are replaced in every line, and a key or token cut.
+// The one exception is the person's own doing (dictcapture.ts, 2026-11-21):
+// dictated phrases they recorded for the report on its page, and did not remove
+// there, go into the zip's "dictation" folder, each one's sound and its text.
 
 import { execFile } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
+import type { Capture } from './dictcapture'
 import { t } from './i18n'
 import { oldLog } from './log'
 import { system32 } from './system32'
@@ -50,7 +54,7 @@ const profile = (name: string) => new RegExp(`(?<=[\\\\/]Users(?:\\\\{1,2}|/))${
 
 /** A text safe to send: the names are `<you>` and `<computer>`, a Hugging Face key or a bearer token is cut. */
 export function cleanText(text: string, names: Names): string {
-  let out = text.replace(/\bhf_[A-Za-z0-9]{8,}/g, 'hf_…').replace(/\b(Bearer|X-Krya-Token:?)(\s+)[A-Za-z0-9._~+/=-]{8,}/gi, '$1$2…')
+  let out = text.replace(/\bhf_[A-Za-z0-9]{8,}/g, 'hf_…').replace(/\bgsk_[A-Za-z0-9]{8,}/g, 'gsk_…').replace(/\b(Bearer|X-Krya-Token:?)(\s+)[A-Za-z0-9._~+/=-]{8,}/gi, '$1$2…')
   for (const name of new Set(names.you.filter(Boolean))) {
     out = out.replace(profile(name), '<you>')
     // A short name ("al") would hide words too; in a path it is gone already.
@@ -99,6 +103,24 @@ export type ReportInput = {
   settings: object
   names: Names
   at: Date
+  /** The dictated phrases the person recorded for the report (dictcapture.ts), each with its sound's file; none unless they turned it on. */
+  captures?: { phrase: Capture; sound?: string }[]
+}
+
+/** dictation/phrases.txt: each recorded phrase, numbered as its sound file: when, how long, what was recognized and what was typed. */
+export function capturesText(captures: Capture[], names: Names): string {
+  const two = (n: number) => String(n).padStart(2, '0')
+  return captures
+    .map((c, i) =>
+      [
+        `${two(i + 1)}.wav  ${new Date(c.at).toISOString()}  ${c.seconds} s  ${c.mode}  language ${c.language || '?'} (${c.sure.toFixed(2)})`,
+        `  heard: ${cleanText(c.heard, names)}`,
+        `  typed: ${c.typed ? cleanText(c.typed, names) : '(nothing)'}`,
+        ...(c.note ? [`  note:  ${cleanText(c.note, names)}`] : []),
+        ...(c.error ? [`  error: ${cleanText(c.error, names)}`] : []),
+      ].join('\n'),
+    )
+    .join('\n\n')
 }
 
 /** report.txt: what happened, Kryakl and Windows, the parts, the settings. */
@@ -112,6 +134,7 @@ export function reportText(i: Omit<ReportInput, 'dir' | 'out'>): string {
     factsLine(i.facts),
     '',
     ...i.status.map(line => cleanText(line, i.names)),
+    i.captures?.length ? `Dictation recorded for this report: ${i.captures.length} phrases, in the dictation folder` : 'Dictation recorded for this report: none',
     '',
     'Settings (your own lists only counted)',
     cleanText(JSON.stringify(settingsSummary(i.settings), null, 2), i.names),
@@ -166,6 +189,16 @@ export async function makeReport(i: ReportInput): Promise<string> {
     }
     const device = tail(path.join(i.dir, 'device.json'), TAIL)
     if (device !== undefined) put('device.json', cleanText(device, i.names))
+    if (i.captures?.length) {
+      // Oldest first, numbered: the list and the sounds go by the same numbers.
+      const captures = [...i.captures].sort((a, b) => a.phrase.at - b.phrase.at)
+      fs.mkdirSync(path.join(temp, 'dictation'))
+      captures.forEach((c, n) => {
+        if (c.sound) fs.copyFileSync(c.sound, path.join(temp, 'dictation', `${String(n + 1).padStart(2, '0')}.wav`))
+      })
+      fs.writeFileSync(path.join(temp, 'dictation', 'phrases.txt'), capturesText(captures.map(c => c.phrase), i.names), 'utf8')
+      files.push('dictation')
+    }
     fs.mkdirSync(path.dirname(i.out), { recursive: true })
     fs.rmSync(i.out, { force: true })
     await zip(temp, files, i.out)

@@ -1,11 +1,14 @@
 // Messages between the main process and the card, the small window that
 // shows one picked text or one snipped piece of the screen at a time.
 import type { ChromeProfileCheck } from './chromecheck'
+import type { CaptureView } from './dictcapture'
 import type { DictationEntry } from './dictationlog'
 import type { DeviceProfile } from './hardware'
 import type { WordTime } from './kokoro'
 import type { Gloss } from './lemma'
 import type { NaturalState } from './natural'
+import type { KeyService, KeyView } from './remote/keys'
+import type { UsageView } from './remote/usage'
 import type { LlmModel, Settings, TranslationLevel } from './settings'
 import type { SpeechPackState, SpeechPart } from './speechpack'
 import type { Choice, Feature, FeaturePlan, SpeechPlan } from './speechplan'
@@ -53,8 +56,13 @@ export type TextResult =
   | { status: 'ready'; text: string; from: string; to: string; html: string; sentences: string[]; drafts?: number; busy?: BusyPart }
   | { status: 'failed'; message: string }
 
-/** What kept the local model too slow just now, so Fast translated instead (modelbusy.ts): the graphics card or the processor taken by another program. */
-export type BusyPart = 'card' | 'processor'
+/**
+ * What kept the accurate translation away, so Fast translated instead: the
+ * graphics card or the processor taken by another program (modelbusy.ts), or
+ * Groq not answering, by the person's own key (no internet, the free day's
+ * limit used up, the key refused).
+ */
+export type BusyPart = 'card' | 'processor' | 'remote'
 
 /** Check my English's answer under the person's text (a `check` card), asked for with `checkText`. */
 export type CheckResult =
@@ -114,6 +122,10 @@ export type CardView = {
   native: string
   /** The translation level the card translates with (Settings). */
   level: TranslationLevel
+  /** The level's model and Check my English run by Groq, with the person's own key: the card names Groq and draws a cloud. */
+  remote?: boolean
+  /** The screenshot's text was read by Groq's vision model: the head draws a cloud by "screen". */
+  readBy?: 'groq'
   /** The level's model too slow just now: Fast translates until it is tried again (modelbusy.ts). */
   busy?: BusyPart
   /** Read the English aloud as soon as the card has it. */
@@ -257,6 +269,12 @@ export type AppView = {
   newVersion: string
   /** Settings › Version's own look, whatever the notice: the newer release found ('' none), when GitHub last answered (0 never), whether the last ask failed, whether one runs now. */
   versionCheck: { latest: string; lookedAt: number; failed: boolean; checking: boolean }
+  /**
+   * The person's keys (Settings › Keys), never the keys themselves: whether one
+   * is saved, its last four letters, how its last check went; whether Windows
+   * can encrypt them here; and Groq's free plan spent today, by model.
+   */
+  keys: { groq: KeyView; huggingface: KeyView; usable: boolean; usage: UsageView[] }
   natural: NaturalState
   hostVoices: HostVoice[]
   /** The languages a person may name as their own: English name and own name. */
@@ -295,6 +313,8 @@ export type AppView = {
   speech: SpeechView
   /** The phrases dictated lately, newest first: all kept (200 at most, 30 days, dictationlog.ts). */
   dictation: { recent: DictationEntry[] }
+  /** Dictation recorded for a problem report (dictcapture.ts): whether the next phrases are kept, how many more, and those kept, newest first. */
+  captures: CaptureView
   /** The translator for the person's language with its download's progress and size (MB), for the setup's list. */
   translatorState: TranslatorState
   /** Each translation level's models for the person's language (Fast: Firefox's pair), for the Translate page. */
@@ -331,9 +351,10 @@ export type StorageId = 'fast' | 'dict' | 'voice' | 'accurate' | 'most' | 'unuse
 /**
  * Its place, its bytes, and how many of them are files linked from elsewhere too (a developer's uv cache), which a removal does not free.
  * `item`: the language's code (fast, dict), the speech model's name, the build (llama: vulkan, cuda). `users`: the actions it serves now;
- * `unused`: nothing uses it, Clean up removes it; `reserve`: kept for when the graphics card fails ("Dictate"), not cleaned up.
+ * `unused`: nothing uses it, Clean up removes it; `reserve`: kept for when the graphics card fails ("Dictate"), not cleaned up;
+ * `standby`: Groq does its work now, and it runs when Groq cannot be reached; not cleaned up either.
  */
-export type StoragePart = { id: StorageId; item?: string; path: string; bytes: number; shared: number; away?: boolean; users?: string[]; unused?: boolean; reserve?: string }
+export type StoragePart = { id: StorageId; item?: string; path: string; bytes: number; shared: number; away?: boolean; users?: string[]; unused?: boolean; reserve?: string; standby?: boolean }
 /** `refused`: the parts the last removal or Clean up could not take off the disk, each with why, in the interface's language. */
 export type StorageView = { measuring: boolean; root: string; drive: string; freeMb: number; parts: StoragePart[]; old?: OldFolder; refused?: Refused[] }
 export type Refused = { id: StorageId; item?: string; why: string }
@@ -417,11 +438,15 @@ export type ToView =
    * `session`: the engine's dictation heard while spoken (engine/stream.py), when the engine has them;
    * `expected`: the languages the person uses (their own, English, the others named); the phrase is one of them.
    */
-  | { type: 'dictation'; command: 'start' | 'stop' | 'cancel'; mode: DictationMode; key: string; session?: string; expected?: string[] }
+  | { type: 'dictation'; command: 'start' | 'stop' | 'cancel'; mode: DictationMode; key: string; session?: string; expected?: string[]; keep?: boolean; sound?: boolean; remote?: boolean }
+  /** The badge plays a sound: the text is typed (the start's sound it plays itself, as recording begins). */
+  | { type: 'dictationSound'; sound: 'start' | 'done' }
   /** `note`: said in place of "Typed" (Fast translated it, the model too slow just now). */
   | { type: 'dictationDone'; text: string; note?: string }
   /** The phrase is with the local model (text editing). */
   | { type: 'dictationEditing' }
+  /** A phrase heard by Groq while it is spoken (remote/dictstream.ts): the text so far, and the seconds of speech still waiting to be heard. */
+  | { type: 'dictationHeard'; heard: string; pending: number }
   | { type: 'dictationError'; message: string }
   /** The phrase is over and the badge is out of sight: its page keeps nothing on it (a spinner left there would turn for good). */
   | { type: 'dictationRest' }
@@ -534,6 +559,8 @@ export type ToHost =
   | { type: 'recordKeys'; on: boolean }
   /** The Transcribe page's microphone recording (or Talk's listening) began or ended: the tray shows it. */
   | { type: 'micRecording'; on: boolean }
+  /** The transcript the Transcripts page shows now, '' for none: main shows no notification of one the person is looking at. */
+  | { type: 'transcriptShown'; id: string }
   /** Talk (talk.ts), from the talk window: a new talk on a topic, a line said or typed, the duck's answer under way dropped, New talk; `talkListen`: it began listening, so the model loads meanwhile. */
   | { type: 'talkStart'; topic: string }
   | { type: 'talkSay'; text: string }
@@ -631,6 +658,10 @@ export type ToHost =
   | { type: 'openShots' }
   /** Forget the phrases dictated lately; the texts translated lately. */
   | { type: 'clearDictation' }
+  /** Dictation for a problem report: keep the next phrases (it stops by itself) or stop; remove one kept phrase, or all. */
+  | { type: 'captureDictation'; on: boolean }
+  | { type: 'forgetCapture'; id: string }
+  | { type: 'clearCaptures' }
   | { type: 'clearTranslations' }
   /** One phrase or one translation forgotten, by when it was kept. */
   | { type: 'forgetPhrase'; at: string }
@@ -646,6 +677,17 @@ export type ToHost =
   | { type: 'checkVersion' }
   /** Every key back to how it came (after a question). */
   | { type: 'resetKeys' }
+  /**
+   * Settings › Keys: a service's key saved (checked first; the page drops what
+   * it typed once this is sent, and learns only the key's last four letters back),
+   * removed, or checked again. `useGroq`: every action Groq can do goes to it,
+   * or none; `remote`: one part turned on or off.
+   */
+  | { type: 'saveKey'; service: KeyService; key: string }
+  | { type: 'removeKey'; service: KeyService }
+  | { type: 'checkKey'; service: KeyService }
+  | { type: 'useGroq'; on: boolean }
+  | { type: 'remote'; part: keyof Settings['remote']; on: boolean }
   /** Report a problem (report.ts): the zip made and shown in its folder, then the email or the GitHub issue opened with `text` in it; or Kryakl's folder with the logs opened. */
   | { type: 'reportProblem'; via: 'email' | 'github'; text: string }
   | { type: 'openLogs' }
@@ -670,6 +712,10 @@ export type ToHost =
   | { type: 'dictationText'; mode: DictationMode; text: string; language: string; sure: number }
   /** A note was recorded into the engine as this transcript. */
   | { type: 'dictationNote'; id: string }
+  /** A phrase heard by Groq: its sound as recorded, 16-bit PCM at 16 kHz, a quarter of a second at a time; `last`, the tail, sent at the key. */
+  | { type: 'dictationPcm'; pcm: Uint8Array; last: boolean }
+  /** The phrase's whole sound (16-bit PCM at 16 kHz), sent before its text, only while the person records dictation for a report (`keep`). */
+  | { type: 'dictationKept'; pcm: Uint8Array }
   /** The badge's content is this tall, in CSS pixels; the window follows, its bottom edge kept. */
   | { type: 'dictationHeight'; px: number }
   /** The person folded the badge away for this phrase; `fly`: into the tray, or at once where motion is reduced. */
@@ -689,6 +735,8 @@ export type HostCall =
   | { call: 'openChrome'; url: string; profile?: string }
   /** The programs with a window open now, by .exe name, for the Programs page: answers string[]. */
   | { call: 'runningApps' }
+  /** A dictated phrase recorded for a report, as a WAV file's bytes, to hear before it is sent: answers Uint8Array | null. */
+  | { call: 'capturedSound'; id: string }
 
 /** What every page has as `window.tutorHost` (preload.ts). */
 export type TutorHost = {

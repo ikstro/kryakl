@@ -17,6 +17,7 @@ import { chosenNatural } from '../natural'
 import { byName, languageName as uiLanguageName, levelName, t, type Key } from '../i18n'
 import { updateSentences } from './sweep'
 import type { BusyPart, CardKind, CardState, CardView, CheckResult, DiffPart, HostVoice, NaturalState, TextResult, ToHost, ToView, TranslationState, TutorHost, ViewConfig } from '../protocol'
+import type { TranslationLevel } from '../settings'
 import { dwmFlag, el, html, icon } from './dom'
 import { glyph } from './glyphs'
 import { fieldText, halfBar, paint, plainOf, rangeIndexAt, sentenceRanges } from './halves'
@@ -190,8 +191,8 @@ function busyNotice(): { box: HTMLElement; show(busy: BusyPart | undefined): voi
       const level = state.card?.level ?? 'fast'
       box.hidden = !busy || level === 'fast'
       if (!busy || level === 'fast') return
-      text.textContent = t(busy === 'card' ? 'card.busyCard' : 'card.busyProcessor', { level: levelName(level) })
-      button.textContent = t('card.useAnyway', { level: levelName(level) })
+      text.textContent = busy === 'remote' ? t('card.busyRemote') : t(busy === 'card' ? 'card.busyCard' : 'card.busyProcessor', { level: levelLabel(level) })
+      button.textContent = t('card.useAnyway', { level: levelLabel(level) })
     },
   }
 }
@@ -391,7 +392,7 @@ function renderChrome(): void {
   const c = state.card
   const [named, source] = KINDS[c?.kind ?? 'selection']
   const kindName: Key = c?.kind === 'text' && held ? 'kind.text' : named
-  kindLabel.replaceChildren(viaKeys(c?.via) ?? '', el('span', { class: 'kind-name' }, t(kindName), source ? el('span', { class: 'kind-source' }, ` · ${t(source)}`) : null))
+  kindLabel.replaceChildren(viaKeys(c?.via) ?? '', el('span', { class: 'kind-name' }, t(kindName), source ? el('span', { class: 'kind-source' }, ` · ${t(source)}`) : null, c?.readBy === 'groq' ? el('span', { class: 'kind-source', title: t('card.readByGroq') }, ' ', icon('cloud')) : null))
   // The translator has no translation under an English text to hide.
   translationButton.hidden = translator(c)
   translationButton.textContent = labelCode(c?.native)
@@ -416,7 +417,12 @@ function status(text: string): HTMLElement {
 function translating(): string {
   const level = state.card?.level ?? 'fast'
   if (state.card?.busy && level !== 'fast') return t('card.translatingFast')
-  return level === 'fast' ? t('card.translating') : t('card.translatingLevel', { level: levelName(level) })
+  return level === 'fast' ? t('card.translating') : t('card.translatingLevel', { level: levelLabel(level) })
+}
+
+/** The level as the card names it: Groq when the person's own key runs it, else its name. */
+function levelLabel(level: TranslationLevel): string {
+  return level !== 'fast' && state.card?.remote ? 'Groq' : levelName(level)
 }
 
 /** 1.4 of 84 MB; 1.2 of 2.5 GB. */
@@ -587,8 +593,10 @@ function renderText(c: CardView, s: Extract<CardState, { status: 'text' | 'check
   const improving = s.status === 'text' && s.result.status === 'ready' && !!s.result.drafts
   // Fast did it, the local model too slow just now: the notice above says why.
   const busy = s.status === 'text' && s.result.status === 'ready' && !!s.result.busy
-  const by = s.status === 'check' ? t('card.checkedBy', { model: s.model }) : improving ? t('card.improving', { level: levelName(c.level) }) : t('card.translatedBy', { level: levelName(busy ? 'fast' : c.level) })
-  textFoot.textContent = s.canPaste ? t('card.newLine', { by }) : by
+  const by = s.status === 'check' ? t('card.checkedBy', { model: s.model }) : improving ? t('card.improving', { level: levelLabel(c.level) }) : t('card.translatedBy', { level: busy ? levelName('fast') : levelLabel(c.level) })
+  // What went to Groq says so by a cloud, as the dictation panel does.
+  const away = !!c.remote && !busy && (s.status === 'check' || c.level !== 'fast')
+  textFoot.replaceChildren(...(away ? [icon('cloud'), ' '] : []), s.canPaste ? t('card.newLine', { by }) : by)
   // Said under a translation, or one on its way; not under nothing, or a failure.
   textFoot.hidden = s.result.status === 'none' || s.result.status === 'failed'
   updateTextButtons()

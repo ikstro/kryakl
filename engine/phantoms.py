@@ -13,7 +13,10 @@ Three kinds, each cut on its own terms:
   recording someone may say them, so only when the sound does not carry them
   (`Sound.weak`) or there is more text than sound (`Sound.too_fast`).
 - thanks ("Спасибо.", "Thank you.", "Спасибо за внимание."): people say them all
-  the time, so only when they are all of the text and the sound does not carry it.
+  the time, so only when they are all of the text and the sound does not carry it;
+  in dictation also at the end of a longer text when the last of two or more pieces
+  Whisper heard does not carry it (`Sound.end_weak`; Groq wrote "…сделать. Спасибо."
+  over a phrase's trailing silence, 2026-11-23).
 - murmurs ("you"): a lone word Whisper writes for a breath; all of a dictated phrase,
   always cut; in a recording only when the sound does not carry it.
 
@@ -98,6 +101,7 @@ class Sound:
     seconds: float | None = None
     no_speech: float = 0.0
     logprob: float = 0.0
+    end_weak: bool = False  # the last of two or more segments is weak: the text's end was not heard as speech
 
     @property
     def weak(self) -> bool:
@@ -145,7 +149,7 @@ def phantoms(text: str, sound: Sound, dictation: bool) -> list[tuple[int, int]]:
             if not (dictation or sound.weak or sound.too_fast(left())):
                 break
         elif _is(THANKS, last):
-            if not (whole and sound.weak):
+            if not ((whole and sound.weak) or (dictation and not whole and sound.end_weak)):
                 break
         elif _is(MURMURS, last):
             if not (whole and (dictation or sound.weak)):

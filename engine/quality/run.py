@@ -47,6 +47,7 @@ import asr  # noqa: E402
 import settings  # noqa: E402
 from audio import RATE  # noqa: E402
 from quality import conditions  # noqa: E402
+from quality.groqrec import GroqRecognizer, is_groq  # noqa: E402
 from quality.wer import format_errors, pause_marks, score, wrong_language  # noqa: E402
 
 REPORT = ENGINE.parent / "docs" / "speech-quality.md"
@@ -101,7 +102,7 @@ def apply_levers(pairs: list[str]) -> dict:
 
 def default_beam(name: str, device: str) -> int:
     """The plan's beam (speechplan.ts): 5 on the card, 2 on the processor; Parakeet has none."""
-    if asr.backend(name) != "whisper":
+    if is_groq(name) or asr.backend(name) != "whisper":
         return 0
     return 5 if device == "cuda" else 2
 
@@ -123,6 +124,8 @@ def run_phrases(rec, name, device, threads, beam, langs, conds, n, expected, set
             for i, p in enumerate(phrases):
                 others = [sounds[(i + k) % len(sounds)] for k in range(1, 5)]
                 x = conditions.make(sounds[i], cond, p["id"], others)
+                if hasattr(rec, "pace"):
+                    rec.pace()
                 started = time.perf_counter()
                 text, heard_as, _sure = rec.dictate(x, None, expected_for(lang, expected), hotwords, beam, "", strict=True)
                 took = time.perf_counter() - started
@@ -320,13 +323,14 @@ def main(argv: list[str]) -> None:
     conds = a.conditions.split(",")
     expected = a.expected.split(",") if a.expected else None
     items: list[dict] = []
+    usage: dict = {}
     for raw in a.models.split(","):
         name = ALIASES.get(raw, raw)
-        where = place(name)
+        where = "Groq's" if is_groq(name) else place(name)
         for threads in [int(t) for t in a.threads.split(",")]:
             if a.device == "cuda" and threads:
                 continue
-            rec = asr.recognizer(name)
+            rec = GroqRecognizer() if is_groq(name) else asr.recognizer(name)
             started = time.perf_counter()
             rec.load(name, a.device, (a.compute or None) if a.device == "cuda" else None, threads)
             rec.warm()
@@ -334,13 +338,16 @@ def main(argv: list[str]) -> None:
             beam = a.beam or default_beam(name, a.device)
             args = (rec, name, a.device, threads, beam, langs, conds, a.n, expected, a.sets, a.hotwords)
             items += run_stream(*args, a.take, a.speed, a.hesitate) if a.mode == "stream" else run_phrases(*args)
+            if is_groq(name):
+                print(f"  {name}: {rec.requests} requests, {rec.billed:.0f} s billed", flush=True)
+                usage[name] = {"requests": rec.requests, "billedSeconds": round(rec.billed)}
             rec.unload()
             del rec
             gc.collect()
 
     stamp = dt.datetime.now().strftime("%Y-%m-%d %H%M")
     plain = {k: v if isinstance(v, (str, int, float, bool, type(None))) else repr(v) for k, v in levers.items()}
-    record = {"label": a.label, "at": stamp, "commit": commit(), "args": vars(a), "levers": plain, "items": items}
+    record = {"label": a.label, "at": stamp, "commit": commit(), "args": vars(a), "levers": plain, "usage": usage, "items": items}
     runs = ROOT / "runs"
     runs.mkdir(parents=True, exist_ok=True)
     out = runs / f"{stamp} {a.label}.json"
@@ -363,6 +370,8 @@ def report(record: dict) -> None:
             + (f"; levers {record['levers']}" if record["levers"] else "") + (f"; beam {a['beam']}" if a["beam"] else "") + "\n\n")
     with REPORT.open("a", encoding="utf-8") as f:
         f.write(head + table(record["items"]) + "\n")
+        if record.get("usage"):
+            f.write("\nGroq spent: " + "; ".join(f"{m} {u['requests']} requests, {u['billedSeconds']} s billed" for m, u in record["usage"].items()) + "\n")
 
 
 if __name__ == "__main__":

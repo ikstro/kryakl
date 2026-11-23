@@ -14,8 +14,9 @@ import { cost, recommend, recommendedChoice, sizeText, speakersWhere, type Advic
 import { minutes, seconds } from '../speechplan'
 import { el } from './dom'
 import { lucide, type LucideName } from './lucide'
+import { groqKeyRows } from './keys'
 import { installed, running } from './speech'
-import { aside, bad, bar, btn, card, chip, grp, ib, linkBtn, recommended, seg, select, toggleCard, twoNames, uiLanguageCard } from './ui'
+import { aside, bad, bar, btn, card, chip, grp, ib, linkBtn, radioRow, recommended, seg, select, toggleCard, twoNames, uiLanguageCard } from './ui'
 
 export type SetupHooks = {
   save: (patch: Partial<Settings>) => void
@@ -68,7 +69,8 @@ export function setupNodes(v: AppView, h: SetupHooks): HTMLElement[] {
     started = true
     go(4)
   }
-  const room = step === 3 ? cost(c, v).fits : true
+  // Groq picked goes on only with its key saved; else the person picks this computer.
+  const room = step === 3 ? cost(c, v).fits : step === 2 ? !c.groq || v.keys.groq.set : true
   const next =
     step === 3
       ? btn([lucide('download', 's'), t('setup.download')], download, 'primary')
@@ -162,6 +164,7 @@ function computerStep(v: AppView, h: SetupHooks, c: Choice, r: ReturnType<typeof
     ),
     card('memory-stick', t('setup.memory'), [t('size.gb', { n: d.ramGb })], null),
     card('monitor', t('setup.graphicsCard'), [cardNote], null),
+    ...whereStep(v, h, c, r),
     grp(t('setup.means')),
     verdict,
     s.plan.offers.gpu
@@ -180,6 +183,23 @@ function computerStep(v: AppView, h: SetupHooks, c: Choice, r: ReturnType<typeof
         )
       : null,
     looking ? aside('info', t('setup.stillLooking')) : null,
+  ].filter((n): n is HTMLElement => n !== null)
+}
+
+/** Where the models run: on this computer, or by Groq with the person's own key (pasted right here, as on Settings › Keys). */
+function whereStep(v: AppView, h: SetupHooks, c: Choice, r: ReturnType<typeof recommend>): HTMLElement[] {
+  const pick = (groq: boolean) => () => {
+    c.groq = groq
+    h.redraw()
+  }
+  const label = (text: string, advisedHere: boolean) => el('span', {}, text, advisedHere ? recommended() : null)
+  const known = v.speech.device.at !== 0
+  return [
+    grp(t('setup.runWhere')),
+    radioRow(label(t('setup.runHere'), known && !r.groq.on), [t('setup.runHereNote'), known && !r.groq.on ? r.groq.why : null], !c.groq, pick(false)),
+    radioRow(label(t('setup.runGroq'), r.groq.on), [t('setup.runGroqNote'), r.groq.on ? r.groq.why : null], c.groq, pick(true)),
+    ...(c.groq ? groqKeyRows(v, h.redraw) : []),
+    c.groq && !v.keys.groq.set ? aside('info', t('setup.groqNeedsKey')) : null,
   ].filter((n): n is HTMLElement => n !== null)
 }
 
@@ -244,7 +264,9 @@ function needStep(v: AppView, h: SetupHooks, c: Choice, r: ReturnType<typeof rec
         t('dict.type'),
         c.dictate,
         flip('dictate'),
-        t('setup.dictateNote', { why: r.dictate.why, engine: sizeText(engineMb), model: dictateModel.label, size: dictateModel.downloaded ? t('setup.here') : sizeText(dictateModel.mb) }),
+        c.groq
+          ? t('setup.dictateGroq')
+          : t('setup.dictateNote', { why: r.dictate.why, engine: sizeText(engineMb), model: dictateModel.label, size: dictateModel.downloaded ? t('setup.here') : sizeText(dictateModel.mb) }),
       ),
       r.dictate,
     ),
@@ -254,7 +276,7 @@ function needStep(v: AppView, h: SetupHooks, c: Choice, r: ReturnType<typeof rec
         t('setup.transcribe'),
         c.transcribe,
         flip('transcribe'),
-        t(c.dictate ? 'setup.transcribeNote' : 'setup.transcribeNoteEngine', {
+        c.groq ? t('setup.transcribeGroq', { engine: sizeText(engineMb) }) : t(c.dictate ? 'setup.transcribeNote' : 'setup.transcribeNoteEngine', {
           why: r.transcribe.why,
           model: transcribeModel.label,
           size: transcribeModel.downloaded ? t('setup.here') : sizeText(transcribeModel.mb),
@@ -316,6 +338,8 @@ function start(v: AppView, h: SetupHooks, c: Choice): void {
     // The advice stays "automatic", so it follows the computer; another choice is kept as made.
     speakersDevice: speakersWhere(c, v) === v.speech.plan.speakers.advised ? 'auto' : speakersWhere(c, v),
   })
+  // Groq for everything at once: dictation, recordings and the language model (main turns accurate translation on).
+  if (c.groq && v.keys.groq.set) h.post({ type: 'useGroq', on: true })
   const t = v.translatorState.status
   if (t === 'absent' || t === 'failed') h.post({ type: 'prepareTranslator' })
   const d = v.dictionary.status

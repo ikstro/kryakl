@@ -36,7 +36,7 @@ import * as path from 'node:path'
 
 import { execFile, execFileSync } from 'node:child_process'
 
-import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, screen, session, shell, Tray, type Rectangle } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, Notification, safeStorage, screen, session, shell, Tray, type Rectangle } from 'electron'
 
 import { backupSummary, makeBackup, readBackup, type BackupRead } from './backup'
 import { callAllowed, messageAllowed, openable, pageOf, patchAllowed, type Page, mediaAllowed } from './bridge'
@@ -65,7 +65,14 @@ import { LearnStore } from './learning'
 import { lookup, type Dictionary } from './lemma'
 import { LlamaServer } from './llama'
 import { createLlmFiles, LLM_MODELS, llmPaths, type LlmFiles } from './llmfiles'
-import { createLlmTranslators, ModelSlow, type LlmTranslators } from './llmtranslator'
+import { createLlmTranslators, ModelSlow, type LlmTranslator, type LlmTranslators } from './llmtranslator'
+import { dictateByGroq } from './remote/dictate'
+import { GroqStream } from './remote/dictstream'
+import { ordinaryWords } from './vocabcorrect'
+import { Groq, GROQ_MODELS, isRemoteError, RemoteError } from './remote/groq'
+import { adoptPlainKey, keyShape, KeyStore, type KeyCheck, type KeyService } from './remote/keys'
+import { createRemoteTranslator } from './remote/llm'
+import { Usage } from './remote/usage'
 import { BUSY_MS, busyName, slowAfter, tryAgain, type ModelBusy } from './modelbusy'
 import { cardRoom, oneAtATime, sharedReading } from './resources'
 import { RestWatch } from './restwatch'
@@ -91,9 +98,13 @@ import { placeByTray, placeNear, resize, type Point } from './placement'
 import type { AppTab, AppView, BusyPart, CardKind, CardState, CheckResult, DictationMode, DictionaryStatus, GlossMissing, HostCall, HostVoice, Refused, ShotAction, StorageId, StoragePart, StorageView, TalkWindowView, TextResult, ToHost, ToView, TranslationState, TrayCommand, TrayView, ViewConfig } from './protocol'
 import { draftsIn, englishHtml, textOutHtml, translationHtml } from './render'
 import { issueUrl, mailUrl, makeReport, namesHere, reportName, type ReportFacts } from './report'
+import { CaptureStore } from './dictcapture'
+import { typedText, yoDictionary, type YoDictionary } from './dicttext'
+import { unwrapLines } from './sentences'
 import { addKept, CARD_WIDTH, DEFAULTS, keptForm, LEVEL_NAMES, myLanguages, normalize, TARGET, type LlmModel, type Settings, type TranslationLevel } from './settings'
 import { Speaker, listHostVoices } from './speech'
 import { SpeechHost } from './speechhost'
+import type { LibraryRow } from './transcriptwatch'
 import { MODELS as SPEECH_MODELS } from './speechplan'
 import { SPEECH_PORT } from './speechservice'
 import { recommendedModels } from './setup'
@@ -242,6 +253,10 @@ const LINKS = new Set([
   'https://huggingface.co/join',
   'https://huggingface.co/pyannote/speaker-diarization-community-1',
   'https://huggingface.co/settings/tokens',
+  // Settings › Keys: where a free Groq key is made, and what Groq does with the data.
+  'https://console.groq.com/keys',
+  'https://console.groq.com/settings/limits',
+  'https://groq.com/privacy-policy',
 ])
 
 /** The settings that are Dictate's keys (and Talk's, which listens as dictation does): registered only once the speech engine is installed. */
@@ -301,7 +316,7 @@ let pinned = false
 let shownAt = 0
 /** The card on screen; a newer text replaces it. */
 let seq = 0
-let shown: { id: number; kind: CardKind; state: CardState; via?: string } | undefined
+let shown: { id: number; kind: CardKind; state: CardState; via?: string; readBy?: 'groq' } | undefined
 let last: { id: number; text: string; kind: CardKind; note?: string } | undefined
 let snipSince = 0
 let recordingClosed = false
@@ -414,6 +429,41 @@ let glossSink: VoicePage = 'card'
 type VoicePage = 'card' | 'talk'
 let words: WordStore
 let dictationLog: DictationLog
+/** Dictated phrases the person records for a problem report (dictcapture.ts); nothing is kept unless they turn it on. */
+let captures: CaptureStore
+/** The words written with ё in one way only (media/yo/safe.txt), read when a phrase first needs them; null when the file cannot be read. */
+let yoWords: YoDictionary | null | undefined
+
+function yoDict(): YoDictionary | undefined {
+  if (yoWords === undefined) {
+    try {
+      yoWords = yoDictionary(fs.readFileSync(path.join(app.getAppPath(), 'media', 'yo', 'safe.txt'), 'utf8'))
+    } catch (error) {
+      yoWords = null
+      log(`dictation: the ё dictionary could not be read (${messageOf(error)}); phrases are typed as heard`)
+    }
+  }
+  return yoWords ?? undefined
+}
+
+/** The ordinary words of media/layout/{en,ru,uk}.txt that a near miss of a name never replaces (vocabcorrect.ts, as engine/vocab.py), read when a phrase by Groq first needs them; a list that cannot be read is skipped and said once, and with none no near miss is guessed. */
+let ordinaryList: Set<string> | undefined
+
+function ordinaryVocabulary(): Set<string> {
+  if (!ordinaryList) {
+    const texts: string[] = []
+    for (const code of ['en', 'ru', 'uk']) {
+      try {
+        texts.push(fs.readFileSync(path.join(app.getAppPath(), 'media', 'layout', `${code}.txt`), 'utf8'))
+      } catch (error) {
+        log(`dictation: the ${code} word list could not be read (${messageOf(error)}): its words are not kept from names`)
+      }
+    }
+    ordinaryList = ordinaryWords(texts)
+    if (!ordinaryList.size) log('dictation: no word lists: names are not guessed from near misses in phrases by Groq')
+  }
+  return ordinaryList
+}
 /** The most common English words, for the card's dotted lines; read once. */
 let common: string[] | undefined
 
@@ -869,7 +919,10 @@ async function reportProblem(via: 'email' | 'github', text: string): Promise<voi
   log(`report: made for ${via}`)
   const out = path.join(app.getPath('documents'), 'Kryakl', 'Reports', reportName(at))
   const facts = reportFacts()
-  await makeReport({ dir: userDir(), out, message: text, facts, status: reportStatus(), settings, names: namesHere(), at })
+  // The dictated phrases the person recorded for this and left on the page (dictcapture.ts); none unless they turned it on.
+  const kept = captures.list().map(phrase => ({ phrase, ...(captures.soundFile(phrase.id) ? { sound: captures.soundFile(phrase.id)! } : {}) }))
+  if (kept.length) log(`report: ${kept.length} recorded phrases go with it`)
+  await makeReport({ dir: userDir(), out, message: text, facts, status: reportStatus(), settings, names: namesHere(), at, captures: kept })
   shell.showItemInFolder(out)
   await shell.openExternal(via === 'email' ? mailUrl(text, facts, path.basename(out)) : issueUrl(text, facts, path.basename(out)))
   appWin?.webContents.send('to-view', { type: 'reported', file: out } satisfies ToView)
@@ -1182,6 +1235,7 @@ function useContext(): UseContext {
     naturalVoice: settings.voice === '' || settings.voice.startsWith(NATURAL_PREFIX),
     build: translationAdvice(speech.profile)[settings.model].cuda ? 'cuda' : 'vulkan',
     speech: { dictation: plan.dictation.chosen.model, transcripts: plan.transcripts.chosen.model, reserve: { dictation: other?.dictation.model, transcripts: other?.transcripts.model } },
+    groq: { llm: remoteLlm(), dictate: remoteDictate(), transcribe: remoteTranscribe() },
   }
 }
 
@@ -1326,6 +1380,7 @@ function appView(): AppView {
     dev: !app.isPackaged,
     newVersion: newVersion(),
     versionCheck: versionCheck(),
+    keys: keysView(),
     natural: naturalState(),
     hostVoices: hostVoices ?? [],
     languages: NATIVES.map(code => findLanguage(code))
@@ -1363,6 +1418,7 @@ function appView(): AppView {
     foreignKeys,
     speech: speech.view(speechKeysOk),
     dictation: { recent: dictationLog.list() },
+    captures: captures.view(),
   }
 }
 
@@ -1399,6 +1455,13 @@ function createAppWindow(): BrowserWindow {
   // The page's maximize button shows Maximize or Restore, whichever way the window got there (a double click on the bar too).
   win.on('maximize', () => postAppWindow())
   win.on('unmaximize', () => postAppWindow())
+  // The other layout switchers and screenshot programs it names are looked for again as the person comes back to it, and
+  // while it is in sight: one closed after the window opened was said to run for good (a tester, 2026-11-21).
+  win.on('focus', findRivals)
+  const rivalsClock = setInterval(() => {
+    if (win.isVisible() && !win.isMinimized()) findRivals()
+  }, RIVALS_LOOK_MS)
+  win.on('closed', () => clearInterval(rivalsClock))
   // Its errors go into kryakl.log; a run from source shows the rest of what it says in the terminal.
   logPageErrors(win, 'app window')
   if (!app.isPackaged) {
@@ -1438,6 +1501,33 @@ function openApp(tab?: AppTab): void {
   appWin.focus()
 }
 
+/** The transcript the app window's Transcripts page shows now (its `transcriptShown`); '' for none. */
+let shownTranscript = ''
+/** Notifications on screen, kept so a click still reaches them (Electron lets one go with its object). */
+const notices = new Set<Notification>()
+
+/**
+ * A transcript (never a voice note) became done or failed (speechhost.ts, transcriptwatch.ts): Windows'
+ * notification with its title, a click opening it, unless the person is looking at it in the window now.
+ */
+function transcriptEnded(row: LibraryRow): void {
+  const failed = row.status === 'failed'
+  log(`transcript: ${failed ? 'failed' : 'ready'} (${row.source})`)
+  if (!Notification.isSupported()) return
+  const looking = appWin && !appWin.isDestroyed() && appWin.isVisible() && !appWin.isMinimized() && appWin.isFocused() && shownTranscript === row.id
+  if (looking) return
+  const notice = new Notification({ title: t(failed ? 'tr.notifyFailed' : 'tr.notifyReady'), body: row.title, silent: false })
+  notices.add(notice)
+  const forget = () => notices.delete(notice)
+  notice.on('click', () => {
+    forget()
+    openTranscript(row.id)
+  })
+  notice.on('close', forget)
+  notice.on('failed', forget)
+  notice.show()
+}
+
 /** The app window on one transcript. */
 function openTranscript(id: string): void {
   openApp('transcripts')
@@ -1449,7 +1539,7 @@ function postCard(): void {
   if (!shown) return
   post({
     type: 'card',
-    card: { ...shown, target: TARGET, native: settings.native, level: settings.translationLevel, ...busySpell(), autoRead: settings.autoRead },
+    card: { ...shown, target: TARGET, native: settings.native, level: settings.translationLevel, ...(remoteLlm() ? { remote: true } : {}), ...busySpell(), autoRead: settings.autoRead },
     config: config(),
     pinned,
     maximized: !!maximizedFrom,
@@ -1585,6 +1675,24 @@ function onMessage(message: ToHost, page: Page): void {
     case 'clearDictation':
       dictation.clearLog()
       return
+    case 'captureDictation':
+      // Dictation recorded for a problem report: on for the next phrases (it stops by itself), or off.
+      if (message.on) log(captures.start() ? `capture: on, the next ${captures.left} phrases are kept for a report` : 'capture: not turned on, the list is full')
+      else {
+        captures.stop()
+        log('capture: off')
+      }
+      postApp()
+      return
+    case 'forgetCapture':
+      captures.remove(String(message.id))
+      postApp()
+      return
+    case 'clearCaptures':
+      captures.clear()
+      log('capture: every recorded phrase removed')
+      postApp()
+      return
     case 'clearTranslations':
       translationLog.clear()
       postApp()
@@ -1622,6 +1730,23 @@ function onMessage(message: ToHost, page: Page): void {
       return
     case 'resetKeys':
       resetKeys().catch(error => console.warn('Kryakl: could not reset the keys', error))
+      return
+    case 'saveKey':
+      void saveKey(message.service, message.key)
+      return
+    case 'removeKey':
+      removeKey(message.service)
+      return
+    case 'checkKey':
+      void checkKey(message.service)
+      return
+    case 'useGroq':
+      useGroq(message.on)
+      return
+    case 'remote':
+      if (!['dictate', 'transcribe', 'llm'].includes(message.part)) return
+      if (message.on && !groqKey()) return
+      setRemote({ ...settings.remote, [message.part]: message.on })
       return
     case 'installSpeech':
       speech.install(message.parts, message.models).then(
@@ -1790,6 +1915,7 @@ function onMessage(message: ToHost, page: Page): void {
       return
     case 'appReady':
       appReady = true
+      shownTranscript = ''
       // A page loaded afresh records nothing.
       if (micRecording) {
         micRecording = false
@@ -1847,6 +1973,9 @@ function onMessage(message: ToHost, page: Page): void {
     case 'micRecording':
       micRecording = message.on
       refreshTray()
+      return
+    case 'transcriptShown':
+      shownTranscript = typeof message.id === 'string' ? message.id : ''
       return
     case 'talkStart':
       // A topic starts a new talk: the one going on, if any, is put away first.
@@ -1958,9 +2087,152 @@ async function sendHostVoices(): Promise<void> {
 let translator: Translator
 let llm: LlmTranslators
 
+// ---------------------------------------------------------------- Groq, by the person's own key (2026-11-23)
+
+/** The person's keys (Groq, Hugging Face), encrypted by Windows for this account (safeStorage); never sent to a page, a log, a report or a backup. */
+let keys: KeyStore
+/** What was spent on Groq today and this hour, by model, and what Groq says is left. */
+let usage: Usage
+let groq: Groq
+/** Accurate translation by Groq: a text's sentences in a few requests (remote/llm.ts). */
+let remoteTranslator: LlmTranslator
+
+/** A Groq key is saved. */
+const groqKey = (): boolean => !!keys?.has('groq')
+/** Accurate translation, Check my English, Talk and text editing go to Groq. */
+const remoteLlm = (): boolean => settings.remote.llm && groqKey()
+/** Dictation (typing, in English, practice; not notes) goes to Groq. */
+const remoteDictate = (): boolean => settings.remote.dictate && groqKey()
+/** Recordings and meetings go to Groq, by the speech engine (it holds the key in memory only). */
+const remoteTranscribe = (): boolean => settings.remote.transcribe && groqKey()
+/** A screenshot's text is read by Groq's vision model, Windows' reader standing by. */
+const remoteScreen = (): boolean => settings.remote.screen && groqKey()
+
+/** Groq's fault, said once a kind in kryakl.log: what it was, never the text. */
+let groqSaid = ''
+function groqFault(error: unknown, what: string): void {
+  const kind = isRemoteError(error) ? error.fault : 'error'
+  if (`${what}:${kind}` === groqSaid) return
+  groqSaid = `${what}:${kind}`
+  log(`groq: ${what} gave up (${kind})${isRemoteError(error) && error.retryAfter ? `, back in ${Math.round(error.retryAfter)} s` : ''}`)
+}
+
+function setUpGroq(): void {
+  keys = new KeyStore(path.join(userDir(), 'keys.json'), {
+    available: () => safeStorage.isEncryptionAvailable(),
+    encrypt: text => safeStorage.encryptString(text),
+    decrypt: data => safeStorage.decryptString(data),
+  })
+  // The trial build kept its key in the clear (groq.json): into the store once, the file gone.
+  if (adoptPlainKey(keys, 'groq', path.join(userDir(), 'groq.json'), 'apiKey', true)) log('groq: the key kept in the clear moved into the encrypted store')
+  // The Hugging Face key the engine kept in speech.json: taken into the store; the engine blanks its own copy once it is handed the key (secrets).
+  adoptEngineToken()
+  usage = new Usage(path.join(userDir(), 'remote.json'))
+  groq = new Groq({ key: () => keys.get('groq'), usage, say: message => log(`groq: ${message}`) })
+  remoteTranslator = createRemoteTranslator(groq)
+}
+
+/** How the last check of each key went (Groq's; Hugging Face's state is the engine's own, Who spoke when). */
+const keyChecks: Partial<Record<KeyService, KeyCheck>> = {}
+
+function keysView(): AppView['keys'] {
+  const view = (service: KeyService) => {
+    const kept = keys?.view(service) ?? { set: false }
+    const check = keyChecks[service]
+    return kept.set && check ? { ...kept, check } : kept
+  }
+  return { groq: view('groq'), huggingface: view('huggingface'), usable: !!keys?.usable, usage: usage?.view(GROQ_MODELS) ?? [] }
+}
+
+/** What Groq's key changes: the dictation keys (they work without the engine then), the engine's secrets, the card. */
+function remoteChanged(): void {
+  registerShortcuts()
+  applyKeyboard()
+  speech?.keysChanged()
+  if (shown) postCard()
+  postTalk()
+  postApp()
+}
+
+function setRemote(remote: Settings['remote']): void {
+  saveSettings({ remote })
+  remoteChanged()
+}
+
+/** "Use Groq for everything" (or for nothing): dictation, recordings and the language models at once; accurate translation needs a level that is not Fast. */
+function useGroq(on: boolean): void {
+  if (on && !groqKey()) return
+  saveSettings({ remote: { ...settings.remote, dictate: on, transcribe: on, llm: on }, ...(on && settings.translationLevel === 'fast' ? { translationLevel: 'accurate' } : {}) })
+  remoteChanged()
+}
+
+/** A key typed on Settings › Keys: Groq's checked with Groq first (a refused key is not kept); kept encrypted, never shown again but its last four letters. */
+async function saveKey(service: KeyService, key: string): Promise<void> {
+  const value = key.trim()
+  if (!keyShape(service, value)) {
+    keyChecks[service] = 'bad'
+    postApp()
+    return
+  }
+  if (service === 'groq') {
+    keyChecks.groq = 'checking'
+    postApp()
+    const check = await groq.check(value)
+    keyChecks.groq = check
+    if (check === 'bad') {
+      log('keys: Groq did not accept a key; it was not saved')
+      postApp()
+      return
+    }
+  }
+  try {
+    keys.set(service, value)
+  } catch (error) {
+    log(`keys: not saved (${messageOf(error)})`)
+    keyChecks[service] = 'bad'
+    postApp()
+    return
+  }
+  log(`keys: the ${service === 'groq' ? 'Groq' : 'Hugging Face'} key saved`)
+  remoteChanged()
+}
+
+function removeKey(service: KeyService): void {
+  keys.remove(service)
+  delete keyChecks[service]
+  log(`keys: the ${service === 'groq' ? 'Groq' : 'Hugging Face'} key removed`)
+  remoteChanged()
+}
+
+/** The saved key asked again (Groq's), or handed to the engine again (Hugging Face's, which checks it itself). */
+async function checkKey(service: KeyService): Promise<void> {
+  const key = keys.get(service)
+  if (!key) return
+  if (service === 'huggingface') return speech?.keysChanged()
+  keyChecks.groq = 'checking'
+  postApp()
+  keyChecks.groq = await groq.check(key)
+  postApp()
+}
+
+/** speech.json's `hfToken`, read once into the store: the file itself is the engine's, which blanks it (writing it here could race the engine's own save). */
+function adoptEngineToken(): void {
+  if (!keys.usable || keys.has('huggingface')) return
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(TEST_HOME ?? userDir(), 'speech.json'), 'utf8')) as { hfToken?: unknown }
+    if (typeof raw.hfToken === 'string' && raw.hfToken.trim()) {
+      keys.set('huggingface', raw.hfToken)
+      log('keys: the Hugging Face key moved into the encrypted store')
+    }
+  } catch {
+    // No engine settings yet, or none readable: nothing to take.
+  }
+}
+
 /** The translator of the level picked in Settings; a card waits for it, never another. */
 function activeTranslator(): Translator {
-  return settings.translationLevel === 'fast' ? translator : llm[settings.translationLevel]
+  if (settings.translationLevel === 'fast') return translator
+  return remoteLlm() ? remoteTranslator : llm[settings.translationLevel]
 }
 
 function messageOf(error: unknown): string {
@@ -1988,6 +2260,7 @@ function translationJob(codes: readonly string[], wait = false): TranslationJob 
   const level = settings.translationLevel
   const fast = { t: translator, translate: translator.translate, busy: () => undefined }
   if (level === 'fast') return fast
+  if (remoteLlm()) return remoteJob(codes, wait)
   const t = llm[level]
   const missing = codes.filter(code => code !== 'en' && translator.state(code).status !== 'ready')
   if (missing.length) {
@@ -2006,6 +2279,35 @@ function translationJob(codes: readonly string[], wait = false): TranslationJob 
   let fell: BusyPart | undefined
   const gaveUp = (error: unknown) => error instanceof ModelSlow && ((fell = modelSlow(error)), true)
   return { t, translate: drafted(roomFirst(level, t.hurried(slowAfter(modelSpeeds[level]?.sentence ?? [], LEVEL_SURE_AFTER))), throughEnglish(translator.translate), gaveUp), busy: () => fell }
+}
+
+/**
+ * Accurate translation by Groq: Fast's draft first where its models are here
+ * (they download once by themselves, as for the local model), then Groq's.
+ * Groq not answering (no internet, the free day's limit, the key refused)
+ * gives the job up and Fast's translation stands, said in the card
+ * (`busy: 'remote'`); with no Fast models here Groq is all there is and its
+ * fault is the card's. `wait` (Use Groq anyway): nothing is given up.
+ */
+function remoteJob(codes: readonly string[], wait: boolean): TranslationJob {
+  const t = remoteTranslator
+  const missing = codes.filter(code => code !== 'en' && translator.state(code).status !== 'ready')
+  for (const code of missing)
+    if (translator.state(code).status === 'absent')
+      translator
+        .prepare(code, () => undefined)
+        .catch(error => console.warn('Kryakl: the draft translator did not download', error))
+        .finally(() => postApp())
+  if (missing.length) return { t, translate: t.translate, busy: () => undefined }
+  if (wait) return { t, translate: drafted(t.translate, throughEnglish(translator.translate)), busy: () => undefined }
+  let fell: BusyPart | undefined
+  const gaveUp = (error: unknown) => {
+    if (!isRemoteError(error)) return false
+    groqFault(error, 'translation')
+    fell = 'remote'
+    return true
+  }
+  return { t, translate: drafted(t.translate, throughEnglish(translator.translate), gaveUp), busy: () => fell }
 }
 
 /** The graphics card's free memory, one nvidia-smi reading shared by a key press and the job after it (read afresh once Kryakl's speech model let go of it). */
@@ -2226,6 +2528,18 @@ function translateText(text: string, kind: CardKind, at: Point, via?: string): v
  * text, the card showing why.
  */
 async function recognizeSnip(id: number, png: Buffer, layout: 'paragraphs' | 'screen' = 'paragraphs'): Promise<{ text: string; misread: boolean } | undefined> {
+  if (remoteScreen()) {
+    const read = await readByGroq(png)
+    if (read !== undefined) {
+      if (shown?.id === id) {
+        shown.readBy = 'groq'
+        postCard()
+      }
+      if (!read.trim()) return void setState(id, { status: 'empty' })
+      const text = layout === 'screen' ? read : unwrapLines(read.split(/\r?\n/)).join('\n').replace(/\n{3,}/g, '\n\n').trim()
+      return { text, misread: false }
+    }
+  }
   const file = path.join(app.getPath('temp'), `kryakl-${process.pid}-${id}.png`)
   try {
     fs.writeFileSync(file, png)
@@ -2240,6 +2554,31 @@ async function recognizeSnip(id: number, png: Buffer, layout: 'paragraphs' | 'sc
     return { text, misread: scriptFor(settings.native) !== 'Latin' && !nativeRead }
   } finally {
     fs.rmSync(file, { force: true })
+  }
+}
+
+/** The long side a picture is sent to Groq at, at most: a 4K screen costs the free minute's tokens several times over. */
+const GROQ_PICTURE_SIDE = 1920
+
+/** A screenshot's text by Groq; undefined when Groq could not read it (no connection, the minute's limit, a cut answer), so Windows reads it. */
+async function readByGroq(png: Buffer): Promise<string | undefined> {
+  try {
+    let image = nativeImage.createFromBuffer(png)
+    const { width, height } = image.getSize()
+    const side = Math.max(width, height)
+    if (side > GROQ_PICTURE_SIDE) {
+      const scale = GROQ_PICTURE_SIDE / side
+      image = image.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: 'best' })
+    }
+    const read = await groq.readImage({ png: image.toPNG() })
+    if (read.cut) {
+      log('groq: a screenshot had more text than one answer holds; Windows read it')
+      return undefined
+    }
+    return read.text
+  } catch (error) {
+    groqFault(error, 'screen text')
+    return undefined
   }
 }
 
@@ -2379,7 +2718,7 @@ async function translateInPlace(text: string, at: Point, window: bigint, via?: s
     await pasteInto(window, undefined, out)
     // Fast did it: said by the cursor, as no card shows.
     const busy = job.busy()
-    if (busy) keyboard.say(t(busy === 'card' ? 'badge.fastCard' : 'badge.fastProcessor'), BUSY_SAY_MS)
+    if (busy) keyboard.say(t(busy === 'card' ? 'badge.fastCard' : busy === 'remote' ? 'badge.fastRemote' : 'badge.fastProcessor'), BUSY_SAY_MS)
   } catch (error) {
     keyboard.say('')
     tray?.displayBalloon({ title: t('app.name'), content: t('main.notTranslated', { why: messageOf(error) }) })
@@ -2484,7 +2823,7 @@ let checkAsked = 0
  * dictated, to paste the text set right back into, `after` it.
  */
 function checkWindow(text: string, at: Point, window?: bigint, via?: string, field?: unknown, after?: string): void {
-  const id = openCard('check', { status: 'check', text, result: { status: 'none' }, model: levelName(settings.model), canPaste: !!window }, at, via)
+  const id = openCard('check', { status: 'check', text, result: { status: 'none' }, model: remoteLlm() ? 'Groq' : levelName(settings.model), canPaste: !!window }, at, via)
   releaseField(pasteTarget?.field)
   pasteTarget = window ? { id, window, field, ...(after ? { after } : {}) } : undefined
   if (!window) releaseField(field)
@@ -2608,7 +2947,9 @@ function talkWindowView(): TalkWindowView {
   const installed = !!view?.pack.parts.includes('core')
   const fit = translationAdvice(speech?.profile)
   const probed = !!speech?.profile?.at
-  const busy = busyFor(s.model)
+  // By the person's own key: no graphics card or download in Talk's way, and the bar names Groq.
+  const remote = remoteLlm()
+  const busy = remote ? undefined : busyFor(s.model)
   const current = talks.current()
   return {
     talk: talk.state(),
@@ -2624,9 +2965,9 @@ function talkWindowView(): TalkWindowView {
     native: s.native,
     natural: naturalState().status,
     engine: !installed ? 'absent' : view?.service === 'ready' ? 'ready' : 'starting',
-    model: { name: levelName(s.model), full: LLM_MODELS[s.model].name, ...llmFiles.state(s.model) },
-    needsCard: probed && fit.accurate.where !== 'card',
-    slow: probed && fit[s.model].where !== 'card',
+    model: remote ? { name: 'Groq', full: 'Groq', ...llmFiles.state(s.model), status: 'ready', progress: 1 } : { name: levelName(s.model), full: LLM_MODELS[s.model].name, ...llmFiles.state(s.model) },
+    needsCard: !remote && probed && fit.accurate.where !== 'card',
+    slow: !remote && probed && fit[s.model].where !== 'card',
     ...(busy ? { busy } : {}),
     keyTaken: !speechKeysOk.talk,
   }
@@ -2913,7 +3254,8 @@ async function lookForVersion(now = false): Promise<void> {
  */
 function warmModel(purpose: Purpose): void {
   const model = purpose === 'check' ? settings.model : settings.translationLevel
-  if (model === 'fast' || llmFiles.state(model).status !== 'ready') return
+  // Groq has nothing to load here.
+  if (model === 'fast' || remoteLlm() || llmFiles.state(model).status !== 'ready') return
   // Check my English always uses the model.
   if (purpose === 'check') return llmFiles.server.warm(llmFiles.target(model))
   warmWhole(model)
@@ -2938,11 +3280,15 @@ const EDIT_WAIT_MS = { card: 8000, processor: 20_000 }
  */
 async function editPhrase(text: string, stop: AbortSignal): Promise<{ text: string; note?: string }> {
   const model = settings.model
-  if (llmFiles.state(model).status !== 'ready') return { text, note: t('dict.editNoModel') }
-  const busy = busyFor(model)
-  if (busy) return { text, note: t(busy === 'card' ? 'dict.editCard' : 'dict.editProcessor') }
-  if (await cardFull(model).catch(() => undefined)) return { text, note: t('dict.editCard') }
-  const wait = EDIT_WAIT_MS[translationAdvice(speech?.profile)[model].where === 'card' ? 'card' : 'processor']
+  // By the person's own key: no model here to look at; Groq answers in a second or two, or the phrase goes as said.
+  const remote = remoteLlm()
+  if (!remote) {
+    if (llmFiles.state(model).status !== 'ready') return { text, note: t('dict.editNoModel') }
+    const busy = busyFor(model)
+    if (busy) return { text, note: t(busy === 'card' ? 'dict.editCard' : 'dict.editProcessor') }
+    if (await cardFull(model).catch(() => undefined)) return { text, note: t('dict.editCard') }
+  }
+  const wait = remote ? EDIT_WAIT_MS.card : EDIT_WAIT_MS[translationAdvice(speech?.profile)[model].where === 'card' ? 'card' : 'processor']
   const style = settings.dictateEditStyle
   const began = Date.now()
   try {
@@ -2952,8 +3298,8 @@ async function editPhrase(text: string, stop: AbortSignal): Promise<{ text: stri
     return out.doubt ? { text, note: t('dict.editDoubt') } : { text: out.text }
   } catch (error) {
     if (stop.aborted) return { text }
-    log(`edit: ${style}, gave up after ${((Date.now() - began) / 1000).toFixed(1)} s: ${error instanceof Error ? error.name : 'failed'}`)
-    return { text, note: t('dict.editSlow') }
+    log(`edit: ${style}, gave up after ${((Date.now() - began) / 1000).toFixed(1)} s: ${isRemoteError(error) ? `groq ${error.fault}` : error instanceof Error ? error.name : 'failed'}`)
+    return { text, note: t(isRemoteError(error) ? 'dict.editRemote' : 'dict.editSlow') }
   }
 }
 
@@ -3181,13 +3527,14 @@ function registerShortcuts(): void {
     pause: register(settings.pauseKey, togglePause),
     window: register(settings.windowKey, () => openApp()),
   }
-  // Dictate's keys mean nothing before the engine is there; then each starts and stops a phrase.
-  const dictate = (mode: DictationMode, key: string) => (speech?.installed ? register(key, () => dictation.press(mode, key)) : true)
+  // Dictate's keys mean nothing before the engine is there, unless Groq hears the phrases (not notes, kept by the engine); then each starts and stops a phrase.
+  const heard = !!speech?.installed || remoteDictate()
+  const dictate = (mode: DictationMode, key: string) => ((mode === 'note' ? speech?.installed : heard) ? register(key, () => dictation.press(mode, key)) : true)
   speechKeysOk = {
     dictate: dictate('type', settings.dictateKey),
     english: dictate('english', settings.englishKey),
     note: dictate('note', settings.noteKey),
-    again: speech?.installed ? register(settings.againKey, () => dictation.typeAgain()) : true,
+    again: heard ? register(settings.againKey, () => dictation.typeAgain()) : true,
     practice: dictate('check', settings.practiceKey),
     talk: speech?.installed ? register(settings.talkKey, talkPressed) : true,
   }
@@ -3224,7 +3571,8 @@ function applyKeyboard(): void {
   keyboardTrouble = undefined
   try {
     // Dictate's keys work only once the engine is installed, here as with Electron's shortcuts; paused, the helper keeps the pause key alone.
-    keyboard.apply(speech?.installed ? settings : { ...settings, dictateKey: '', englishKey: '', noteKey: '', againKey: '', practiceKey: '', talkKey: '' }, learned.forThread())
+    const none = speech?.installed ? {} : remoteDictate() ? { noteKey: '', talkKey: '' } : { dictateKey: '', englishKey: '', noteKey: '', againKey: '', practiceKey: '', talkKey: '' }
+    keyboard.apply({ ...settings, ...none }, learned.forThread())
   } catch (error) {
     keyboardTrouble = messageOf(error)
   }
@@ -3510,6 +3858,9 @@ async function convertOver(cycle: string[], now: string, again: boolean): Promis
   log(`convert: ${steps} chars ${from} → ${to}${before ? ', again' : ''}, the cursor after it in ${where}`)
   return { pasted: true, done: true }
 }
+
+/** How often the app window, while in sight, looks again for the programs it names (one look is Windows' list of processes). */
+const RIVALS_LOOK_MS = 15_000
 
 /** Other layout switchers running now, for the settings' warning, and the other programs that watch the keyboard. */
 function findRivals(): void {
@@ -3928,10 +4279,14 @@ function setUpSpeechEngine(): void {
     open: url => openStream(url),
     ...(TEST_HOME ? { testHome: TEST_HOME } : {}),
     settings: () => settings,
+    // Groq's key goes to the engine only while recordings go to Groq.
+    secrets: () => ({ hfToken: keys?.get('huggingface') ?? '', groqKey: remoteTranscribe() ? (keys.get('groq') ?? '') : '' }),
+    remoteTranscribe,
     onChange: () => {
       postApp()
       refreshTray()
     },
+    onTranscriptEnded: transcriptEnded,
   })
   dictation = new Dictation({
     page: path.join(app.getAppPath(), 'media', 'dictation.html'),
@@ -3943,13 +4298,62 @@ function setUpSpeechEngine(): void {
       const job = translationJob([from])
       const english = await translatePlain(text, from, 'en', job.translate, job.t.direct)
       const busy = job.busy()
-      return { text: english, ...(busy ? { note: t(busy === 'card' ? 'dict.fastCard' : 'dict.fastProcessor') } : {}) }
+      return { text: english, ...(busy ? { note: t(busy === 'card' ? 'dict.fastCard' : busy === 'remote' ? 'dict.fastRemote' : 'dict.fastProcessor') } : {}) }
     },
     edit: editPhrase,
     editing: () => settings.dictateEdit,
-    warm: async () => {
-      if (settings.dictateEdit && llmFiles.state(settings.model).status === 'ready') warmWhole(settings.model)
-      else await cardForDictation()
+    polish: (text, language) => typedText(text, language, { yo: settings.dictateYo, endStop: settings.dictateEndStop }, yoDict),
+    space: () => settings.dictateSpace,
+    sound: () => settings.dictateSound,
+    capturing: () => captures.on,
+    captured: (phrase, pcm) => {
+      const kept = captures.add(phrase, pcm)
+      // Never the words: how long it was, and how many more will be kept.
+      if (kept) log(`capture: a phrase of ${kept.seconds} s kept for a report, ${captures.left} more to keep${captures.on ? '' : ': recording is off again'}`)
+      postApp()
+    },
+    warm: async remote => {
+      if (settings.dictateEdit && !remoteLlm() && llmFiles.state(settings.model).status === 'ready') warmWhole(settings.model)
+      // Heard by Groq: the speech model here needs no room on the card.
+      else if (!remote) await cardForDictation()
+    },
+    remote: {
+      on: remoteDictate,
+      hear: async (audio, mime, seconds, expected, signal) => {
+        const began = Date.now()
+        try {
+          const out = await dictateByGroq(groq, { audio, mime: mime === 'audio/wav' ? 'audio/wav' : 'audio/webm', seconds, expected, vocabulary: vocabularyFor(settings), ordinary: ordinaryVocabulary(), signal })
+          // Never the words: the sound's length, the wait, what was cut.
+          log(`dictation: ${seconds.toFixed(1)} s of sound by Groq, ${((Date.now() - began) / 1000).toFixed(1)} s${out.asked > 1 ? ', asked again in the own language' : ''}${out.cut.length ? `, cut: ${out.cut.join(', ')}` : ''}`)
+          postApp()
+          return { text: out.text, language: out.language }
+        } catch (error) {
+          if (!signal.aborted) groqFault(error, 'dictation')
+          throw error
+        }
+      },
+      stream: (expected, onText) => {
+        const began = Date.now()
+        const stream = new GroqStream(groq, { expected, vocabulary: vocabularyFor(settings), ordinary: ordinaryVocabulary(), onText })
+        return {
+          push: pcm => stream.push(pcm),
+          cancel: () => stream.cancel(),
+          finish: async () => {
+            const key = Date.now()
+            try {
+              const out = await stream.finish()
+              // Never the words: the sound's length, the pieces, the wait after the key, what was cut.
+              log(`dictation: ${((key - began) / 1000).toFixed(1)} s of sound by Groq in ${out.pieces} piece(s), ${((Date.now() - key) / 1000).toFixed(1)} s after the key${out.asked > out.pieces ? ', asked again in the own language' : ''}${out.cut.length ? `, cut: ${out.cut.join(', ')}` : ''}`)
+              postApp()
+              return { text: out.text, language: out.language }
+            } catch (error) {
+              if (!stream.cancelled) groqFault(error, 'dictation')
+              postApp()
+              throw error
+            }
+          },
+        }
+      },
     },
     check: practice,
     expected: () => myLanguages(settings),
@@ -4045,6 +4449,11 @@ async function hostCall(request: HostCall): Promise<unknown> {
     }
     case 'runningApps':
       return windowedApps().filter(exe => exe !== path.win32.basename(process.execPath).toLowerCase())
+    case 'capturedSound': {
+      // A phrase recorded for a report, to hear on the report page before it is sent: its WAV, or null when it is gone.
+      const file = captures.soundFile(String(request.id))
+      return file ? new Uint8Array(fs.readFileSync(file)) : null
+    }
   }
 }
 
@@ -4087,6 +4496,7 @@ function start(): void {
   setUpSpeech()
   words = new WordStore(path.join(userDir(), 'words.json'))
   dictationLog = new DictationLog(path.join(userDir(), 'dictation.json'))
+  captures = new CaptureStore(path.join(userDir(), 'captures'))
   translationLog = new TranslationLog(path.join(userDir(), 'translations.json'))
   learned = new LearnStore(path.join(userDir(), 'learning.json'))
   translator = createTranslator(downloads('models'), unpacked('dist', 'mt-worker.js'), {
@@ -4101,15 +4511,17 @@ function start(): void {
     engineFor: model => (translationAdvice(speech?.profile)[model].cuda ? 'cuda' : 'vulkan'),
   })
   llm = createLlmTranslators({ files: llmFiles, onTimed: modelTimed })
+  setUpGroq()
+  const byGroq = { on: remoteLlm, chat: groq }
   setInterval(watchModel, FULL_SCREEN_LOOK_MS)
   setInterval(watchRest, REST_LOOK_MS)
   setTimeout(() => void lookForVersion(), VERSION_FIRST_MS)
   setInterval(() => void lookForVersion(), VERSION_TICK_MS)
-  checker = createChecker({ files: llmFiles, model: () => settings.model, onTimed: modelTimed })
-  editor = createEditor({ files: llmFiles, model: () => settings.model })
+  checker = createChecker({ files: llmFiles, model: () => settings.model, onTimed: modelTimed, remote: byGroq })
+  editor = createEditor({ files: llmFiles, model: () => settings.model, remote: byGroq })
   mistakes = new MistakeStore(path.join(userDir(), 'mistakes.json'))
   // Talk: the same model checks each line and the duck answers it (talk.ts, duck.ts).
-  duck = createDuck({ files: llmFiles, model: () => settings.model, onTimed: modelTimed })
+  duck = createDuck({ files: llmFiles, model: () => settings.model, onTimed: modelTimed, remote: byGroq })
   // The talk going on survives a restart; New talk puts it away in the talk window's history.
   talks = new TalkStore(path.join(userDir(), 'talks.json'))
   talk = new Talk({
@@ -4232,7 +4644,7 @@ function start(): void {
     query: pageQuery,
     background: cardColor,
     border: borderColor,
-    groups: () => menuGroups(settings.uiLanguage, !!speech?.installed),
+    groups: () => menuGroups(settings.uiLanguage, !!speech?.installed || remoteDictate()),
     caret: () => {
       const front = foreground()
       return front.tid ? caretOf(front.tid) : undefined
@@ -4391,6 +4803,7 @@ if (!theOnlyOne) {
   app.on('will-quit', () => {
     const steps: [string, () => void][] = [
       ['shortcuts', () => globalShortcut.unregisterAll()],
+      ['groq usage', () => usage?.flush()],
       ['speech', () => speech?.dispose()],
       ['dictation', () => dictation?.dispose()],
       ['clipboard', () => stopWatching?.()],

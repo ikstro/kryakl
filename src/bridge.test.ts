@@ -26,6 +26,10 @@ describe('a page that shows text from outside opens, removes and exports nothing
     for (const type of ['trayReady', 'trayHeight', 'trayClose', 'tray', 'keepWord', 'saveSettings']) expect(messageAllowed('tray', type), type).toBe(true)
     for (const type of ['dictationReady', 'dictationTuck', 'dictationText', 'dictationAudio', 'dictationNote', 'dictationHeight', 'dictationCancelled', 'dictationFailed']) expect(messageAllowed('dictation', type), type).toBe(true)
   })
+  test('a phrase\'s sound for Groq comes from the badge alone', () => {
+    expect(messageAllowed('dictation', 'dictationPcm')).toBe(true)
+    for (const page of ['app', 'card', 'tray', 'talk', 'menu', 'shot', 'shots', 'record'] as const) expect(messageAllowed(page, 'dictationPcm'), page).toBe(false)
+  })
   test('only the talk window talks to the duck: a model\'s words in the card cannot start a talk or speak for the person', () => {
     for (const type of ['talkStart', 'talkSay', 'talkInterrupt', 'talkClear', 'talkListen', 'talkReady', 'talkPin', 'talkWindow', 'talkContinue', 'talkDelete', 'talksClear']) {
       expect(messageAllowed('talk', type), type).toBe(true)

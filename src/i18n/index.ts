@@ -117,7 +117,7 @@ export function byName<T>(items: readonly T[], name: (item: T) => string): T[] {
 export const levelName = (level: TranslationLevel): string => t(`level.${level}`)
 
 /** What kept the model slow, as a sentence names it: the graphics card or the processor. */
-export const busyPartName = (part: BusyPart): string => t(part === 'card' ? 'busy.card' : 'busy.processor')
+export const busyPartName = (part: BusyPart): string => (part === 'remote' ? 'Groq' : t(part === 'card' ? 'busy.card' : 'busy.processor'))
 
 const numbers = new Map<string, Intl.NumberFormat>()
 

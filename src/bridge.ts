@@ -33,6 +33,9 @@ export function mediaAllowed(page: Page): boolean {
 /** Messages only the app window sends: they install, remove, reset, open or export. */
 const APP_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>([
   'clearDictation',
+  'captureDictation',
+  'forgetCapture',
+  'clearCaptures',
   'clearTranslations',
   'forgetPhrase',
   'forgetTranslation',
@@ -45,6 +48,12 @@ const APP_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>([
   'resetSettings',
   'checkVersion',
   'resetKeys',
+  // The person's own keys, and what goes to Groq with them: the app window's Settings › Keys alone.
+  'saveKey',
+  'removeKey',
+  'checkKey',
+  'useGroq',
+  'remote',
   'installSpeech',
   'prepareTranslator',
   'prepareDictionary',
@@ -67,6 +76,7 @@ const APP_ONLY: ReadonlySet<ToHost['type']> = new Set<ToHost['type']>([
   'copyWords',
   'openLink',
   'micRecording',
+  'transcriptShown',
   'talkOpen',
   'reportProblem',
   'openLogs',
@@ -114,6 +124,8 @@ export function messageAllowed(page: Page, type: string): boolean {
   if (MENU_ONLY.has(type as ToHost['type'])) return page === 'menu'
   if (page === 'menu') return false
   if (TALK_ONLY.has(type as ToHost['type'])) return page === 'talk'
+  // A phrase's sound for a problem report comes from the badge that recorded it, and from no other page.
+  if (type === 'dictationKept' || type === 'dictationPcm') return page === 'dictation'
   // The talk window listens too: the tray shows the red dot meanwhile.
   if (type === 'micRecording') return page === 'app' || page === 'talk'
   return page === 'app' || !APP_ONLY.has(type as ToHost['type'])

@@ -258,11 +258,18 @@ export class StreamRecorder {
   private spanSum = 0
   private spanCount = 0
 
+  /**
+   * `post`: the sound goes to the main process (a phrase heard by Groq, remote/dictstream.ts), each chunk as
+   * it is recorded and the tail at the end (`last`); `finish` then resolves with no text, which comes from the
+   * main process. With a `session` too, each chunk also goes to that engine session, only for `onStatus` (this
+   * computer's preview); it is never finished here, and the main process throws it away.
+   */
   constructor(
     private readonly call: Call,
     private readonly session: string,
     private readonly expected: string[],
     private readonly onStatus: (status: StreamStatus) => void,
+    private readonly post?: (pcm: Uint8Array, last: boolean) => void,
   ) {}
 
   private speech<T>(method: string, route: string, body?: unknown): Promise<SpeechResult<T>> {
@@ -336,13 +343,18 @@ export class StreamRecorder {
 
   private send(chunk: Int16Array): void {
     this.kept.push(chunk)
+    if (this.post) {
+      this.post(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength), false)
+      if (!this.session) return
+    }
     const seq = this.seq++
     this.uploads = this.uploads.then(async () => {
       if (this.broken) return
       const bytes = new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength)
       for (let attempt = 0; attempt < RETRIES; attempt++) {
         const r = await this.speech<StreamStatus>('PUT', `/dictate/sessions/${this.session}/${seq}`, bytes)
-        if (r.ok) return this.cancelled ? undefined : this.onStatus(r.data)
+        // A preview's answer after the key is not shown: the panel waits for Groq's text then.
+        if (r.ok) return this.cancelled || (this.post && this.broken) ? undefined : this.onStatus(r.data)
         if (r.status === 404) break
         await new Promise(resolve => setTimeout(resolve, 300 * (attempt + 1)))
       }
@@ -364,6 +376,14 @@ export class StreamRecorder {
 
   get seconds(): number {
     return this.startedAt ? (Date.now() - this.startedAt) / 1000 : 0
+  }
+
+  /** The whole sound captured so far, 16-bit PCM at 16 kHz: asked for after `finish`, when the phrase is kept for a problem report. */
+  sound(): Uint8Array {
+    const all = new Int16Array(this.kept.reduce((n, c) => n + c.length, 0))
+    let at = 0
+    for (const c of this.kept) (all.set(c, at), (at += c.length))
+    return new Uint8Array(all.buffer)
   }
 
   /** Stops, sends the tail, and waits for the whole text. */
@@ -406,6 +426,12 @@ export class StreamRecorder {
     const tail = this.waiting.slice(0, this.filled)
     this.filled = 0
     this.kept.push(tail)
+    if (this.post) {
+      // The preview is over (no chunk more, no answer shown); Groq's text comes from the main process.
+      this.broken = true
+      this.post(new Uint8Array(tail.buffer, tail.byteOffset, tail.byteLength), true)
+      return { text: '', language: '', sure: 0 }
+    }
     await this.uploads
     this.checkCancelled()
     if (!this.broken) {
@@ -431,7 +457,7 @@ export class StreamRecorder {
     this.flushFailed?.(new DOMException('Recording cancelled', 'AbortError'))
     this.release()
     this.kept = []
-    await this.speech('DELETE', `/dictate/sessions/${this.session}`)
+    if (!this.post) await this.speech('DELETE', `/dictate/sessions/${this.session}`)
   }
 
   private release(): void {

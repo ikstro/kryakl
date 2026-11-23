@@ -119,6 +119,40 @@ def save_opus(samples: np.ndarray, path: Path, bitrate: int = 24000, progress: P
     tmp.replace(path)
 
 
+def to_wav(samples: np.ndarray) -> bytes:
+    """16-bit mono WAV at 16 kHz in memory: 32 KB a second, lossless."""
+    import io
+    import wave
+
+    out = io.BytesIO()
+    with wave.open(out, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(RATE)
+        w.writeframes((np.clip(samples, -1.0, 1.0) * 32767).astype("<i2").tobytes())
+    return out.getvalue()
+
+
+def to_flac(samples: np.ndarray) -> bytes:
+    """16-bit mono FLAC at 16 kHz in memory, by PyAV's FFmpeg: lossless, about half a WAV."""
+    import io
+
+    pcm = (np.clip(samples, -1.0, 1.0) * 32767).astype(np.int16)
+    out = io.BytesIO()
+    with av.open(out, "w", format="flac") as container:
+        stream = container.add_stream("flac", rate=RATE)
+        stream.layout = "mono"
+        step = RATE * 10
+        for start in range(0, len(pcm), step):
+            frame = av.AudioFrame.from_ndarray(pcm[start:start + step].reshape(1, -1), format="s16", layout="mono")
+            frame.sample_rate = RATE
+            for packet in stream.encode(frame):
+                container.mux(packet)
+        for packet in stream.encode(None):
+            container.mux(packet)
+    return out.getvalue()
+
+
 def lift(samples: np.ndarray) -> np.ndarray:
     """A quiet phrase made louder (LIFT_BELOW); its loudest sound is taken past single clicks."""
     if LIFT_BELOW is None or not len(samples):

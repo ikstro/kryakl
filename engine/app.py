@@ -14,22 +14,29 @@ What other apps may use, and keep using:
                                       close call; an explicit `language` wins;
                                       `language` is "" when the model does not say, as Parakeet;
                                       the text is spelled as the vocabulary says)
-  POST /dictate/sessions {expected?, language?, strict?} -> {id, model}
-                                      a dictation recognized while it is spoken (the same rules):
+  POST /dictate/sessions {expected?, language?, strict?, device?} -> {id, model}
+                                      a dictation recognized while it is spoken (the same rules;
+                                      device "cpu": the processor's plan, never the graphics card):
   PUT  /dictate/sessions/<id>/<seq>   a chunk of raw 16-bit 16 kHz mono -> {pending, heard (all so far), model}
   POST /dictate/sessions/<id>/finish  the last chunk -> {text, language, sure, seconds, took}
   DELETE /dictate/sessions/<id>       thrown away
   POST /dictate/prepare               loads the dictation model, so the next phrase is quick
   POST /transcripts {path}            a file on this computer -> a transcript in the library
   POST /recordings ...                a recording that arrives in chunks (the extension)
+  GET  /recordings/<id>/status        a meeting's progress -> {stage, progress (0..1), done, failed}; nothing
+                                      of its text, title or speakers; 404 for any recording but a `meet` one;
+                                      served without the key too (auth.open_status), as the extension's GET
+                                      comes without an Origin
   GET  /health                        what is installed (parts), loaded and busy, and the Chrome
                                       extension last seen ({id, version, seen} or null); without
                                       the key only {ok}, or with X-Krya-Nonce only {proof}
   GET  /transcripts/<id>/file?format= the transcript as txt, md, srt, vtt, docx or json (bytes)
 
-Kryakl alone uses: PUT /settings {plan, vocabulary: [{word, heard}]} (which model runs
-where, made from this computer's measurements; the words to spell right and what they
-are heard as), POST /calibrate (the speed test), POST /models/<name>/download,
+Kryakl alone uses: PUT /settings {plan, vocabulary: [{word, heard}], remoteTranscribe,
+secrets: {hfToken?, groqKey?}} (which model runs where, made from this computer's
+measurements; the words to spell right and what they are heard as; a recording's words
+from Groq's Whisper; the keys, held in memory only, '' removes one, as KRYA_HF_TOKEN and
+KRYA_GROQ_KEY at the start), POST /calibrate (the speed test), POST /models/<name>/download,
 DELETE /models/<name> (its files gone -> {name, state: "missing"}; 409 while it is planned,
 loaded, downloading or being measured).
 """
@@ -181,6 +188,9 @@ async def guard(request: Request, call_next):
             if auth.nonce_ok(nonce):
                 return JSONResponse({"proof": auth.proof(TOKEN, nonce)})
             return JSONResponse({"ok": True})
+        # The extension's look at how far a meeting's transcript is comes without an Origin too (auth.open_status).
+        if auth.open_status(method, path):
+            return await call_next(request)
         return JSONResponse({"detail": "the engine's key is needed"}, status_code=401)
     # The extension of Altype's days (up to 0.2.1) sent X-Altype-Extension; it says hello until Chrome reloads it.
     version = request.headers.get("x-krya-extension", "") or request.headers.get("x-altype-extension", "")
@@ -200,9 +210,9 @@ def whisper_status(model: str) -> str:
     return "ready" if asr.downloaded(model) else "missing"
 
 
-def planned(feature: str) -> dict:
-    """The model the plan gives a feature on the device in use, how far it is downloaded, and where it runs."""
-    device, entry = worker.entry(feature)
+def planned(feature: str, on: str | None = None) -> dict:
+    """The model the plan gives a feature on the device in use (or `on`), how far it is downloaded, and where it runs."""
+    device, entry = worker.entry(feature, on)
     return {**asr.model_state(entry["model"]), "device": device, "compute": entry.get("compute") or ("int8" if device == "cpu" else "float16")}
 
 
@@ -247,6 +257,7 @@ def health_view() -> dict:
         "dataDir": s["dataDir"],
         "kbDir": s["kbDir"],
         "extension": extension,
+        "remote": {"transcribe": remote_transcribe()},
     }
 
 
@@ -343,20 +354,20 @@ def _execution(transcriber) -> dict:
     return {"name": transcriber.name, "backend": asr.backend(transcriber.name), "device": transcriber.device, "compute": transcriber.compute, "state": "ready"}
 
 
-def _prepare_session() -> dict:
+def _prepare_session(on: str | None = None) -> dict:
     with _dictating:
-        transcriber, _ = worker.dictation_model()
+        transcriber, _ = worker.dictation_model(on)
         transcriber.warm()
         return _execution(transcriber)
 
 
-def _piece(sound: np.ndarray, language: str | None, expected: list, before: str, strict: bool = False) -> tuple:
-    """One piece of a dictation heard while it is spoken (stream.py), by dictation's model.
+def _piece(sound: np.ndarray, language: str | None, expected: list, before: str, strict: bool = False, on: str | None = None) -> tuple:
+    """One piece of a dictation heard while it is spoken (stream.py), by dictation's model (`on` "cpu": the processor's).
 
     Its text stays as recognized: the vocabulary is applied to the whole text at the finish."""
     with _dictating:
         worker.activity += 1
-        transcriber, entry = worker.dictation_model()
+        transcriber, entry = worker.dictation_model(on)
         beam = entry.get("beam") or (5 if transcriber.device == "cuda" else 2)
         started = time.perf_counter()
         out = transcriber.dictate(sound, language, expected, hotwords(), beam, before, strict=strict)
@@ -373,22 +384,25 @@ def session_or_404(id: str) -> Session:
 
 @app.post("/dictate/sessions")
 def open_session(body: dict = Body(default={})):
-    """A dictation to be heard while it is spoken; the model loads meanwhile (the first time it downloads)."""
+    """A dictation to be heard while it is spoken; the model loads meanwhile (the first time it downloads).
+    `device` "cpu": the processor's plan whatever the card (Kryakl's preview while Groq dictates)."""
     expected = expected_codes(body.get("expected"))
     language = body.get("language") if isinstance(body.get("language"), str) and body.get("language") not in ("", "auto") else None
-    device, entry = worker.entry("dictation")
+    on = "cpu" if body.get("device") == "cpu" else None
+    device, entry = worker.entry("dictation", on)
     kind = (asr.backend(entry["model"]) or "whisper", device)
-    # stream.py calls a recognizer with (sound, language, expected, before) only; strictness rides along here.
-    recognize = functools.partial(_piece, strict=body.get("strict") is True)
-    session = sessions.open(Session(recognize, kind, expected, language, prepare=_prepare_session))
-    return {"id": session.id, "model": planned("dictation")}
+    # stream.py calls a recognizer with (sound, language, expected, before) only; strictness and the device ride along here.
+    recognize = functools.partial(_piece, strict=body.get("strict") is True, on=on)
+    session = sessions.open(Session(recognize, kind, expected, language, prepare=functools.partial(_prepare_session, on)))
+    session.on = on
+    return {"id": session.id, "model": planned("dictation", on)}
 
 
 @app.put("/dictate/sessions/{id}/{seq}")
 async def session_chunk(id: str, seq: int, request: Request):
     s = session_or_404(id)
     s.add(seq, await request.body())
-    return {**s.status(), "model": s.execution or planned("dictation")}
+    return {**s.status(), "model": s.execution or planned("dictation", getattr(s, "on", None))}
 
 
 @app.post("/dictate/sessions/{id}/finish")
@@ -518,7 +532,13 @@ def delete_model(name: str):
 def public_settings() -> dict:
     s = settings.get()
     s["hasToken"] = bool(s.pop("hfToken"))
+    s["hasGroqKey"] = bool(settings.secret("groqKey"))
     return s
+
+
+def remote_transcribe() -> bool:
+    """A recording's words come from Groq: the person turned it on and Kryakl gave the key."""
+    return bool(settings["remoteTranscribe"] and settings.secret("groqKey"))
 
 
 @app.get("/settings")
@@ -531,14 +551,17 @@ def put_settings(changes: dict = Body(...)):
     """A new Hugging Face token is checked, and the speakers' model downloaded, right away.
 
     A plan from another computer (its fingerprint) starts the speed numbers again."""
-    changes = {k: v for k, v in changes.items() if k != "bench"}
+    # The keys (hfToken, groqKey) are held in memory only: never saved, never logged.
+    given = settings.set_secrets(changes.get("secrets"))
+    changes = {k: v for k, v in changes.items() if k not in ("bench", "secrets")}
     plan = changes.get("plan")
     if isinstance(plan, dict) and isinstance(plan.get("fingerprint"), str) and plan["fingerprint"] != settings["bench"].get("fingerprint", ""):
         worker.bench.reset(plan["fingerprint"])
     settings.update(changes)
     if "plan" in changes:
         worker.drop_unplanned(_dictating.locked)
-    if isinstance(changes.get("hfToken"), str) and changes["hfToken"].strip():
+    new_token = isinstance(changes.get("hfToken"), str) and changes["hfToken"].strip()
+    if new_token or ("hfToken" in given and settings["hfToken"]):
         setup.start(settings["hfToken"])
     return public_settings()
 
@@ -584,9 +607,12 @@ def get_transcript(id: str):
     if row is None:
         raise HTTPException(404, "No such transcript")
     job = row.pop("job", None) or {}
-    # What recognized it when the card was busy (jobs.py gave_way): the page says so.
+    # What recognized it when the card was busy (jobs.py gave_way), or when Groq could not be reached: the page says so.
     if isinstance(job.get("ran"), dict):
         row["ran"] = job["ran"]
+    # Waiting for Groq's limit (stage "waiting"): until when, in epoch seconds.
+    if row.get("stage") == "waiting" and isinstance(job.get("until"), (int, float)):
+        row["until"] = job["until"]
     t = store.transcript(id)
     return {"row": row, "transcript": public(t, id) if t is not None else None}
 
@@ -842,6 +868,19 @@ def finish(id: str, request: Request, body: dict = Body(default={})):
         raise HTTPException(409, "Nothing to transcribe")
     worker.submit(id)
     return {"id": id}
+
+
+@app.get("/recordings/{id}/status")
+def recording_status(id: str):
+    """How far a meeting's transcript is, for the extension's popup: no text, title or speakers. Only a `meet`
+    recording, for anyone: a note or the microphone is no business of a caller by the extension's Origin."""
+    row = state.get_store().row(id)
+    if row is None or row["source"] != "meet":
+        raise HTTPException(404, "No such recording")
+    status = row["status"]
+    stage = row.get("stage") or ""
+    return {"stage": stage if isinstance(stage, str) else "", "progress": float(row.get("progress") or 0),
+            "done": status == "done", "failed": status == "failed"}
 
 
 @app.delete("/recordings/{id}")

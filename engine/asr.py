@@ -3,11 +3,13 @@
 A long recording gets times for every word; a dictated phrase just its text, fast.
 Which model runs where is Kryakl's plan (settings.py `plan`); this module loads
 what it is told and says when the card cannot take it (`CudaFailed`).
+A recording's words may come from Groq's Whisper instead, with the person's key (`GroqWhisper`).
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
 import logging
 import os
 import sys
@@ -228,6 +230,7 @@ def _said(segments, speech: np.ndarray) -> str:
         len(speech) / RATE,
         max(s.no_speech_prob for s in segments),
         min(s.avg_logprob for s in segments),
+        len(segments) > 1 and phantoms.Sound(no_speech=segments[-1].no_speech_prob, logprob=segments[-1].avg_logprob).weak,
     )
     return phantoms.pauses(phantoms.clean(text, sound, dictation=True))
 
@@ -542,3 +545,382 @@ class Parakeet:
 def recognizer(name: str):
     """A fresh, unloaded recognizer for this model: Whisper's or Parakeet's."""
     return Parakeet() if backend(name) == "parakeet" else Transcriber()
+
+
+# Groq ---------------------------------------------------------------------
+#
+# A recording's words from Groq's Whisper with the person's own key (2026-11-23), so a computer with no
+# graphics card gets an hour's transcript in minutes. Only the speech is sent, cut at pauses into pieces of
+# at most GROQ_PIECE seconds (the free plan: 20 requests a minute, 7,200 seconds of sound an hour, each
+# request billed at least 10 s, 25 MB a file); every word gets its time in the recording back. What comes
+# back is cleaned as a local recording's segments are, so jobs.py goes on as with a local model.
+
+GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
+GROQ_MODEL = "whisper-large-v3-turbo"
+GROQ_PIECE = 600.0          # seconds of speech a request at most
+GROQ_FILE_MOST = 24 << 20   # bytes a file at most (Groq's limit is 25 MB)
+GROQ_PROMPT_TOKENS = 224    # Whisper's prompt, as Groq counts it
+GROQ_TIMEOUT = 300          # seconds for one request: ten minutes of speech uploaded and recognized
+GROQ_RETRIES = (2.0, 5.0, 10.0)  # pauses before each retry of a piece after a network error or a 5xx
+GROQ_LIMIT_WAIT = 60.0      # seconds waited on a 429 without retry-after
+GROQ_SILENCE_MS = 1000      # a pause this long is left out of what is sent
+GROQ_PAD_MS = 400           # speech kept on each side of it
+CUT_WINDOW = 60.0           # an unbroken stretch longer than a piece is cut at its quietest moment in the piece's last minute
+
+# Groq names the language it heard in English ("russian"); Kryakl keeps codes.
+LANGUAGE_NAMES = {
+    "english": "en", "russian": "ru", "ukrainian": "uk", "belarusian": "be", "german": "de", "french": "fr",
+    "spanish": "es", "italian": "it", "portuguese": "pt", "polish": "pl", "czech": "cs", "slovak": "sk",
+    "dutch": "nl", "swedish": "sv", "norwegian": "no", "danish": "da", "finnish": "fi", "estonian": "et",
+    "latvian": "lv", "lithuanian": "lt", "hungarian": "hu", "romanian": "ro", "bulgarian": "bg", "serbian": "sr",
+    "croatian": "hr", "bosnian": "bs", "slovenian": "sl", "macedonian": "mk", "greek": "el", "turkish": "tr",
+    "georgian": "ka", "armenian": "hy", "azerbaijani": "az", "kazakh": "kk", "uzbek": "uz", "hebrew": "he",
+    "arabic": "ar", "persian": "fa", "hindi": "hi", "chinese": "zh", "japanese": "ja", "korean": "ko",
+    "vietnamese": "vi", "thai": "th", "indonesian": "id", "malay": "ms", "catalan": "ca", "galician": "gl",
+    "basque": "eu", "icelandic": "is", "irish": "ga", "welsh": "cy", "albanian": "sq", "tagalog": "tl",
+}
+
+
+class GroqRejected(Exception):
+    """Groq did not accept the key (401, 403): the job fails, nothing local is tried."""
+
+
+class GroqUnreachable(Exception):
+    """No answer from Groq that could be used (no connection, 5xx after the retries, a piece refused):
+    jobs.py recognizes the whole job here instead, when the local model is downloaded."""
+
+
+def groq_post(key: str, fields: list[tuple[str, str]], audio_bytes: bytes, filename: str, mime: str, timeout: float = GROQ_TIMEOUT) -> tuple[int, dict, bytes]:
+    """One multipart POST to Groq's transcriptions: (status, headers in lower case, body). A network
+    error raises OSError. The key goes in the header alone, never into the address or an error's text."""
+    import urllib.error
+    import urllib.request
+
+    boundary = "kryakl" + os.urandom(12).hex()
+    body = bytearray()
+    for name, value in fields:
+        body += f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n'.encode()
+        body += value.encode("utf-8") + b"\r\n"
+    body += f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{filename}"\r\nContent-Type: {mime}\r\n\r\n'.encode()
+    body += audio_bytes + b"\r\n" + f"--{boundary}--\r\n".encode()
+    request = urllib.request.Request(GROQ_URL, data=bytes(body), method="POST", headers={
+        "Authorization": f"Bearer {key}",
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+        "User-Agent": "Kryakl",
+    })
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as answer:
+            return answer.status, {k.lower(): v for k, v in answer.headers.items()}, answer.read()
+    except urllib.error.HTTPError as error:
+        try:
+            content = error.read()
+        except OSError:
+            content = b""
+        return error.code, {k.lower(): v for k, v in (error.headers or {}).items()}, content
+
+
+def groq_prompt(hotwords: str, most: int = GROQ_PROMPT_TOKENS) -> str:
+    """The vocabulary's spellings (vocab.hotwords, comma separated) as Groq's prompt: the words in order while
+    they fit `most` tokens, a word counted as ceil(letters / 3), closed with a full stop; '' for none."""
+    words: list[str] = []
+    used = 0
+    for word in (w.strip() for w in (hotwords or "").split(",")):
+        if not word:
+            continue
+        cost = -(-len(word) // 3)
+        if used + cost > most:
+            break
+        words.append(word)
+        used += cost
+    if not words:
+        return ""
+    prompt = ", ".join(words)
+    return prompt if prompt[-1] in ".!?…" else prompt + "."
+
+
+class Piece:
+    """Speech joined from parts of a recording, with where each part was: `spans` of (at, was, seconds), `at`
+    in the piece and `was` in the recording, so a time Groq gives in the piece is put back (`original`)."""
+
+    def __init__(self, samples: np.ndarray, spans: list[tuple[float, float, float]]):
+        self.samples = samples
+        self.spans = spans
+
+    @property
+    def seconds(self) -> float:
+        return len(self.samples) / RATE
+
+    def original(self, t: float, end: bool = False) -> float:
+        """The recording's time of the piece's `t`; an `end` on a join stays with the part before it."""
+        import bisect
+
+        starts = [s[0] for s in self.spans]
+        i = (bisect.bisect_left(starts, t) if end else bisect.bisect_right(starts, t)) - 1
+        i = min(max(i, 0), len(self.spans) - 1)
+        at, was, length = self.spans[i]
+        return was + min(max(t - at, 0.0), length)
+
+
+def _quietest(samples: np.ndarray, lo: int, hi: int) -> int:
+    """The sample in [lo, hi) at the middle of its quietest 50 ms: a pause between words, where there is one."""
+    frame = RATE // 20
+    best, where = None, (lo + hi) // 2
+    for start in range(lo, max(lo + 1, hi - frame), frame // 2):
+        energy = float(np.mean(np.square(samples[start:start + frame]))) if start + frame <= len(samples) else None
+        if energy is not None and (best is None or energy < best):
+            best, where = energy, start + frame // 2
+    return where
+
+
+def pieces_of(samples: np.ndarray, chunks: list[dict], most: float = GROQ_PIECE) -> list[Piece]:
+    """The speech `chunks` ({start, end} in samples, in order) joined into pieces of at most `most` seconds,
+    the silence between them left out; a chunk longer than a piece is cut at its quietest moment near the end."""
+    limit = int(most * RATE)
+    parts: list[tuple[int, int]] = []
+    for c in chunks:
+        a, b = int(c["start"]), min(int(c["end"]), len(samples))
+        while b - a > limit:
+            cut = _quietest(samples, a + max(limit - int(CUT_WINDOW * RATE), limit // 2), a + limit)
+            parts.append((a, cut))
+            a = cut
+        if b > a:
+            parts.append((a, b))
+    pieces: list[Piece] = []
+    group: list[tuple[int, int]] = []
+
+    def close() -> None:
+        spans, at = [], 0
+        for a, b in group:
+            spans.append((at / RATE, a / RATE, (b - a) / RATE))
+            at += b - a
+        pieces.append(Piece(np.concatenate([samples[a:b] for a, b in group]).astype(np.float32, copy=False), spans))
+
+    for a, b in parts:
+        if group and sum(y - x for x, y in group) + (b - a) > limit:
+            close()
+            group = []
+        group.append((a, b))
+    if group:
+        close()
+    return pieces
+
+
+def speech_chunks(samples: np.ndarray) -> list[dict]:
+    """Where someone speaks in a recording ({start, end} in samples), by the Silero VAD faster-whisper brings."""
+    from faster_whisper.vad import VadOptions, get_speech_timestamps
+
+    return get_speech_timestamps(samples, VadOptions(min_silence_duration_ms=GROQ_SILENCE_MS, speech_pad_ms=GROQ_PAD_MS))
+
+
+def language_code(name) -> str | None:
+    """Groq's language ("russian", or a code) as Kryakl's code; None when it does not say."""
+    if not isinstance(name, str) or not name.strip():
+        return None
+    name = name.strip().lower()
+    if name in LANGUAGE_NAMES:
+        return LANGUAGE_NAMES[name]
+    return name if 2 <= len(name) <= 3 and name.isalpha() else None
+
+
+def _spread(text: str, start: float, end: float) -> list[dict]:
+    """A segment's words when Groq gave it none: its text's words over its time, evenly."""
+    tokens = text.split()
+    step = (end - start) / max(len(tokens), 1)
+    return [{"start": start + n * step, "end": start + (n + 1) * step, "word": " " + t} for n, t in enumerate(tokens)]
+
+
+def _dress(text: str, words: list[dict]) -> list[dict]:
+    """Groq's bare words given what the segment's text has around them, as a local Whisper's words come:
+    " Hello," with its space and its punctuation, so merge.py's utterances read as the text does."""
+    out, at, low = [], 0, text.casefold()
+    for w in words:
+        bare = str(w.get("word", "")).strip()
+        if not bare:
+            continue
+        found = low.find(bare.casefold(), at)
+        if found < 0:
+            out.append({**w, "word": " " + bare})
+            continue
+        end = found + len(bare)
+        while end < len(text) and not text[end].isspace() and not text[end].isalnum():
+            end += 1
+        out.append({**w, "word": " " + text[at:end].strip()})
+        at = end
+    rest = text[at:].strip()
+    if out and rest and not any(ch.isalnum() for ch in rest):
+        out[-1]["word"] += rest
+    return out
+
+
+def segments_of(answer: dict) -> list[dict]:
+    """Groq's verbose_json as Whisper's segments in the piece's time ({start, end, text, words, no_speech_prob,
+    avg_logprob}): each word to the segment it falls in, by its middle."""
+    segments = [s for s in answer.get("segments") or [] if isinstance(s, dict)]
+    words = sorted((w for w in answer.get("words") or [] if isinstance(w, dict) and "start" in w and "end" in w), key=lambda w: float(w["start"]))
+    if not segments and (answer.get("text") or "").strip():
+        segments = [{"start": words[0]["start"] if words else 0.0, "end": words[-1]["end"] if words else float(answer.get("duration") or 0.0), "text": answer["text"]}]
+    held: list[list[dict]] = [[] for _ in segments]
+    j = 0
+    for w in words:
+        middle = (float(w["start"]) + float(w["end"])) / 2
+        while j + 1 < len(segments) and middle >= float(segments[j + 1].get("start", 0.0)):
+            j += 1
+        if segments:
+            held[j].append({"start": float(w["start"]), "end": float(w["end"]), "word": str(w.get("word", ""))})
+    out = []
+    for segment, mine in zip(segments, held):
+        text = str(segment.get("text") or "").strip()
+        start, end = float(segment.get("start", 0.0)), float(segment.get("end", 0.0))
+        dressed = _dress(text, mine) if mine else _spread(text, start, end)
+        out.append({
+            "start": start, "end": end, "text": text, "words": dressed,
+            "no_speech_prob": float(segment.get("no_speech_prob") or 0.0),
+            "avg_logprob": float(segment.get("avg_logprob") or 0.0),
+        })
+    return out
+
+
+def _hide(text: str, key: str) -> str:
+    """An error's text with the key cut out, should it ever be in it."""
+    return text.replace(key, "<key>") if key else text
+
+
+class GroqWhisper:
+    """Groq's whisper-large-v3-turbo with the person's key, in place of a local Transcriber for a recording.
+
+    `post` stands for groq_post (the tests' fake); `sleep` and `clock` for time's; `on_wait(until)` is told
+    when a job waits for Groq's limit (until: epoch seconds) and `on_wait(None)` when it goes on."""
+
+    name = GROQ_MODEL
+    device = "groq"
+    compute = None
+
+    def __init__(self, key: str, post=None, sleep=None, clock=None, on_wait=None, encode=None):
+        import time as _time
+
+        self._key = key
+        self._post = post
+        self._sleep = sleep or _time.sleep
+        self._clock = clock or _time.time
+        self.on_wait = on_wait
+        self._encode = encode
+        # For speech.log's one line a job: never the words, never the key.
+        self.stats = {"pieces": 0, "sent": 0.0, "waited": 0.0, "requests": 0}
+
+    def summary(self) -> str:
+        s = self.stats
+        return f"{s['pieces']} piece(s), {s['sent']:.0f} s of speech sent, {s['requests']} request(s), {s['waited']:.0f} s waited for Groq's limits"
+
+    def _file(self, samples: np.ndarray) -> tuple[bytes, str, str]:
+        """The piece as FLAC (WAV should PyAV fail), within Groq's size."""
+        import audio as audio_module
+
+        if self._encode:
+            return self._encode(samples)
+        try:
+            data = audio_module.to_flac(samples)
+            if len(data) <= GROQ_FILE_MOST:
+                return data, "piece.flac", "audio/flac"
+        except Exception as error:
+            log.warning("groq: FLAC failed (%s), sending WAV", type(error).__name__)
+        return audio_module.to_wav(samples), "piece.wav", "audio/wav"
+
+    def _wait(self, seconds: float) -> None:
+        until = self._clock() + seconds
+        if self.on_wait:
+            self.on_wait(until)
+        self._sleep(seconds)
+        self.stats["waited"] += seconds
+        if self.on_wait:
+            self.on_wait(None)
+
+    def _ask(self, piece: Piece, language: str | None, prompt: str) -> dict:
+        """One piece recognized: Groq's answer, after waiting out its limits and retrying what failed on the way."""
+        fields = [("model", GROQ_MODEL), ("temperature", "0"), ("response_format", "verbose_json"),
+                  ("timestamp_granularities[]", "word"), ("timestamp_granularities[]", "segment")]
+        if language:
+            fields.append(("language", language))
+        if prompt:
+            fields.append(("prompt", prompt))
+        data, filename, mime = self._file(piece.samples)
+        post = self._post or groq_post
+        failures = 0
+        while True:
+            self.stats["requests"] += 1
+            try:
+                status, headers, body = post(self._key, fields, data, filename, mime, GROQ_TIMEOUT)
+            except OSError as error:
+                status, headers, body, problem = 0, {}, b"", _hide(f"{type(error).__name__}: {error}", self._key)
+            else:
+                problem = f"HTTP {status}"
+            if status == 200:
+                try:
+                    return json.loads(body)
+                except ValueError:
+                    raise GroqUnreachable("Groq's answer could not be read") from None
+            if status in (401, 403):
+                raise GroqRejected("Groq did not accept the saved key.")
+            if status == 429:
+                wait = _retry_after(headers.get("retry-after"))
+                log.info("groq: the limit is reached, waiting %.0f s", wait)
+                self._wait(wait)
+                continue
+            if status and status < 500:
+                # 400, 413 and the like: the piece is refused, and another try would be refused too.
+                raise GroqUnreachable(f"Groq refused a piece of the recording ({problem})")
+            if failures >= len(GROQ_RETRIES):
+                log.warning("groq: no answer after %d tries (%s)", failures + 1, problem)
+                raise GroqUnreachable("No connection to Groq.")
+            log.info("groq: %s, trying again in %.0f s", problem, GROQ_RETRIES[failures])
+            self._sleep(GROQ_RETRIES[failures])
+            failures += 1
+
+    def transcribe(
+        self,
+        samples: np.ndarray,
+        language: str | None = None,
+        hotwords: str = "",
+        progress: Callable[[float], None] | None = None,
+    ) -> tuple[list[dict], str]:
+        """Segments as {start, end, text, words: [{start, end, word}]} in the recording's time, cleaned as a local
+        recording's are (phantoms.clean_segment), and the language spoken (the most spoken piece's, '' when Groq does not say)."""
+        pieces = pieces_of(samples, speech_chunks(samples), GROQ_PIECE)
+        total = sum(p.seconds for p in pieces) or 1.0
+        prompt = groq_prompt(hotwords)
+        out: list[dict] = []
+        heard: dict[str, float] = {}
+        done = 0.0
+        for piece in pieces:
+            answer = self._ask(piece, language, prompt)
+            self.stats["pieces"] += 1
+            self.stats["sent"] += piece.seconds
+            code = language_code(answer.get("language"))
+            if code:
+                heard[code] = heard.get(code, 0.0) + piece.seconds
+            for segment in segments_of(answer):
+                kept = phantoms.clean_segment(
+                    {k: segment[k] for k in ("start", "end", "text", "words")},
+                    phantoms.Sound(segment["end"] - segment["start"], segment["no_speech_prob"], segment["avg_logprob"]),
+                )
+                if not kept or not kept["words"]:
+                    continue
+                words = []
+                for w in kept["words"]:
+                    start = piece.original(w["start"])
+                    end = max(piece.original(w["end"], end=True), start)
+                    words.append({"start": round(start, 2), "end": round(end, 2), "word": w["word"]})
+                out.append({"start": words[0]["start"], "end": words[-1]["end"], "text": kept["text"], "words": words})
+            done += piece.seconds
+            if progress:
+                progress(min(done / total, 1.0))
+        spoken = language or (max(heard, key=heard.get) if heard else "")
+        return out, spoken
+
+
+def _retry_after(value) -> float:
+    """Groq's retry-after in seconds (a number; a date is not expected), GROQ_LIMIT_WAIT when absent or unreadable."""
+    try:
+        seconds = float(str(value).strip())
+    except (TypeError, ValueError):
+        return GROQ_LIMIT_WAIT
+    return max(seconds, 1.0) if seconds == seconds else GROQ_LIMIT_WAIT

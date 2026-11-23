@@ -19,7 +19,7 @@ export type ModelBusy = { model: LlmModel; where: BusyPart; until: number }
 
 /** The part kept busy, in words: "the graphics card is busy". */
 export function busyName(part: BusyPart): string {
-  return part === 'card' ? 'graphics card' : 'processor'
+  return part === 'card' ? 'graphics card' : part === 'remote' ? 'Groq' : 'processor'
 }
 
 /**

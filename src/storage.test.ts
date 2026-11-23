@@ -160,3 +160,20 @@ test('Clean up takes only what nothing uses and what takes room', () => {
   const parts = withUse([part('fast', 'uk'), part('most', undefined, 0), part('accurate')], context)
   expect(cleanable(parts).map(p => p.id + (p.item ? `:${p.item}` : ''))).toEqual(['fast:uk'])
 })
+
+test('what Groq does now stands by here, kept for when it cannot be reached, never cleaned up', () => {
+  const groq = { llm: true, dictate: true, transcribe: false }
+  const parts = withUse([part('accurate'), part('llama', 'vulkan'), part('most'), part('speechModel', 'large-v3-turbo'), part('speechModel', 'large-v3')], { ...context, groq })
+  const seen = parts.map(p => [p.id + (p.item ? `:${p.item}` : ''), p.users?.join(' · ') ?? '-', p.unused ? 'unused' : p.standby ? 'standby' : ''])
+  expect(seen).toEqual([
+    ['accurate', '', 'standby'],
+    ['llama:vulkan', '', 'standby'],
+    ['most', '', 'unused'],
+    // Transcribe stays here: the model shared with dictation is still in use.
+    ['speechModel:large-v3-turbo', 'Dictate · Transcribe', ''],
+    ['speechModel:large-v3', '', 'unused'],
+  ])
+  expect(cleanable(parts).map(p => p.id)).toEqual(['most', 'speechModel'])
+  const all = withUse([part('speechModel', 'large-v3-turbo')], { ...context, groq: { ...groq, transcribe: true } })
+  expect(all[0]?.standby).toBe(true)
+})

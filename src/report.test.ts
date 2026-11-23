@@ -23,6 +23,10 @@ describe('cleanText', () => {
   it('cuts a Hugging Face key and a bearer token', () => {
     expect(cleanText('token hf_AbCdEf1234567890 sent; Authorization: Bearer 9f8e7d6c5b4a3210', names)).toBe('token hf_… sent; Authorization: Bearer …')
   })
+
+  it('cuts a Groq key', () => {
+    expect(cleanText('key gsk_AbCdEf1234567890xyz refused', names)).toBe('key gsk_… refused')
+  })
 })
 
 describe('settingsSummary', () => {
@@ -103,5 +107,42 @@ describe('makeReport', () => {
     expect(report).toContain('It broke')
     expect(report).toContain('"keepWords": "1 not shown"')
     expect(report).not.toContain('secret')
+    expect(report).toContain('Dictation recorded for this report: none')
+  })
+
+  it('takes the dictated phrases the person recorded for it, numbered oldest first, their names hidden', async () => {
+    const home = dir()
+    fs.writeFileSync(path.join(home, 'kryakl.log'), 'start: Kryakl\n')
+    const sounds = dir()
+    fs.writeFileSync(path.join(sounds, 'a.wav'), 'first')
+    fs.writeFileSync(path.join(sounds, 'b.wav'), 'second')
+    const phrase = (at: number, heard: string, typed: string) => ({ id: `x-${at}`, at, seconds: 2.5, mode: 'type', language: 'ru', sure: 0.9, heard, typed })
+    const out = path.join(dir(), 'r.zip')
+    await makeReport({
+      dir: home,
+      out,
+      message: '',
+      facts,
+      status: [],
+      settings: {},
+      names,
+      at: new Date(),
+      // Newest first, as the store lists them.
+      captures: [
+        { phrase: { ...phrase(2000, 'второе', ''), error: 'Nothing was heard' }, sound: path.join(sounds, 'b.wav') },
+        { phrase: phrase(1000, 'привет от creoo', 'Привет от creoo.'), sound: path.join(sounds, 'a.wav') },
+      ],
+    })
+    const opened = dir()
+    await unzip(out, opened)
+    expect(fs.readdirSync(path.join(opened, 'dictation')).sort()).toEqual(['01.wav', '02.wav', 'phrases.txt'])
+    expect(fs.readFileSync(path.join(opened, 'dictation', '01.wav'), 'utf8')).toBe('first')
+    const list = fs.readFileSync(path.join(opened, 'dictation', 'phrases.txt'), 'utf8')
+    expect(list).toContain('01.wav')
+    expect(list).toContain('typed: Привет от <you>.')
+    expect(list).toContain('typed: (nothing)')
+    expect(list).toContain('error: Nothing was heard')
+    expect(list).not.toContain('creoo')
+    expect(fs.readFileSync(path.join(opened, 'report.txt'), 'utf8')).toContain('Dictation recorded for this report: 2 phrases')
   })
 })

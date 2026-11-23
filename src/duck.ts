@@ -11,6 +11,7 @@
 // layers), and a talk of an hour costs the same as one of a minute.
 
 import { LLM_LANGUAGES, type LlmFiles, type LlmModel } from './llmfiles'
+import { localComplete, remoteComplete, type Ask, type RemoteChoice } from './remote/complete'
 import { TALK_ABOUT_MAX, type TalkLevel } from './settings'
 import { topicOf } from './topics'
 
@@ -47,14 +48,18 @@ export const LEVELS: Readonly<Record<TalkLevel, string>> = {
 }
 
 /** The duck's instructions for `learner`, on a topic. */
-export function duckPrompt(learner: Learner, topic: string): string {
+export function duckPrompt(learner: Learner, topic: string, remote = false): string {
   const language = LLM_LANGUAGES[learner.native] ?? 'English'
   const about = learner.about.trim().slice(0, TALK_ABOUT_MAX).replace(/\s+/g, ' ')
   const { role, plan } = topicOf(topic)
+  // What the duck says of itself is true either way: run here, or by the person's own Groq key.
+  const what = remote
+    ? 'You are an AI model the learner reaches through Groq, an online service, with their own key: you cannot browse the internet and you do not remember earlier talks. '
+    : 'You are a small AI model that runs on their computer, offline: you have no internet and you do not remember earlier talks. '
   return [
     "You are the duck in Kryakl, an app on the learner's computer that helps people learn English. " +
       'You are their English conversation partner, a friend to talk with, not a teacher or a tutor: they talk with you to practise speaking. ' +
-      'You are a small AI model that runs on their computer, offline: you have no internet and you do not remember earlier talks. ' +
+      what +
       'Mention what you are only when they ask who or what you are.',
     `The learner's own language is ${language}.${about ? ` What they told you about themselves: "${about}"` : ''}`,
     'How you talk:\n' +
@@ -82,7 +87,7 @@ type Message = { role: 'system' | 'user' | 'assistant'; content: string }
  * side in a row are joined and the duck's lines before the first of the
  * person's go into the instructions.
  */
-export function messagesFor(turns: readonly Said[], learner: Learner, topic: string): Message[] {
+export function messagesFor(turns: readonly Said[], learner: Learner, topic: string, remote = false): Message[] {
   const joined: Message[] = []
   for (const turn of turns) {
     const text = turn.text.trim()
@@ -93,7 +98,7 @@ export function messagesFor(turns: readonly Said[], learner: Learner, topic: str
     else joined.push({ role, content: text })
   }
   const recent = joined.slice(-WINDOW)
-  let system = duckPrompt(learner, topic)
+  let system = duckPrompt(learner, topic, remote)
   // The talk opens with the duck's line (a topic's opener): it stays the duck's own turn, after a greeting of the person's, as a chat
   // template wants the person first. Folded into the instructions instead ("You said before: …"), the interviewer asked it again one time in three.
   // A window cut before a line of the duck's starts at the person's next one.
@@ -139,6 +144,8 @@ export type DuckOptions = {
   fetch?: typeof fetch
   /** An answer done: its seconds, and the seconds it waited for the model to load, when it did. */
   onTimed?: (model: LlmModel, timed: { reply: number; start?: number }) => void
+  /** Groq by the person's own key, when they chose it for the language models (settings.remote.llm). */
+  remote?: RemoteChoice
 }
 
 export type Duck = {
@@ -151,29 +158,26 @@ export function createDuck(o: DuckOptions): Duck {
   const post = o.fetch ?? fetch
   return {
     async reply(turns, learner, topic, signal) {
+      const remote = !!o.remote?.on()
+      const ask: Ask = {
+        messages: messagesFor(turns, learner, topic, remote),
+        // A little freedom: the same line twice should not get the same answer.
+        temperature: 0.7,
+        maxTokens: MAX_TOKENS,
+        local: { cache_prompt: false },
+        ...(signal ? { signal } : {}),
+      }
+      if (remote && o.remote) {
+        const { content, cut } = await remoteComplete(o.remote.chat, 'talk')(ask)
+        return spoken(content, cut)
+      }
       const model = o.model()
       const began = Date.now()
       return files.server.run(files.target(model), async (base, loaded) => {
         const ready = Date.now()
-        const response = await post(`${base}/v1/chat/completions`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', authorization: `Bearer ${files.server.apiKey}` },
-          body: JSON.stringify({
-            messages: messagesFor(turns, learner, topic),
-            // A little freedom: the same line twice should not get the same answer.
-            temperature: 0.7,
-            max_tokens: MAX_TOKENS,
-            cache_prompt: false,
-            chat_template_kwargs: { enable_thinking: false },
-          }),
-          signal: AbortSignal.any([AbortSignal.timeout(REQUEST_MS), ...(signal ? [signal] : [])]),
-        })
-        if (!response.ok) throw new Error(`The duck's model answered ${response.status}`)
-        const data = (await response.json()) as { choices?: { message?: { content?: unknown }; finish_reason?: unknown }[] }
-        const choice = data.choices?.[0]
-        const content = typeof choice?.message?.content === 'string' ? choice.message.content : ''
+        const { content, cut } = await localComplete(post, base, files.server.apiKey, "The duck's model", REQUEST_MS)(ask)
         o.onTimed?.(model, { reply: (Date.now() - ready) / 1000, ...(loaded ? { start: (ready - began) / 1000 } : {}) })
-        return spoken(content, choice?.finish_reason === 'length')
+        return spoken(content, cut)
       })
     },
   }

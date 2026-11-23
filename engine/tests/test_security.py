@@ -150,6 +150,42 @@ def test_the_extension_s_origin_touches_no_recording_of_kryakl_s(client):
     assert engine.state.get_store().row(id)["status"] == "recording"
 
 
+def test_the_extension_reads_how_far_a_meeting_is_and_nothing_more(client):
+    id = meeting(client)
+    r = client.get(f"/recordings/{id}/status", headers=OURS)
+    assert r.status_code == 200
+    assert r.json() == {"stage": "", "progress": 0.0, "done": False, "failed": False}
+    store = engine.state.get_store()
+    store.update(id, status="working", stage="words", progress=0.42)
+    assert client.get(f"/recordings/{id}/status", headers=OURS).json() == {"stage": "words", "progress": 0.42, "done": False, "failed": False}
+    store.update(id, status="done", stage="", progress=1.0)
+    assert client.get(f"/recordings/{id}/status", headers=OURS).json()["done"] is True
+    store.update(id, status="failed", error="boom")
+    answer = client.get(f"/recordings/{id}/status", headers=OURS).json()
+    assert answer["failed"] is True and "boom" not in json.dumps(answer)
+    assert set(answer) == {"stage", "progress", "done", "failed"}
+    # Kryakl reads it too, with the key; the extension's GET comes without an Origin (Chrome adds none under host
+    # permissions), so a meeting's progress is served with neither.
+    assert client.get(f"/recordings/{id}/status", headers=KEY).status_code == 200
+    assert client.get(f"/recordings/{id}/status").json()["failed"] is True
+    # Nothing else is: the transcript itself, its text, another method on the same path.
+    assert client.get(f"/transcripts/{id}").status_code == 401
+    assert client.get(f"/transcripts/{id}/text").status_code == 401
+    assert client.post(f"/recordings/{id}/status").status_code == 401
+
+
+def test_the_status_of_anything_but_a_meeting_is_not_there(client):
+    mic = client.post("/recordings", headers=KEY, json={"source": "mic", "tracks": {"mic": {"startedAt": 0}}}).json()["id"]
+    note = client.post("/recordings", headers=KEY, json={"source": "note", "tracks": {"main": {"startedAt": 0}}}).json()["id"]
+    for id in (mic, note, ID, "no-such-thing"):
+        assert client.get(f"/recordings/{id}/status", headers=OURS).status_code == 404, id
+        assert client.get(f"/recordings/{id}/status", headers=KEY).status_code == 404, id
+        assert client.get(f"/recordings/{id}/status").status_code == 404, id
+    # Another extension or a page is refused before anything is looked up.
+    assert client.get(f"/recordings/{meeting(client)}/status", headers={**OTHER, **KEY}).status_code == 403
+    assert client.get(f"/recordings/{meeting(client)}/status", headers=PAGE).status_code == 403
+
+
 def test_a_meeting_by_the_extension_s_origin_fills_no_more_than_its_cap(client, monkeypatch):
     monkeypatch.setattr(engine, "EXTENSION_RECORDING_MAX", 100)
     monkeypatch.setattr(engine, "EXTENSION_CHUNK_MAX", 60)

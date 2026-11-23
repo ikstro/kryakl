@@ -6,7 +6,7 @@
 // engine's work by asking it again every moment and a half; the bar moves in
 // place, so its light keeps running.
 
-import { formatDate, languageName, t } from '../i18n'
+import { formatDate, languageName, t, uiLanguage } from '../i18n'
 import type { AppView } from '../protocol'
 import { MODELS } from '../speechplan'
 import { el, icon } from './dom'
@@ -368,6 +368,7 @@ function statusChip(r: Row): HTMLElement | null {
 export function openTranscript(id: string): void {
   if (id !== tx.openId) stopPlayer()
   tx.openId = id
+  post({ type: 'transcriptShown', id })
   tx.deleting = tx.exporting = tx.redoing = tx.againing = false
   if (id && tx.row?.id !== id) {
     tx.row = undefined
@@ -389,6 +390,7 @@ export function backToList(): boolean {
 /** The page closed: the sound stops. */
 export function leaveTranscripts(): void {
   stopPlayer()
+  post({ type: 'transcriptShown', id: '' })
 }
 
 const busy = (status?: string) => status === 'queued' || status === 'working'
@@ -481,9 +483,11 @@ function progressCard(r: Row): HTMLElement {
 }
 
 function updateProgress(card: HTMLElement, r: Row): void {
-  const at = STAGES.findIndex(s => s[0] === r.stage)
+  // Waiting for Groq's hour stands where the words are: they go on after it.
+  const waiting = r.stage === 'waiting'
+  const at = STAGES.findIndex(s => s[0] === (waiting ? 'words' : r.stage))
   const lead = card.querySelector('.plead')
-  if (lead) lead.textContent = r.status === 'queued' ? t('tr.waitingTurn') : `${STAGES[at]?.[1] ?? t('tr.starting')}…`
+  if (lead) lead.textContent = r.status === 'queued' ? t('tr.waitingTurn') : waiting ? t('tr.waitingGroq') : `${STAGES[at]?.[1] ?? t('tr.starting')}…`
   const track = card.querySelector<HTMLElement>('.track')
   track?.classList.toggle('live', r.status === 'working')
   const fill = track?.firstElementChild as HTMLElement | null
@@ -495,8 +499,9 @@ function updateProgress(card: HTMLElement, r: Row): void {
   const held = card.querySelector<HTMLElement>('.pbusy')
   const why = r.status === 'working' ? r.ran?.why : undefined
   if (held) {
-    held.hidden = why !== 'lighter' && why !== 'processor'
-    held.textContent = why === 'lighter' ? t('tr.busyLighter', { model: modelLabel(r.ran?.model) }) : why === 'processor' ? t('tr.busyProcessor') : ''
+    const groq = r.status === 'working' && r.ran?.device === 'groq'
+    held.hidden = why !== 'lighter' && why !== 'processor' && why !== 'offline' && !groq
+    held.textContent = groq ? t('tr.byGroqNow') : why === 'offline' ? t('tr.groqOffline') : why === 'lighter' ? t('tr.busyLighter', { model: modelLabel(r.ran?.model) }) : why === 'processor' ? t('tr.busyProcessor') : ''
   }
 }
 
@@ -506,6 +511,7 @@ const modelLabel = (name = '') => MODELS.find(m => m.name === name)?.label ?? na
 /** "23 of 64 min · about 2 min left", "40%", or what it waits for. */
 function progressLine(r: Row): string {
   if (r.status === 'queued') return t('tr.startsAfter')
+  if (r.stage === 'waiting') return r.until ? t('tr.goesOnAt', { time: new Date(r.until * 1000).toLocaleTimeString(uiLanguage(), { hour: '2-digit', minute: '2-digit' }) }) : t('tr.goesOnSoon')
   const [a, b] = WEIGHTS[r.stage] ?? [0, 1]
   const part = Math.min(1, Math.max(0, (r.progress - a) / (b - a)))
   const parts: string[] = []
@@ -655,13 +661,17 @@ function notices(v: AppView, r: Row, tr: Transcript): HTMLElement[] {
   if (lighter) out.push(lighter)
   const speakers = speakersNotice(v, tr)
   if (speakers) out.push(speakers)
+  // Who spoke when by Meet's own captions (the extension), not the voice model.
+  if (tr.speakersBy === 'meet') out.push(aside('users', t('tr.namesFromMeet')))
   return out
 }
 
 /** Written by a lighter model while the graphics card was busy: said, with Transcribe again where its sound allows it. */
 function lighterNotice(r: Row, tr: Transcript): HTMLElement | null {
-  if (r.ran?.why !== 'lighter') return null
-  const said = t('tr.lighterDone', { model: modelLabel(r.ran.model) })
+  // What left the computer says so, as the card and the dictation panel do.
+  if (tr.by === 'groq' || r.by === 'groq') return aside('cloud', t('tr.byGroqDone'))
+  if (r.ran?.why !== 'lighter' && r.ran?.why !== 'offline') return null
+  const said = r.ran.why === 'offline' ? t('tr.groqOfflineDone', { model: modelLabel(r.ran.model) }) : t('tr.lighterDone', { model: modelLabel(r.ran.model) })
   // A meeting's two tracks are not kept apart, so it cannot be recognized again.
   if (tr.source === 'meet') return aside('info', said)
   if (tx.againing) {
@@ -960,6 +970,7 @@ window.setInterval(() => {
 
 /** The page opened: the library is asked for at once. */
 export function enterTranscripts(): void {
+  post({ type: 'transcriptShown', id: tx.openId })
   if (tx.openId) void loadTranscript()
   else void loadRows()
 }

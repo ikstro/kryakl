@@ -11,6 +11,7 @@ import { t, type Key } from './index'
 const EXACT: Readonly<Record<string, Key>> = {
   'The speech engine is not running': 'engine.notRunning',
   'No sound': 'engine.noSound',
+  'Nothing was heard': 'talk.nothingHeard',
   'Too long for dictation: transcribe it instead': 'engine.tooLong',
   'No such dictation': 'engine.noDictation',
   'No downloaded model to test': 'engine.noModelToTest',

@@ -66,6 +66,9 @@ body { font: 400 var(--t-body) / 1.45 var(--font); color: var(--text); user-sele
 .what { color: var(--strong); font-weight: 600; white-space: nowrap; }
 .time { font: 500 var(--t-small) / 1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .time.fetch { font-family: var(--font); }
+/* This phrase is kept for a problem report (the person turned that on): a quiet mark all the while. */
+.kept { display: inline-flex; flex: none; color: var(--muted); }
+.kept svg { width: 13px; height: 13px; }
 
 .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--rec); animation: blink 1s step-end infinite; }
 /* The voice is ahead of the engine: amber until it catches up. */

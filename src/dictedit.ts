@@ -9,6 +9,7 @@
 // (guardEdit); the marks of what was said stay in the phrase list.
 
 import type { LlmFiles, LlmModel, ModelState } from './llmfiles'
+import { localComplete, remoteComplete, type Ask, type Complete, type RemoteChoice } from './remote/complete'
 import type { EditStyle } from './settings'
 
 /** A phrase of fewer words has nothing to edit: it is typed at once. */
@@ -160,6 +161,8 @@ export type EditorOptions = {
   /** The model in use (the settings' `model`), asked at each phrase. */
   model: () => LlmModel
   fetch?: typeof fetch
+  /** Groq by the person's own key, when they chose it for the language models (settings.remote.llm). */
+  remote?: RemoteChoice
 }
 
 export type Editor = {
@@ -173,42 +176,38 @@ export function createEditor(o: EditorOptions): Editor {
   const post = o.fetch ?? fetch
 
   return {
-    state: () => files.state(o.model()),
+    state: () => (o.remote?.on() ? { status: 'ready', progress: 1, size: 0 } : files.state(o.model())),
     async edit(text, style, own, terms, signal) {
       const said = text.trim()
       if (wordCount(said) < SHORTEST || (style === 'own' && !own.trim())) return { text, doubt: '' }
       // Only the names in the phrase: given them all, the model once typed the list in its place.
       const names = terms.filter(term => said.toLowerCase().includes(term.toLowerCase()))
-      const job = files.server.run(files.target(o.model()), async base => {
-        const response = await post(`${base}/v1/chat/completions`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', authorization: `Bearer ${files.server.apiKey}` },
-          body: JSON.stringify({
-            messages: [
-              { role: 'system', content: editPrompt(style, own, names) },
-              { role: 'user', content: `<dictation>${said}</dictation>` },
-            ],
-            temperature: 0,
-            // Twice the phrase and a line; the cap stops a model that repeats itself.
-            max_tokens: Math.min(4096, 96 + 3 * said.length),
-            chat_template_kwargs: { enable_thinking: false },
-            response_format: { type: 'json_schema', json_schema: { name: 'edit', schema: SCHEMA } },
-          }),
-          ...(signal ? { signal } : {}),
-        })
-        if (!response.ok) throw new Error(`The editor answered ${response.status}`)
-        const data = (await response.json()) as { choices?: { message?: { content?: unknown } }[] }
-        const content = data.choices?.[0]?.message?.content
+      const ask: Ask = {
+        messages: [
+          { role: 'system', content: editPrompt(style, own, names) },
+          { role: 'user', content: `<dictation>${said}</dictation>` },
+        ],
+        temperature: 0,
+        // Twice the phrase and a line; the cap stops a model that repeats itself.
+        maxTokens: Math.min(4096, 96 + 3 * said.length),
+        schema: { name: 'edit', schema: SCHEMA },
+        ...(signal ? { signal } : {}),
+      }
+      const read = async (complete: Complete): Promise<EditOutcome> => {
+        const { content } = await complete(ask)
         let answer: { text?: unknown } = {}
         try {
-          answer = JSON.parse(typeof content === 'string' ? content : '') as typeof answer
+          answer = JSON.parse(content) as typeof answer
         } catch {
           return { text, doubt: 'empty' as const }
         }
         const edited = typeof answer.text === 'string' ? tidyEdit(answer.text, style) : ''
         const doubt = guardEdit(said, edited, style, names)
         return doubt ? { text, doubt } : { text: edited, doubt }
-      })
+      }
+      // By the person's own key: no model here to wait for; the caller's time limit holds.
+      if (o.remote?.on()) return read(remoteComplete(o.remote.chat, 'edit', 20_000))
+      const job = files.server.run(files.target(o.model()), base => read(localComplete(post, base, files.server.apiKey, 'The editor', 10 * 60_000)))
       if (!signal) return job
       // The model may still be loading, which no request can stop: the phrase does not wait for it.
       return new Promise<EditOutcome>((resolve, reject) => {

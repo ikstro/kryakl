@@ -128,6 +128,8 @@ function full(over: Partial<AppView['settings']>, plan: AppView['speech']['plan'
       noteKey: 'Control+Shift+N',
       typeCheckKey: 'RightControl*2',
       talkAbout: 'I am Alex, a product designer from Kyiv. I love hiking and progressive metal.',
+      // SHOTS_GROQ=1: dictation and the language model by Groq, recordings here.
+      ...(process.env.SHOTS_GROQ ? { remote: { dictate: true, transcribe: false, llm: true } } : {}),
       ...over,
     },
     // SHOTS_NEW_VERSION=0.99.0 pictures the notice of a newer version (the tray's mark, Home, Settings), on an installed copy, as only that one asks.
@@ -136,6 +138,15 @@ function full(over: Partial<AppView['settings']>, plan: AppView['speech']['plan'
     dev: !process.env.SHOTS_NEW_VERSION,
     newVersion: process.env.SHOTS_NEW_VERSION ?? '',
     versionCheck: { latest: process.env.SHOTS_NEW_VERSION ?? '', lookedAt: process.env.SHOTS_NEW_VERSION ? now - 3_600_000 : now - 600_000, failed: false, checking: false },
+    // SHOTS_GROQ=1: a Groq key saved, the day's use partly spent.
+    keys: process.env.SHOTS_GROQ
+      ? {
+          groq: { set: true, tail: 'a1b2', check: 'ok' },
+          huggingface: { set: true, tail: '9f3c' },
+          usable: true,
+          usage: [{ model: 'whisper-large-v3', day: { requests: 412, seconds: 7340, tokens: 0 }, hour: { requests: 38, seconds: 610, tokens: 0 }, left: 1588, limit: 2000 }],
+        }
+      : { groq: { set: false }, huggingface: { set: false }, usable: true, usage: [] },
     natural: { status: 'ready', progress: 1, size: 170, dismissed: false, rtf: 0.3 },
     hostVoices: [{ name: 'Microsoft Zira Desktop', lang: 'en-US' }],
     languages: LANGUAGES.map(l => ({ name: l.name, native: l.native })),
@@ -205,6 +216,17 @@ function full(over: Partial<AppView['settings']>, plan: AppView['speech']['plan'
         { at: new Date(now - 600e3).toISOString(), mode: 'type', text: 'Привет, это проверка диктовки в новом бейдже.' },
         { at: new Date(now - 86400e3).toISOString(), mode: 'english', text: 'I will send the updated layouts before the call.', heard: 'Пришлю обновлённые макеты до созвона.' },
         ...['Но были параллельные задачи в других окнах.', 'Только Claude Code.', 'Есть такая статистика по Киме.', 'Так может проще пересобрать сборку.', 'Ты можешь ещё определить, сколько это лимитов съела у кого?'].map((text, i) => ({ at: new Date(now - 2 * 86400e3 - i * 600e3).toISOString(), mode: 'type' as const, text })),
+      ],
+    },
+    // Dictation recorded for a problem report: on, three phrases kept so far, one that came to nothing.
+    captures: {
+      on: true,
+      left: 17,
+      most: 20,
+      items: [
+        { id: 'a-2', at: now - 120e3, seconds: 6.4, mode: 'type', language: 'ru', sure: 0.97, heard: 'Но были параллельные задачи в других окнах.', typed: 'Но были параллельные задачи в других окнах.' },
+        { id: 'a-1', at: now - 300e3, seconds: 1.2, mode: 'type', language: 'ru', sure: 0.4, heard: '', typed: '', error: 'Nothing was heard' },
+        { id: 'a-0', at: now - 900e3, seconds: 11.8, mode: 'type', language: 'ru', sure: 0.99, heard: 'еще раз проверь знаки препинания', typed: 'Ещё раз проверь знаки препинания' },
       ],
     },
     translatorState: { status: 'ready', progress: 1, size: 84 },

@@ -24,6 +24,7 @@ from typing import Callable
 
 import asr
 import audio
+import meetnames
 import merge
 import notes
 import vocab
@@ -98,7 +99,12 @@ def finish_recording(store: Store, id: str, options: dict | None = None, interru
         store.delete(id)
         return False
     job["inputs"] = inputs
-    job.update({k: v for k, v in (options or {}).items() if k in ("language", "speakers")})
+    options = options or {}
+    job.update({k: v for k, v in options.items() if k in ("language", "speakers")})
+    if "names" in options:
+        # Who spoke when by Meet's captions (the extension, 0.8.0): names and seconds only, made safe here.
+        job["meetNames"] = meetnames.clean(options["names"])
+        job["captions"] = str(options.get("captions") or "")[:20]
     store.update(id, status="queued", job=job, stage="", progress=0, error="The recording was cut off; what arrived is transcribed" if interrupted else "")
     return True
 
@@ -197,8 +203,8 @@ class Worker:
                 return step, why
         return None
 
-    def _load(self, t: Transcriber, feature: str) -> tuple[str, dict]:
-        device, entry = self.entry(feature)
+    def _load(self, t: Transcriber, feature: str, on: str | None = None) -> tuple[str, dict]:
+        device, entry = self.entry(feature, on)
         # The same model already on that device stays as it was loaded, compact or not (2026-11-12: turbo loaded compact beside
         # Kryakl's language model went back to float16 at the next piece, as the plan names float16, and no longer fitted beside it).
         if t.loaded and t.device == device and t.name == entry["model"]:
@@ -228,21 +234,32 @@ class Worker:
         self.gave_way[feature] = why
         return device, entry
 
+    def remote(self, on_wait: Callable[[float | None], None] | None = None) -> asr.GroqWhisper | None:
+        """Groq's Whisper for a recording's words, when the person turned it on and Kryakl gave the key; else None."""
+        key = self.settings.secret("groqKey")
+        if not (self.settings["remoteTranscribe"] and key):
+            return None
+        return asr.GroqWhisper(key, on_wait=on_wait)
+
     def words_model(self) -> Transcriber:
         self._load(self.transcriber, "transcripts")
         return self.transcriber
 
-    def dictation_model(self) -> tuple[Transcriber | Parakeet, dict]:
-        """Dictation's model, loaded: the transcripts' own when the plan gives both the same (one copy in memory)."""
+    def dictation_model(self, on: str | None = None) -> tuple[Transcriber | Parakeet, dict]:
+        """Dictation's model, loaded: the transcripts' own when the plan gives both the same (one copy in memory).
+        `on` "cpu": the processor's plan whatever the card (a preview while Groq dictates); the transcripts'
+        model is shared then only when it is loaded there already, so a recording on the card is never moved."""
         self.last_dictation = time.monotonic()
-        device, entry = self.entry("dictation")
+        device, entry = self.entry("dictation", on)
         if asr.backend(entry["model"]) == "parakeet":
             self.parakeet.load(entry["model"], "cpu", None, self.threads())
             return self.parakeet, entry
         _, words = self.entry("transcripts", device)
         same = words["model"] == entry["model"] and words.get("compute") == entry.get("compute")
+        if on and same:
+            same = self.transcriber.loaded and self.transcriber.device == device and self.transcriber.name == entry["model"]
         t = self.transcriber if same else self.dictator
-        _, entry = self._load(t, "dictation")
+        _, entry = self._load(t, "dictation", on)
         return (self.parakeet if asr.backend(entry["model"]) == "parakeet" else t), entry
 
     def unload_all(self) -> None:
@@ -430,15 +447,33 @@ class Worker:
         speakers_status = "single"
         # What recognized the words when the card was busy, for the page to say (and, for a lighter model, the transcript).
         lighter: str | None = None
+        # Groq could not be reached, so this computer recognized the whole job: the transcript says so.
+        offline: str | None = None
+        ran: dict = {}
 
-        def words(samples, share=(0.0, 1.0)):
-            nonlocal lighter
+        def waiting(until: float | None) -> None:
+            """Groq's limit is reached: the page says until when (stage "waiting"), then the words go on."""
+            if until is None:
+                store.update(id, status="working", stage="words", job={**job, "ran": ran})
+            else:
+                store.update(id, status="working", stage="waiting", job={**job, "ran": ran, "until": round(until)})
+
+        groq = self.remote(waiting)
+
+        def words(samples, share=(0.0, 1.0), remote: asr.GroqWhisper | None = None):
+            nonlocal lighter, ran
             a, b = share
+            if remote is not None:
+                ran = {"model": remote.name, "device": remote.device, "why": ""}
+                store.update(id, job={**job, "ran": ran})
+                segments, spoken = remote.transcribe(samples, language, hotwords, lambda p: progress("words", a + (b - a) * p))
+                return vocab.correct_segments(segments, settings["vocabulary"]), spoken
             t = self.words_model()
-            why = self.gave_way.get("transcripts", "")
+            why = "offline" if offline else self.gave_way.get("transcripts", "")
             if why == "lighter":
                 lighter = t.name
-            store.update(id, job={**job, "ran": {"model": t.name, "device": t.device, "why": why}})
+            ran = {"model": t.name, "device": t.device, "why": why}
+            store.update(id, job={**job, "ran": ran})
 
             def step(p):
                 progress("words", a + (b - a) * p)
@@ -455,17 +490,51 @@ class Worker:
 
         # Loading the model, finding the language and cutting the silence come before the first words.
         progress("words")
-        if kind == "meet" and "mic" in tracks and "tab" in tracks:
+        meeting = kind == "meet" and "mic" in tracks and "tab" in tracks
+        if meeting:
             mine = audio.pad(*tracks["mic"])
             theirs = audio.pad(*tracks["tab"])
             share = len(mine) / max(len(mine) + len(theirs), 1)
-            my_segments, my_language = words(mine, (0.0, share))
-            their_segments, their_language = words(theirs, (share, 1.0))
+
+        def every_track(remote: asr.GroqWhisper | None) -> list[tuple[list, str | None]]:
+            """Each track's words on its own: a meeting's microphone and tab, else the one recording."""
+            if meeting:
+                return [words(mine, (0.0, share), remote), words(theirs, (share, 1.0), remote)]
+            return [words(mixed, remote=remote)]
+
+        try:
+            heard = every_track(groq)
+        except asr.GroqUnreachable as error:
+            local = self.entry("transcripts")[1]["model"]
+            if groq is None or not asr.downloaded(local):
+                raise
+            # Never the words, never the key: what failed and what takes over.
+            log.warning("groq: %s; job %s recognized here instead with %s", error, id, local)
+            offline = str(error)
+            progress("words")
+            heard = every_track(None)
+        finally:
+            if groq is not None:
+                log.info("groq: job %s, %s", id, groq.summary())
+        by_groq = groq is not None and not offline
+        named: set[str] | None = None
+        if meeting:
+            (my_segments, my_language), (their_segments, their_language) = heard
             spoken = their_language if their_segments else my_language
-            turns, speakers_status = self._speakers(id, theirs, job.get("speakers"), progress)
+            spans = job.get("meetNames") or []
+            turns = meetnames.turns(merge.words_of(their_segments), spans) if spans else None
+            if turns:
+                speakers_status = "ok"
+                named = {label for _, _, label in turns}
+                # Counts only, never a name.
+                log.info("meet: job %s split by Meet's captions, %d speakers, no voice model", id, len(named))
+            else:
+                if job.get("captions"):
+                    log.info("meet: job %s, captions %s, %d spans: too few words named, the voice model splits", id, job["captions"], len(spans))
+                turns, speakers_status = self._speakers(id, theirs, job.get("speakers"), progress)
             utterances, kept = merge.meeting(my_segments, their_segments, turns)
         else:
-            segments, spoken = words(mixed)
+            segments, spoken = heard[0]
             turns = None
             if kind != "note":
                 turns, speakers_status = self._speakers(id, mixed, job.get("speakers"), progress)
@@ -484,12 +553,18 @@ class Worker:
             "created": row["created"],
             "duration": round(duration, 2),
             "language": spoken,
-            "speakers": merge.renumber(utterances),
+            "speakers": merge.renumber(utterances, named),
             "utterances": utterances,
             "words": kept,
             "audio": "audio.ogg",
             "speakersStatus": speakers_status,
         }
+        if named:
+            # The speakers' names came from Meet, not the voice model.
+            transcript["speakersBy"] = "meet"
+        if by_groq:
+            # Who recognized the words, for the app to mark (absent when this computer did).
+            transcript["by"] = "groq"
         if kind == "note":
             transcript["title"] = notes.first_words(" ".join(u["text"] for u in utterances), 8)
             try:
@@ -502,7 +577,8 @@ class Worker:
             if item.get("temp"):
                 Path(item["path"]).unlink(missing_ok=True)
         shutil.rmtree(store.folder(id) / "incoming", ignore_errors=True)
-        store.update(id, status="done", stage="", progress=1.0, speakers_status=speakers_status, job={"kind": kind, **({"ran": {"model": lighter, "why": "lighter"}} if lighter else {})})
+        kept_ran = {"ran": {"model": ran.get("model"), "why": "offline"}} if offline else {"ran": {"model": lighter, "why": "lighter"}} if lighter else {}
+        store.update(id, status="done", stage="", progress=1.0, speakers_status=speakers_status, job={"kind": kind, **kept_ran})
 
     def _resplit(self, id: str, row: dict) -> None:
         """Speakers for a finished transcript from its saved sound and words; the text is not recognized again."""

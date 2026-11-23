@@ -102,6 +102,16 @@ describe('planSpeech', () => {
     expect(spareToFetch(parakeet)).toBeUndefined()
   })
 
+  it('a phrase going to Groq is previewed by the processor\'s model only when it is here', async () => {
+    const { processorPreview } = await import('./speechplan')
+    const both = planSpeech(input({ cuda: true, downloaded: ['large-v3-turbo', 'parakeet-tdt-0.6b-v3'], languages: ['ru', 'en'] }))
+    // The card's turbo is never the preview: the processor's Parakeet is.
+    expect(processorPreview(both, ['large-v3-turbo', 'parakeet-tdt-0.6b-v3'])).toBe('parakeet-tdt-0.6b-v3')
+    // Not downloaded: no preview, and nothing fetched for it.
+    expect(processorPreview(planSpeech(input({ cuda: true, downloaded: ['large-v3-turbo'] })), ['large-v3-turbo'])).toBeUndefined()
+    expect(processorPreview(planSpeech(input({ profile: weakLaptop })), [])).toBeUndefined()
+  })
+
   it('dictation shares the transcripts\' model only when that costs it nothing', () => {
     // large-v3 kept for recordings: a phrase in it takes four times turbo's, so dictation keeps turbo.
     const two = planSpeech(input({ cuda: true, downloaded: ['large-v3', 'large-v3-turbo', 'parakeet-tdt-0.6b-v3'], previous: { transcripts: 'large-v3' } }))

@@ -10,6 +10,10 @@
 //            (through the engine's library), and a balloon says where.
 // Esc while recording throws it away. Typed phrases go into the log
 // (dictationlog.ts), so the again key can type the last one once more.
+// The text is typed by the person's rules (dicttext.ts: ё, the full stop of one
+// sentence, the space after), a sound may mark the start and the typed text,
+// and while the person records dictation for a problem report, the phrase's
+// sound and texts are kept for it (dictcapture.ts).
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -17,6 +21,7 @@ import * as path from 'node:path'
 import { BrowserWindow, globalShortcut, screen, shell } from 'electron'
 
 import { openable } from './bridge'
+import type { Capture } from './dictcapture'
 import type { DictationLog } from './dictationlog'
 import { calmWhenHidden } from './calm'
 import { frameWindow } from './dwm'
@@ -24,6 +29,8 @@ import { t } from './i18n'
 import { log } from './log'
 import { badgeOffset, flightPoint, placeBadge, type Rect } from './placement'
 import type { DictationMode, ToHost, ToView } from './protocol'
+import { wavOf } from './dictcapture'
+import { isRemoteError } from './remote/groq'
 import type { Settings } from './settings'
 import type { SpeechHost } from './speechhost'
 import { handleOf } from './winclip'
@@ -50,6 +57,18 @@ export type DictationOptions = {
   query: () => Record<string, string>
   preload: string
   speech: SpeechHost
+  /**
+   * Phrases heard by the person's own Groq key (remote/dictate.ts), notes never:
+   * whether it is on now, and the phrase's sound (WebM) heard there. A fault
+   * throws: the phrase then goes to the speech engine here when it is installed
+   * and running, else it is held for the again key.
+   */
+  remote?: {
+    on: () => boolean
+    hear: (audio: Uint8Array, mime: string, seconds: number, expected: string[], signal: AbortSignal) => Promise<{ text: string; language: string }>
+    /** The phrase heard while it is spoken, piece by piece at its pauses (remote/dictstream.ts); `onText`, the text so far and the speech still waiting. */
+    stream: (expected: string[], onText: (text: string, pending: number) => void) => RemoteStream
+  }
   /** Types the text in the program in front, the clipboard kept. */
   paste: (text: string) => Promise<void>
   /** The text in English; `from` is the language the engine heard. */
@@ -59,8 +78,17 @@ export type DictationOptions = {
   edit: (text: string, signal: AbortSignal) => Promise<{ text: string; note?: string }>
   /** Whether a phrase goes through text editing now. */
   editing: () => boolean
-  /** A phrase is starting: the card made ready for its speech model (and the model for text editing warmed). Waited for, `ROOM_WAIT_MS` at most. */
-  warm: () => Promise<void>
+  /** The phrase as the person has it typed (ё, the full stop of one sentence); `language` is the text's. */
+  polish: (text: string, language: string) => string
+  /** Whether a space follows a typed phrase. */
+  space: () => boolean
+  /** Whether a sound marks the recording's start and the typed text. */
+  sound: () => boolean
+  /** Whether this phrase is kept for a problem report, and the phrase kept with its sound (16-bit PCM at 16 kHz). */
+  capturing: () => boolean
+  captured: (phrase: Omit<Capture, 'id' | 'at' | 'seconds'>, pcm: Uint8Array) => void
+  /** A phrase is starting: the card made ready for its speech model (and the model for text editing warmed); `remote`, heard by Groq, needs no card. Waited for, `ROOM_WAIT_MS` at most. */
+  warm: (remote: boolean) => Promise<void>
   /** Practice: a phrase spoken in English, shown checked (Check my English) instead of typed. */
   check: (text: string) => void
   /** The languages the person uses (their own, English, the others they named): a phrase is taken as one of them, never another. */
@@ -93,6 +121,21 @@ function troubleOf(sight: Sight): string {
   return [sight.topmost ? '' : 'not on top', sight.cloaked ? `cloaked ${sight.cloaked}` : '', sight.above.length ? `under ${sight.above.join(', ')}` : ''].filter(Boolean).join('; ')
 }
 
+/** A phrase going to Groq while it is spoken: its sound in, the whole text out at the key; a fault throws from `finish`. */
+export type RemoteStream = { push(pcm: Int16Array): void; finish(): Promise<{ text: string; language: string }>; cancel(): void }
+
+/**
+ * Whether a phrase going to Groq gets this computer's preview while it is spoken (2026-11-23, the owner: the panel
+ * shows the words here, Groq's text is what is typed): only with the engine running and the processor's dictation
+ * model downloaded already (SpeechHost `previewModel`), so the preview downloads nothing and never takes the card.
+ */
+export function previewHere(remote: boolean, speech: Pick<SpeechHost, 'installed' | 'ready'> & { previewModel?: string | undefined }): boolean {
+  return remote && speech.installed && speech.ready && !!speech.previewModel
+}
+
+/** 16-bit PCM at 16 kHz, a second's bytes. */
+const PCM_BYTES_S = 32000
+
 type Transcript = { title: string; note?: string; noteError?: string }
 type Row = { status: string; error: string }
 
@@ -122,8 +165,30 @@ export class Dictation {
   /** The height the page last asked for, kept while the badge cannot take it. */
   private asked: number = BADGE.min
   private flight: NodeJS.Timeout | undefined
+  /** This phrase's sound, handed over by the badge when the person records dictation for a report; and what was heard of it. */
+  private kept: Uint8Array | undefined
+  private hearing = { heard: '', language: '', sure: 0 }
+  /** This phrase goes to Groq (decided at its start), and when its recording began. */
+  private byRemote = false
+  private began = 0
+  /** Ends the request to Groq under way: Esc. */
+  private remoteStop: AbortController | undefined
+  /** A phrase Groq could not take and nothing here could hear: the again key sends it once more. */
+  private unsent: { mode: DictationMode; audio: Uint8Array; mime: string; seconds: number } | undefined
+  /** This phrase going to Groq while it is spoken, and its whole sound as recorded (for the engine here, should Groq fail). */
+  private stream: RemoteStream | undefined
+  private pcm: Uint8Array[] = []
+  /** This phrase's sound is kept for a report: Groq's phrase is held here, not handed over by the badge. */
+  private keeping = false
+  /** The engine's session showing a phrase going to Groq while it is spoken: thrown away at the key, never finished. */
+  private preview: string | undefined
 
   constructor(private readonly o: DictationOptions) {}
+
+  /** Whether the next phrase (not a note) goes to Groq. */
+  get remoteOn(): boolean {
+    return !!this.o.remote?.on()
+  }
 
   /** A Dictate key: the first press starts, the next one (any of the three) stops. */
   press(mode: DictationMode, key: string): void {
@@ -133,21 +198,34 @@ export class Dictation {
   }
 
   private async start(mode: DictationMode, key: string): Promise<void> {
-    if (!this.o.speech.installed) return this.o.needsEngine()
-    if (!this.o.speech.ready) {
-      // Given up after its restarts, it will not come by waiting: the notice says so and opens the report.
-      if (this.o.speech.down) this.o.balloon(t('app.name'), t('dict.engineDown'), this.o.report)
-      else this.o.balloon(t('app.name'), t('dict.engineStarting'))
-      return
+    // Groq hears it: no engine here is needed; the badge sends the sound here as it records, heard piece by piece at its pauses.
+    const remote = mode !== 'note' && this.remoteOn
+    if (!remote) {
+      if (!this.o.speech.installed) return this.o.needsEngine()
+      if (!this.o.speech.ready) {
+        // Given up after its restarts, it will not come by waiting: the notice says so and opens the report.
+        if (this.o.speech.down) this.o.balloon(t('app.name'), t('dict.engineDown'), this.o.report)
+        else this.o.balloon(t('app.name'), t('dict.engineStarting'))
+        return
+      }
     }
+    this.byRemote = remote
+    this.unsent = undefined
     this.mode = mode
-    const room = mode === 'type' || mode === 'english' ? this.o.warm().catch(() => undefined) : undefined
+    this.kept = undefined
+    this.hearing = { heard: '', language: '', sure: 0 }
+    this.stream?.cancel()
+    this.stream = undefined
+    this.pcm = []
+    this.dropPreview()
+    const room = mode === 'type' || mode === 'english' ? this.o.warm(remote).catch(() => undefined) : undefined
     // The screen to show on is the one with the window the text goes into, taken now, while it is in front.
     this.area = this.workArea()
     this.set('recording')
+    this.began = Date.now()
     const expected = this.expected(mode)
     let session: string | undefined
-    if (mode !== 'note') {
+    if (mode !== 'note' && !remote) {
       // Heard while it is spoken (the engine loads its model meanwhile); an engine without sessions gets the phrase whole.
       this.opening = true
       try {
@@ -159,15 +237,28 @@ export class Dictation {
       } finally {
         this.opening = false
       }
+    } else if (previewHere(remote, this.o.speech)) {
+      // Groq types it; meanwhile the engine here shows the words, on the processor's plan alone (the card left alone).
+      this.opening = true
+      try {
+        const r = await this.o.speech.call<{ id: string }>('POST', '/dictate/sessions', { expected, strict: true, device: 'cpu' })
+        if (r.ok) session = this.preview = r.data.id
+      } finally {
+        this.opening = false
+      }
     }
-    if (this.state !== 'recording') return
+    if (this.state !== 'recording') return this.dropPreview()
     if (this.stale) this.renew()
     const badge = this.window()
     this.height = this.asked = BADGE.min
     this.tucked = !this.o.panel()
     if (this.tucked) log('badge: not shown, as the setting says')
-    else this.present(badge, `session ${session ? 'yes' : 'no'}`)
-    this.send({ type: 'dictation', command: 'start', mode, key, ...(session ? { session } : {}), expected })
+    else this.present(badge, remote ? `by Groq, preview ${session ? 'yes' : 'no'}` : `session ${session ? 'yes' : 'no'}`)
+    // Kept for a report only when the person turned that on, and only a phrase that is typed (never a note or practice).
+    const keep = (!!session || remote) && (mode === 'type' || mode === 'english') && this.o.capturing()
+    this.keeping = keep
+    if (remote && this.o.remote) this.stream = this.o.remote.stream(expected, (heard, pending) => this.send({ type: 'dictationHeard', heard, pending }))
+    this.send({ type: 'dictation', command: 'start', mode, key, ...(session ? { session } : {}), expected, keep, sound: this.o.sound(), ...(remote ? { remote: true } : {}) })
     globalShortcut.register('Escape', () => this.cancel())
   }
 
@@ -226,6 +317,13 @@ export class Dictation {
     if (this.state !== 'recording' && !(this.state === 'working' && this.mode !== 'note')) return
     globalShortcut.unregister('Escape')
     this.editStop?.abort()
+    this.remoteStop?.abort()
+    this.stream?.cancel()
+    this.stream = undefined
+    this.pcm = []
+    this.dropPreview()
+    // Thrown away: its sound is not kept either.
+    this.kept = undefined
     this.send({ type: 'dictation', command: 'cancel', mode: this.mode, key: '' })
   }
 
@@ -244,6 +342,12 @@ export class Dictation {
         return true
       case 'dictationNote':
         void this.awaitNote(message.id)
+        return true
+      case 'dictationKept':
+        if (this.state === 'working') this.kept = message.pcm
+        return true
+      case 'dictationPcm':
+        this.heardPcm(message.pcm, message.last)
         return true
       case 'dictationHeight':
         this.fit(message.px)
@@ -264,12 +368,103 @@ export class Dictation {
   }
 
   private async typePhrase(mode: DictationMode, audio: Uint8Array): Promise<void> {
+    if (this.byRemote && this.o.remote) return this.hearRemote(mode, audio, 'audio/webm', (Date.now() - this.began) / 1000)
+    return this.hearHere(mode, audio)
+  }
+
+  /** The sound of a phrase going to Groq, as the badge records it; the tail at the key. */
+  private heardPcm(pcm: Uint8Array, last: boolean): void {
+    const stream = this.stream
+    if (!stream || !this.byRemote || this.state === 'idle') return
+    // Its own copy, whole samples: the message's bytes may sit at any offset of their buffer.
+    const bytes = pcm.slice(0, pcm.byteLength - (pcm.byteLength % 2))
+    this.pcm.push(bytes)
+    stream.push(new Int16Array(bytes.buffer, 0, bytes.byteLength / 2))
+    if (!last) return
+    // The preview has done its work: Groq's text is what is typed, and the engine is free should Groq fail.
+    this.dropPreview()
+    void this.finishStream(this.mode, stream)
+  }
+
+  /** The engine's preview session thrown away (never finished: its text is never typed). */
+  private dropPreview(): void {
+    const id = this.preview
+    this.preview = undefined
+    if (id) void this.o.speech.call('DELETE', `/dictate/sessions/${id}`)
+  }
+
+  /** The whole sound recorded of this phrase, 16-bit PCM at 16 kHz. */
+  private wholePcm(): Uint8Array {
+    const all = new Uint8Array(this.pcm.reduce((n, c) => n + c.byteLength, 0))
+    let at = 0
+    for (const c of this.pcm) (all.set(c, at), (at += c.byteLength))
+    return all
+  }
+
+  /**
+   * The key: Groq hears the tail, and the phrase is typed. A piece Groq could not take is never a lost
+   * phrase: the whole sound goes to the engine here when it runs, else it waits for the again key.
+   */
+  private async finishStream(mode: DictationMode, stream: RemoteStream): Promise<void> {
+    const pcm = this.wholePcm()
+    this.pcm = []
+    if (this.keeping) this.kept = pcm
+    const stop = new AbortController()
+    this.remoteStop = stop
+    let heard: { text: string; language: string }
+    try {
+      heard = await stream.finish()
+    } catch (error) {
+      if (stop.signal.aborted || this.state !== 'working' || this.stream !== stream) return
+      this.stream = undefined
+      return this.remoteFailed(mode, error, pcm, 'pcm16', pcm.byteLength / PCM_BYTES_S)
+    } finally {
+      if (this.remoteStop === stop) this.remoteStop = undefined
+    }
+    if (stop.signal.aborted || this.stream !== stream) return
+    this.stream = undefined
+    await this.typeHeard(mode, heard.text, heard.language, heard.language ? 1 : 0)
+  }
+
+  /** Groq could not hear the phrase: the engine here hears it when it runs, and the badge says why after it is typed; else the again key sends it once more. */
+  private async remoteFailed(mode: DictationMode, error: unknown, audio: Uint8Array, format: 'webm' | 'pcm16', seconds: number): Promise<void> {
+    const why = isRemoteError(error) ? t(`remote.${error.fault}`) : error instanceof Error ? error.message : String(error)
+    log(`dictation: Groq did not hear the phrase (${isRemoteError(error) ? error.fault : error instanceof Error ? error.name : 'error'})`)
+    if (this.o.speech.installed && this.o.speech.ready) return this.hearHere(mode, audio, t('dict.remoteHere'), format)
+    this.unsent = format === 'pcm16' ? { mode, audio: new Uint8Array(wavOf(audio)), mime: 'audio/wav', seconds } : { mode, audio, mime: 'audio/webm', seconds }
+    return this.fail(`${why} ${t('dict.remoteAgain')}`)
+  }
+
+  /**
+   * Groq hears the phrase. A fault (no connection, the limit, the key) is never a
+   * lost phrase: the engine here hears it when it runs, and the badge says why
+   * after it is typed; else it waits for the again key.
+   */
+  private async hearRemote(mode: DictationMode, audio: Uint8Array, mime: string, seconds: number): Promise<void> {
+    const stop = new AbortController()
+    this.remoteStop = stop
+    let heard: { text: string; language: string }
+    try {
+      heard = await this.o.remote!.hear(audio, mime, seconds, this.expected(mode), stop.signal)
+    } catch (error) {
+      if (stop.signal.aborted || this.state !== 'working') return
+      // Held as a WAV (a phrase heard piece by piece), it goes to the engine here as that.
+      if (mime === 'audio/webm') return this.remoteFailed(mode, error, audio, 'webm', seconds)
+      return this.remoteFailed(mode, error, audio.subarray(44), 'pcm16', seconds)
+    } finally {
+      if (this.remoteStop === stop) this.remoteStop = undefined
+    }
+    // Whisper's own guess of the language stands as sure: it is one of the person's (remote/dictate.ts).
+    await this.typeHeard(mode, heard.text, heard.language, heard.language ? 1 : 0)
+  }
+
+  private async hearHere(mode: DictationMode, audio: Uint8Array, note?: string, format: 'webm' | 'pcm16' = 'webm'): Promise<void> {
     const expected = this.expected(mode).map(encodeURIComponent).join(',')
     // strict: a phrase is never taken for a language the person does not use.
-    const r = await this.o.speech.call<{ text: string; language: string; sure?: number }>('POST', `/dictate?language=auto&expected=${expected}&strict=1`, audio)
+    const r = await this.o.speech.call<{ text: string; language: string; sure?: number }>('POST', `/dictate?language=auto&expected=${expected}&strict=1${format === 'pcm16' ? '&format=pcm16' : ''}`, audio)
     if (!r.ok) return this.fail(r.error)
     // An engine before 0.2 says nothing of how sure it is: its language is taken as it is.
-    await this.typeHeard(mode, r.data.text, r.data.language, r.data.sure ?? 1)
+    await this.typeHeard(mode, r.data.text, r.data.language, r.data.sure ?? 1, note)
   }
 
   /** The languages a phrase may be in: the person's, or English alone for practice (so a mistake is not heard as another language). */
@@ -278,24 +473,27 @@ export class Dictation {
   }
 
   /** A recognized phrase typed where the cursor is; in English first for the English key; checked in the card for practice. */
-  private async typeHeard(mode: DictationMode, heard: string, language: string, sure: number): Promise<void> {
+  private async typeHeard(mode: DictationMode, heard: string, language: string, sure: number, said?: string): Promise<void> {
     if (this.state !== 'working') return
     let text = heard.trim()
-    let note: string | undefined
+    let note: string | undefined = said
+    this.hearing = { heard, language, sure }
     if (!text) return this.fail('Nothing was heard')
     if (mode === 'check') {
       this.badge?.hide()
       this.over()
       return this.o.check(text)
     }
+    // Whisper unsure, or a model that does not say (Parakeet): the language by the text's letters and words.
+    const spoken = language && sure >= 0.5 ? language : this.o.languageOf(text)
     try {
-      // Whisper unsure, or a model that does not say (Parakeet): the language by the text's letters and words.
-      const spoken = language && sure >= 0.5 ? language : this.o.languageOf(text)
       if (this.o.editing()) {
         const stop = new AbortController()
         this.editStop = stop
         this.send({ type: 'dictationEditing' })
-        ;({ text, note } = await this.o.edit(text, stop.signal))
+        const edited = await this.o.edit(text, stop.signal)
+        text = edited.text
+        note = edited.note ?? note
         this.editStop = undefined
         // Esc while it was edited: the phrase is gone (the badge says so in a moment).
         if (stop.signal.aborted) return
@@ -308,25 +506,59 @@ export class Dictation {
     } catch (error) {
       return this.fail(`Could not translate: ${error instanceof Error ? error.message : String(error)}`)
     }
+    // What was said is shown beside the phrase only when editing changed its words, not for the rules below.
+    const reworded = text !== heard.trim()
+    // The person's rules for the typed text: ё, the full stop of one sentence.
+    text = this.o.polish(text, mode === 'english' ? 'en' : spoken)
     // Said in the badge a moment after it is typed; else the badge goes at once.
     if (note) {
       this.reveal()
       this.send({ type: 'dictationDone', text, note })
     } else this.badge?.hide()
     this.over()
-    // A space after it, so the next phrase or word goes on without one typed by hand.
-    await this.o.paste(`${text} `)
+    // A space after it (unless the person wants none), so the next phrase or word goes on without one typed by hand.
+    await this.o.paste(this.o.space() ? `${text} ` : text)
+    this.chime()
     if (note) this.hideSoon(NOTE_SHOWN_MS)
-    this.o.log.add(mode === 'english' ? { mode, text, heard } : { mode: 'type', text, ...(text === heard.trim() ? {} : { heard }) })
+    this.o.log.add(mode === 'english' ? { mode, text, heard } : { mode: 'type', text, ...(reworded ? { heard } : {}) })
     this.o.logged()
+    this.keep(mode, text, note ? { note } : {})
+  }
+
+  /** The sound that says the text is typed (or the note saved), for a person not looking at the screen. */
+  private chime(): void {
+    if (this.o.sound()) this.send({ type: 'dictationSound', sound: 'done' })
+  }
+
+  /** This phrase goes to the phrases recorded for a report, when the badge handed over its sound. */
+  private keep(mode: DictationMode, typed: string, more: { note?: string; error?: string }): void {
+    const pcm = this.kept
+    this.kept = undefined
+    if (!pcm) return
+    try {
+      this.o.captured({ mode, ...this.hearing, typed, ...more }, pcm)
+    } catch (error) {
+      log(`capture: the phrase was not kept: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
 
   /** The again key: the last phrase typed once more where the cursor is (not logged again). */
   typeAgain(): void {
     if (this.state !== 'idle' || this.opening) return
+    // A phrase Groq could not take goes to it once more, typed where the cursor is now.
+    const unsent = this.unsent
+    if (unsent && this.o.remote) {
+      this.unsent = undefined
+      this.mode = unsent.mode
+      this.byRemote = true
+      this.area = this.workArea()
+      this.set('working')
+      void this.hearRemote(unsent.mode, unsent.audio, unsent.mime, unsent.seconds)
+      return
+    }
     const last = this.o.log.last()
     if (!last) return this.o.balloon('Kryakl', 'Nothing dictated yet')
-    this.o.paste(`${last.text} `).catch(error => console.warn('Kryakl: could not type the phrase again', error))
+    this.o.paste(this.o.space() ? `${last.text} ` : last.text).catch(error => console.warn('Kryakl: could not type the phrase again', error))
   }
 
   clearLog(): void {
@@ -344,6 +576,7 @@ export class Dictation {
         if (t.note) {
           const file = t.note
           this.send({ type: 'dictationDone', text: path.basename(file, '.md') })
+          this.chime()
           this.o.balloon('Note saved', `${path.basename(file)}\nClick to open it.`, () => {
             if (openable(file, p => fs.statSync(p).isDirectory())) void shell.openPath(file)
           })
@@ -362,6 +595,8 @@ export class Dictation {
   }
 
   private fail(message: string): void {
+    // A phrase that came to nothing is what a report most needs.
+    this.keep(this.mode, '', { error: message })
     this.over()
     this.reveal()
     this.send({ type: 'dictationError', message })
@@ -370,6 +605,7 @@ export class Dictation {
 
   private over(): void {
     globalShortcut.unregister('Escape')
+    this.dropPreview()
     this.set('idle')
     this.rest()
   }

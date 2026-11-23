@@ -93,6 +93,8 @@ export const LUCIDE = {
   "copy-check": "<path d=\"m12 15 2 2 4-4\" /> <rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\" /> <path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\" />",
   "maximize-2": "<path d=\"M15 3h6v6\" /> <path d=\"m21 3-7 7\" /> <path d=\"m3 21 7-7\" /> <path d=\"M9 21H3v-6\" />",
   "minimize-2": "<path d=\"m14 10 7-7\" /> <path d=\"M20 10h-6V4\" /> <path d=\"m3 21 7-7\" /> <path d=\"M4 14h6v6\" />",
+  "cloud": "<path d=\"M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z\" />",
+  "key-round": "<path d=\"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z\" /> <circle cx=\"16.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />",
   "plus": "<path d=\"M5 12h14\" /> <path d=\"M12 5v14\" />",
   "x": "<path d=\"M18 6 6 18\" /> <path d=\"m6 6 12 12\" />",
   "minus": "<path d=\"M5 12h14\" />",

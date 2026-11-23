@@ -30,12 +30,14 @@ export type Choice = {
   printScreen: boolean
   /** Run the speed test once the models are here. */
   test: boolean
+  /** The models run by Groq with the person's own key, not on this computer: nothing to download for dictation, recordings or the language model. */
+  groq: boolean
 }
 
 /** One piece of advice: whether to turn it on, and why, in a few words. */
 export type Advice = { on: boolean; why: string }
 
-export type Recommendation = Record<'voice' | 'autoFix' | 'gpu' | 'dictate' | 'transcribe' | 'speakers' | 'startWithWindows' | 'printScreen', Advice>
+export type Recommendation = Record<'voice' | 'autoFix' | 'gpu' | 'dictate' | 'transcribe' | 'speakers' | 'startWithWindows' | 'printScreen' | 'groq', Advice>
 
 /** A few cores cannot make the natural voice faster than it speaks: a Windows voice is instant. */
 const VOICE_CORES = 4
@@ -70,6 +72,12 @@ export function recommend(v: AppView): Recommendation {
         : { on: false, why: t('setup.why.speakersSlow', { time: minutes(plan.speakers.cpu) }) },
     startWithWindows: { on: true, why: t('setup.why.startWithWindows') },
     printScreen: { on: true, why: t('setup.why.printScreen') },
+    // The models on this computer where the graphics card holds the language model whole (4 GB of its own); else Groq.
+    groq: !d.at
+      ? { on: false, why: t('setup.lookingCard') }
+      : translationAdvice(d).accurate.where === 'card'
+        ? { on: false, why: t('setup.why.local') }
+        : { on: true, why: t('setup.why.groq') },
   }
 }
 
@@ -88,6 +96,7 @@ export function recommendedChoice(v: AppView): Choice {
     startWithWindows: true,
     printScreen: r.printScreen.on,
     test: true,
+    groq: r.groq.on,
   }
 }
 
@@ -111,7 +120,8 @@ export type Cost = {
   fits: boolean
 }
 
-const speechNeeded = (c: Choice) => c.dictate || c.transcribe
+/** Dictation by Groq needs no speech engine here; recordings do (they are cut and kept here), only without a model. */
+const speechNeeded = (c: Choice) => (c.dictate && !c.groq) || c.transcribe
 
 /** Where the choice's speakers would run: the card only with its part chosen and room on it, else the processor. */
 export function speakersWhere(c: Choice, v: AppView): 'cuda' | 'cpu' {
@@ -163,7 +173,7 @@ export function cost(c: Choice, v: AppView): Cost {
     })
     disk += onDisk
     const downloaded = new Set(s.health?.downloaded ?? s.plan.dictation.choices.filter(x => x.downloaded).map(x => x.model))
-    const want = [...(c.dictate ? [s.plan.dictation.chosen] : []), ...(c.transcribe ? [s.plan.transcripts.chosen] : [])]
+    const want = c.groq ? [] : [...(c.dictate ? [s.plan.dictation.chosen] : []), ...(c.transcribe ? [s.plan.transcripts.chosen] : [])]
     for (const m of want) {
       if (models.includes(m.model)) continue
       models.push(m.model)

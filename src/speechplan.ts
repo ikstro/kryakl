@@ -436,6 +436,16 @@ export function spareToFetch(plan: SpeechPlan): Choice | undefined {
   return c && c.device === 'cpu' && !c.downloaded && !c.why && c.mb <= AUTO_DOWNLOAD_MB ? c : undefined
 }
 
+/**
+ * The model that shows a phrase going to Groq while it is spoken (2026-11-23, the owner: Groq types, this computer
+ * previews): the processor's plan for dictation, only when it is downloaded already, so the preview never
+ * downloads anything and never takes the graphics card.
+ */
+export function processorPreview(plan: SpeechPlan, downloaded: readonly string[]): string | undefined {
+  const model = plan.engine.cpu.dictation.model
+  return model && downloaded.includes(model) ? model : undefined
+}
+
 /** The model whose two formats the speed test compares on this card, so that `slowHalf` is this card's own answer:
  *  the one Transcribe runs there, when the card has room for float16 and is not known to be quick at it. */
 function formatProbe(input: PlanInput, plan: SpeechPlan): string | undefined {

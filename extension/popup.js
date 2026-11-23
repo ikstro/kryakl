@@ -43,8 +43,17 @@ function offersRow(on) {
   return el('label', { class: 'switch' }, box, el('span', {}, T('offers')))
 }
 
+/** The last meeting's transcript after its finish: how far Kryakl is, ready, or could not be recognized. */
+function followingRow(f) {
+  if (f.done) return el('div', { class: 'follow ok' }, T('transcriptReady'))
+  if (f.failed) return el('div', { class: 'follow bad' }, T('transcriptFailed'))
+  return el('div', { class: 'follow' }, T('recognizing', String(Math.min(99, Math.round((f.progress || 0) * 100)))))
+}
+
+let refresh
 async function render(error) {
   clearInterval(timer)
+  clearTimeout(refresh)
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   const status = await ask({ type: 'status', tabId: tab?.id })
   engine.className = `engine ${status.engine ? 'ok' : 'bad'}`
@@ -60,6 +69,7 @@ async function render(error) {
       el('div', { class: 'title' }, r.title),
       r.mic ? null : el('div', { class: 'muted' }, T('noMic')),
       el('button', { class: 'stop', onclick: () => act('stop') }, T('stop')),
+      el('div', { class: 'muted' }, status.key ? T('stopsByKey', status.key) : T('stopsBy')),
     )
   } else {
     children.push(
@@ -73,6 +83,12 @@ async function render(error) {
       )
     }
   }
+  const f = status.following
+  if (f) {
+    children.unshift(el('div', { class: 'followed' }, el('div', { class: 'title' }, f.title || T('tabRecording')), followingRow(f)))
+    // Still recognizing: asked again while the popup is open (the background lets a finished one go once shown).
+    if (!f.done && !f.failed) refresh = setTimeout(() => void render(), 3000)
+  }
   error ??= status.lastError
   if (error) children.push(el('div', { class: 'error' }, error))
   children.push(offersRow(status.offers !== false))
@@ -83,7 +99,6 @@ async function act(type, tab) {
   for (const b of main.querySelectorAll('button')) b.disabled = true
   const answer = await ask(type === 'start' ? { type, tabId: tab.id } : { type })
   await render(answer && !answer.ok ? answer.error : answer?.lost ? T('lost') : undefined)
-  if (type === 'stop' && answer?.ok) main.prepend(el('div', { class: 'muted' }, T('sent')))
 }
 
 render()

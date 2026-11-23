@@ -33,10 +33,12 @@ function view(profile: DeviceProfile, over: Partial<AppView> = {}): AppView {
     dev: false,
     newVersion: '',
     versionCheck: { latest: '', lookedAt: 0, failed: false, checking: false },
+    keys: { groq: { set: false }, huggingface: { set: false }, usable: true, usage: [] },
     natural: { status: 'absent', progress: 0, size: 170, dismissed: false },
     hostVoices: [],
     languages: [],
     words: [],
+    captures: { on: false, left: 0, most: 20, items: [] },
     keysOk: { snip: true, select: true, translate: true, text: true, inPlace: true, check: true, type: true, typeCheck: true, pause: true, window: true },
     learned: { alwaysFix: [], myWords: [] },
     translations: [],
@@ -104,6 +106,15 @@ describe('recommend', () => {
     expect(r.transcribe.why).toMatch(/rough/)
   })
 
+  it('the models stay on a card that holds them whole; Groq is advised where it does not', () => {
+    expect(recommend(view(i9)).groq.on).toBe(false)
+    expect(recommendedChoice(view(i9)).groq).toBe(false)
+    expect(recommend(view(laptop)).groq.on).toBe(true)
+    expect(recommendedChoice(view(laptop)).groq).toBe(true)
+    // Before the computer is known, nothing is advised away from it.
+    expect(recommend(view({ ...laptop, at: 0 })).groq.on).toBe(false)
+  })
+
   it('a Latin-script language does not get the layout fixer by default', () => {
     const v = view(i9)
     v.settings.native = 'German'
@@ -124,6 +135,18 @@ describe('cost', () => {
     expect(c.fits).toBe(true)
     // The dictionary is here: listed, free.
     expect(c.items.find(i => i.key === 'dictionary')?.mb).toBe(0)
+  })
+
+  it('by Groq: no speech model; dictation alone needs no engine, recordings the engine only', () => {
+    const v = view(i9)
+    const byGroq = { ...recommendedChoice(v), groq: true }
+    const all = cost(byGroq, v)
+    expect(all.models).toEqual([])
+    expect(all.items.some(i => i.key.startsWith('model:'))).toBe(false)
+    expect(all.items.some(i => i.key === 'engine')).toBe(true)
+    const dictation = cost({ ...byGroq, transcribe: false, speakers: false }, v)
+    expect(dictation.items.some(i => i.key === 'engine')).toBe(false)
+    expect(dictation.parts).toEqual([])
   })
 
   it('a small disk does not fit the engine; without speech it fits', () => {

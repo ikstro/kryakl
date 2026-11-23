@@ -11,6 +11,7 @@
 // caught mistake ("How it works?") and wrote one note in English: not kept.
 
 import { LLM_LANGUAGES, mapLimit, type LlmFiles, type LlmModel, type ModelState } from './llmfiles'
+import { localComplete, remoteComplete, type Complete, type RemoteChoice } from './remote/complete'
 
 const PARALLEL = 4
 /** A long text on the processor may take minutes. */
@@ -63,6 +64,8 @@ export type CheckerOptions = {
   fetch?: typeof fetch
   /** A check done: its seconds, and the seconds it waited for the model to load, when it did. */
   onTimed?: (model: LlmModel, timed: { text: number; start?: number }) => void
+  /** Groq by the person's own key, when they chose it for the language models (settings.remote.llm). */
+  remote?: RemoteChoice
 }
 
 export type Checker = {
@@ -76,31 +79,22 @@ export function createChecker(o: CheckerOptions): Checker {
   const { files } = o
   const post = o.fetch ?? fetch
 
-  async function one(base: string, piece: string, native: string): Promise<CheckOutcome> {
+  async function one(complete: Complete, piece: string, native: string): Promise<CheckOutcome> {
     const text = piece.trim()
     if (!text) return { corrected: piece, note: '' }
-    const response = await post(`${base}/v1/chat/completions`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${files.server.apiKey}` },
-      body: JSON.stringify({
-        messages: [
-          { role: 'system', content: checkPrompt(native) },
-          { role: 'user', content: text },
-        ],
-        temperature: 0,
-        // The text again and a sentence; the cap stops a model that repeats itself.
-        max_tokens: Math.min(4096, 64 + 3 * text.length),
-        chat_template_kwargs: { enable_thinking: false },
-        response_format: { type: 'json_schema', json_schema: { name: 'check', schema: SCHEMA } },
-      }),
-      signal: AbortSignal.timeout(REQUEST_MS),
+    const { content } = await complete({
+      messages: [
+        { role: 'system', content: checkPrompt(native) },
+        { role: 'user', content: text },
+      ],
+      temperature: 0,
+      // The text again and a sentence; the cap stops a model that repeats itself.
+      maxTokens: Math.min(4096, 64 + 3 * text.length),
+      schema: { name: 'check', schema: SCHEMA },
     })
-    if (!response.ok) throw new Error(`The checker answered ${response.status}`)
-    const data = (await response.json()) as { choices?: { message?: { content?: unknown } }[] }
-    const content = data.choices?.[0]?.message?.content
     let answer: { corrected?: unknown; note?: unknown } = {}
     try {
-      answer = JSON.parse(typeof content === 'string' ? content : '') as typeof answer
+      answer = JSON.parse(content) as typeof answer
     } catch {
       throw new Error('The checker gave no answer')
     }
@@ -111,20 +105,27 @@ export function createChecker(o: CheckerOptions): Checker {
     return { corrected: kept, note: typeof answer.note === 'string' ? answer.note.trim() : '' }
   }
 
+  async function lines(complete: Complete, text: string, native: string): Promise<CheckOutcome> {
+    const outs = await mapLimit(text.split('\n'), PARALLEL, line => one(complete, line, native))
+    const notes = [...new Set(outs.map(out => out.note).filter(Boolean))]
+    return { corrected: outs.map(out => out.corrected).join('\n'), note: notes.slice(0, 3).join(' ') }
+  }
+
   return {
-    state: () => files.state(o.model()),
-    prepare: onProgress => files.prepare(o.model(), onProgress),
+    state: () => (o.remote?.on() ? { status: 'ready', progress: 1, size: 0 } : files.state(o.model())),
+    prepare: onProgress => (o.remote?.on() ? Promise.resolve() : files.prepare(o.model(), onProgress)),
     async check(text, native) {
       if (!text.trim()) return { corrected: text, note: '' }
+      // By the person's own key: no model here to load or time.
+      if (o.remote?.on()) return lines(remoteComplete(o.remote.chat, 'check'), text, native)
       const model = o.model()
       const target = files.target(model)
       const began = Date.now()
       return files.server.run(target, async (base, loaded) => {
         const ready = Date.now()
-        const outs = await mapLimit(text.split('\n'), PARALLEL, line => one(base, line, native))
+        const out = await lines(localComplete(post, base, files.server.apiKey, 'The checker', REQUEST_MS), text, native)
         o.onTimed?.(model, { text: (Date.now() - ready) / 1000, ...(loaded ? { start: (ready - began) / 1000 } : {}) })
-        const notes = [...new Set(outs.map(out => out.note).filter(Boolean))]
-        return { corrected: outs.map(out => out.corrected).join('\n'), note: notes.slice(0, 3).join(' ') }
+        return out
       })
     },
   }

@@ -104,6 +104,24 @@ export type UseContext = {
   build: 'vulkan' | 'cuda'
   /** The speech model each action uses now, and those kept for the processor should the graphics card fail. */
   speech: { dictation: string; transcripts: string; reserve: { dictation?: string; transcripts?: string } }
+  /** What goes to Groq now (settings.remote): the models here for it stand by. */
+  groq?: { llm: boolean; dictate: boolean; transcribe: boolean }
+}
+
+/** Every action the part serves goes to Groq now: it stays, for when Groq cannot be reached. */
+function standingBy(p: StoragePart, c: UseContext): boolean {
+  const g = c.groq
+  if (!g) return false
+  switch (p.id) {
+    case 'accurate':
+    case 'most':
+    case 'llama':
+      return g.llm
+    case 'speechModel':
+      return (p.item !== c.speech.dictation || g.dictate) && (p.item !== c.speech.transcripts || g.transcribe)
+    default:
+      return false
+  }
 }
 
 /** The actions a part serves; undefined for the person's own things, which serve no action. */
@@ -141,7 +159,7 @@ export function withUse(parts: readonly StoragePart[], c: UseContext): StoragePa
   return parts.map(p => {
     const users = usersOf(p, c)
     if (!users) return p
-    if (users.length) return { ...p, users }
+    if (users.length) return standingBy(p, c) ? { ...p, users: [], standby: true } : { ...p, users }
     const reserve = p.id === 'speechModel' ? [...(c.speech.reserve.dictation === p.item ? ['Dictate'] : []), ...(c.speech.reserve.transcripts === p.item ? ['Transcribe'] : [])] : []
     return reserve.length ? { ...p, users, reserve: reserve.join(' and ') } : { ...p, users, unused: true }
   })

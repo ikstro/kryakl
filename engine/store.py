@@ -15,8 +15,16 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
-COLUMNS = ("id", "title", "source", "created", "duration", "status", "stage", "progress", "error", "language", "speakers_status", "job", "touched")
-LIST_COLUMNS = ("id", "title", "source", "created", "duration", "status", "stage", "progress", "error", "language", "speakers_status")
+COLUMNS = ("id", "title", "source", "created", "duration", "status", "stage", "progress", "error", "language", "speakers_status", "job", "touched", "remote")
+LIST_COLUMNS = ("id", "title", "source", "created", "duration", "status", "stage", "progress", "error", "language", "speakers_status", "remote")
+
+
+def _by(row: dict) -> dict:
+    """A row as callers see it: the `remote` column as `by` ("groq"), absent for a transcript recognized here."""
+    remote = row.pop("remote", "") or ""
+    if remote:
+        row["by"] = remote
+    return row
 
 
 def new_id(now: datetime | None = None) -> str:
@@ -45,6 +53,10 @@ class Store:
             create virtual table if not exists search using fts5(id unindexed, title, body, tokenize='unicode61 remove_diacritics 2');
             """
         )
+        # Who recognized the words when it was not this computer ("groq"), added 2026-11-23 to libraries made before.
+        if "remote" not in {r[1] for r in self._db.execute("pragma table_info(transcripts)")}:
+            with self._db:
+                self._db.execute("alter table transcripts add column remote text default ''")
 
     def folder(self, id: str) -> Path:
         # One folder right inside the library: no separators, no "..", no drive ("D:" alone is drive D on Windows).
@@ -79,7 +91,7 @@ class Store:
             r = self._db.execute("select * from transcripts where id=?", (id,)).fetchone()
         if r is None:
             return None
-        out = dict(r)
+        out = _by(dict(r))
         out["job"] = json.loads(out["job"] or "{}")
         return out
 
@@ -88,7 +100,7 @@ class Store:
             found = self._db.execute(
                 f"select * from transcripts where status in ({','.join('?' * len(status))}) order by created", status
             ).fetchall()
-        return [dict(r) | {"job": json.loads(r["job"] or "{}")} for r in found]
+        return [_by(dict(r)) | {"job": json.loads(r["job"] or "{}")} for r in found]
 
     def list(self, query: str = "") -> list[dict]:
         columns = ", ".join(f"t.{c}" for c in LIST_COLUMNS)
@@ -102,7 +114,7 @@ class Store:
                 ).fetchall()
             else:
                 found = self._db.execute(f"select {columns} from transcripts t order by t.created desc").fetchall()
-        return [dict(r) for r in found]
+        return [_by(dict(r)) for r in found]
 
     def transcript(self, id: str) -> dict | None:
         try:
@@ -121,8 +133,8 @@ class Store:
             self._db.execute("delete from search where id=?", (id,))
             self._db.execute("insert into search(id, title, body) values(?,?,?)", (id, transcript.get("title", ""), body))
             self._db.execute(
-                "update transcripts set title=?, duration=?, language=? where id=?",
-                (transcript.get("title", ""), transcript.get("duration", 0), transcript.get("language", ""), id),
+                "update transcripts set title=?, duration=?, language=?, remote=? where id=?",
+                (transcript.get("title", ""), transcript.get("duration", 0), transcript.get("language", ""), transcript.get("by", ""), id),
             )
 
     def delete(self, id: str) -> None:
