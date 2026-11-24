@@ -140,53 +140,42 @@
     "busy.processor": "processor",
     "lang.pairEnglish": "{lang} \u21C4 English",
     "lang.yours": "your language",
-    // ------------------------------------------------------------ the tray's panel
+    // ------------------------------------------------------------ the tray's menu
     "tray.open": "Open",
     "tray.openKryakl": "Open Kryakl",
-    "tray.built": "Built {build}",
-    "tray.newVersion": "Version {version} is out: open its page on GitHub",
-    "tray.actions": "Actions",
+    "tray.newVersionItem": "Version {version} is out: download",
+    "tray.fromScreen": "From the screen",
+    "tray.layoutMenu": "Keyboard layout",
+    "tray.keepThis": "Keep \u201C{word}\u201D, not \u201C{fixed}\u201D",
+    "tray.groqToday": "Groq: {n} % of today\u2019s free limit used",
+    "tray.groqUnused": "Groq: nothing used today",
+    "tray.groqSettings": "Groq settings\u2026",
+    "tray.reportProblem": "Report a problem\u2026",
     "tray.listenCopied": "Translate and read aloud",
     "tray.translateCopied": "Translate",
     "tray.typeToTranslate": "Type a text to translate\u2026",
     "tray.checkEnglish": "Type a text to check\u2026",
-    "tray.listenScreen": "Translate and read from the screen",
-    "tray.translateScreen": "Translate from the screen",
     "tray.shot": "Take a screenshot",
     "tray.video": "Record the screen",
     "tray.shots": "Open Screenshots ({n})",
     "tray.saveNote": "Save the note",
     "tray.newNote": "Voice note",
     "tray.transcripts": "All transcripts",
-    "tray.quick": "Quick settings",
     "tray.autoFix": "Fix the layout as I type",
     "tray.switchWith": "Switch layouts with {key}",
     "tray.layoutBadge": "Show the layout by the cursor",
     "tray.trayLayout": "Show the layout in the tray",
     "tray.yourWords": "Your words",
-    "tray.keepWord": "Keep a word as typed\u2026",
-    "tray.keepWordTitle": "Never fix this word by itself (Kept as typed)",
-    "tray.keepPlaceholder": "a word, as you type it",
-    "tray.keepAria": "Keep a word as typed",
     "tray.kept": "Kept: {word}",
     "tray.vocabulary": "Add a name or term\u2026",
     "tray.keptList": "Kept as typed",
     "tray.phrases": "Dictated phrases",
     "tray.allPhrases": "All phrases\u2026",
     "tray.copied": "Copied",
-    "tray.pausedTitle": "Keys are off",
-    "tray.pauseTitle": "Every key and reaction off until resumed",
     "tray.resume": "Resume",
     "tray.pause": "Pause",
     "tray.settings": "Settings",
-    "tray.report": "Report",
-    "tray.reportTitle": "Report a problem, with Kryakl\u2019s logs",
     "tray.quit": "Quit",
-    "tray.paused": "paused",
-    "tray.ready": "ready",
-    "tray.readyTitle": "{pair}, offline",
-    "tray.downloading": "downloading\u2026",
-    "tray.firstUse": "translator on first use",
     "tray.tipRecording": "Recording",
     "tray.tipPaused": "Kryakl \xB7 paused",
     "tray.tipListen": "{keys}: translate and read aloud",
@@ -1859,53 +1848,42 @@
     "busy.processor": "\u043F\u0440\u043E\u0446\u0435\u0441\u0441\u043E\u0440",
     "lang.pairEnglish": "{lang} \u21C4 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439",
     "lang.yours": "\u0432\u0430\u0448 \u044F\u0437\u044B\u043A",
-    // ------------------------------------------------------------ the tray's panel
+    // ------------------------------------------------------------ the tray's menu
     "tray.open": "\u041E\u0442\u043A\u0440\u044B\u0442\u044C",
     "tray.openKryakl": "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u041A\u0440\u044F\u043A\u043B",
-    "tray.built": "\u0421\u043E\u0431\u0440\u0430\u043D\u043E {build}",
-    "tray.newVersion": "\u0412\u044B\u0448\u043B\u0430 \u0432\u0435\u0440\u0441\u0438\u044F {version}: \u043E\u0442\u043A\u0440\u044B\u0442\u044C \u0435\u0451 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0443 \u043D\u0430 GitHub",
-    "tray.actions": "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044F",
+    "tray.newVersionItem": "\u0412\u044B\u0448\u043B\u0430 \u0432\u0435\u0440\u0441\u0438\u044F {version}: \u0441\u043A\u0430\u0447\u0430\u0442\u044C",
+    "tray.fromScreen": "\u0421 \u044D\u043A\u0440\u0430\u043D\u0430",
+    "tray.layoutMenu": "\u0420\u0430\u0441\u043A\u043B\u0430\u0434\u043A\u0430",
+    "tray.keepThis": "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \xAB{word}\xBB, \u043D\u0435 \xAB{fixed}\xBB",
+    "tray.groqToday": "Groq: \u043F\u043E\u0442\u0440\u0430\u0447\u0435\u043D\u043E {n} % \u0431\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u043E\u0433\u043E \u0434\u043D\u0435\u0432\u043D\u043E\u0433\u043E \u043B\u0438\u043C\u0438\u0442\u0430",
+    "tray.groqUnused": "Groq: \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u0447\u0435\u043D\u043E",
+    "tray.groqSettings": "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 Groq\u2026",
+    "tray.reportProblem": "\u0421\u043E\u043E\u0431\u0449\u0438\u0442\u044C \u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0435\u2026",
     "tray.listenCopied": "\u041F\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438 \u0438 \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u044C \u0432\u0441\u043B\u0443\u0445",
     "tray.translateCopied": "\u041F\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438",
     "tray.typeToTranslate": "\u0412\u0432\u0435\u0441\u0442\u0438 \u0442\u0435\u043A\u0441\u0442 \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430\u2026",
     "tray.checkEnglish": "\u0412\u0432\u0435\u0441\u0442\u0438 \u0442\u0435\u043A\u0441\u0442 \u0434\u043B\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438\u2026",
-    "tray.listenScreen": "\u041F\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438 \u0438 \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u044C \u0441 \u044D\u043A\u0440\u0430\u043D\u0430",
-    "tray.translateScreen": "\u041F\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438 \u0441 \u044D\u043A\u0440\u0430\u043D\u0430",
     "tray.shot": "\u0421\u0434\u0435\u043B\u0430\u0442\u044C \u0441\u043A\u0440\u0438\u043D\u0448\u043E\u0442",
     "tray.video": "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u044D\u043A\u0440\u0430\u043D",
     "tray.shots": "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u0421\u043A\u0440\u0438\u043D\u0448\u043E\u0442\u044B ({n})",
     "tray.saveNote": "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0437\u0430\u043C\u0435\u0442\u043A\u0443",
     "tray.newNote": "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u0433\u043E\u043B\u043E\u0441\u043E\u043C",
     "tray.transcripts": "\u0412\u0441\u0435 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0438",
-    "tray.quick": "\u0411\u044B\u0441\u0442\u0440\u044B\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438",
     "tray.autoFix": "\u0418\u0441\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C \u0440\u0430\u0441\u043A\u043B\u0430\u0434\u043A\u0443 \u043F\u0440\u0438 \u043D\u0430\u0431\u043E\u0440\u0435",
     "tray.switchWith": "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0430\u0442\u044C \u0440\u0430\u0441\u043A\u043B\u0430\u0434\u043A\u0443: {key}",
     "tray.layoutBadge": "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u0440\u0430\u0441\u043A\u043B\u0430\u0434\u043A\u0443 \u0443 \u043A\u0443\u0440\u0441\u043E\u0440\u0430",
     "tray.trayLayout": "\u041F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0442\u044C \u0440\u0430\u0441\u043A\u043B\u0430\u0434\u043A\u0443 \u0432 \u0442\u0440\u0435\u0435",
     "tray.yourWords": "\u0412\u0430\u0448\u0438 \u0441\u043B\u043E\u0432\u0430",
-    "tray.keepWord": "\u041D\u0435 \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C \u0441\u043B\u043E\u0432\u043E\u2026",
-    "tray.keepWordTitle": "\u041D\u0438\u043A\u043E\u0433\u0434\u0430 \u043D\u0435 \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C \u044D\u0442\u043E \u0441\u043B\u043E\u0432\u043E \u0441\u0430\u043C\u043E\u0441\u0442\u043E\u044F\u0442\u0435\u043B\u044C\u043D\u043E (\u041D\u0435 \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C)",
-    "tray.keepPlaceholder": "\u0441\u043B\u043E\u0432\u043E, \u043A\u0430\u043A \u0432\u044B \u0435\u0433\u043E \u043D\u0430\u0431\u0438\u0440\u0430\u0435\u0442\u0435",
-    "tray.keepAria": "\u041D\u0435 \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C \u0441\u043B\u043E\u0432\u043E",
     "tray.kept": "\u0414\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043E: {word}",
     "tray.vocabulary": "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0438\u043C\u044F \u0438\u043B\u0438 \u0442\u0435\u0440\u043C\u0438\u043D\u2026",
     "tray.keptList": "\u041D\u0435 \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C",
     "tray.phrases": "\u041D\u0430\u0434\u0438\u043A\u0442\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0444\u0440\u0430\u0437\u044B",
     "tray.allPhrases": "\u0412\u0441\u0435 \u0444\u0440\u0430\u0437\u044B\u2026",
     "tray.copied": "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E",
-    "tray.pausedTitle": "\u041A\u043B\u0430\u0432\u0438\u0448\u0438 \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u044B",
-    "tray.pauseTitle": "\u0412\u0441\u0435 \u043A\u043B\u0430\u0432\u0438\u0448\u0438 \u0438 \u0440\u0435\u0430\u043A\u0446\u0438\u0438 \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u044B, \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u0435",
     "tray.resume": "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C",
     "tray.pause": "\u041F\u0430\u0443\u0437\u0430",
     "tray.settings": "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438",
-    "tray.report": "\u041F\u0440\u043E\u0431\u043B\u0435\u043C\u0430",
-    "tray.reportTitle": "\u0421\u043E\u043E\u0431\u0449\u0438\u0442\u044C \u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0435, \u0441 \u0436\u0443\u0440\u043D\u0430\u043B\u0430\u043C\u0438 \u041A\u0440\u044F\u043A\u043B\u0430",
     "tray.quit": "\u0412\u044B\u0439\u0442\u0438",
-    "tray.paused": "\u043F\u0430\u0443\u0437\u0430",
-    "tray.ready": "\u0433\u043E\u0442\u043E\u0432\u043E",
-    "tray.readyTitle": "{pair}, \u0431\u0435\u0437 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0430",
-    "tray.downloading": "\u0437\u0430\u0433\u0440\u0443\u0437\u043A\u0430\u2026",
-    "tray.firstUse": "\u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0447\u0438\u043A \u2014 \u043F\u0440\u0438 \u043F\u0435\u0440\u0432\u043E\u043C \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0438",
     "tray.tipRecording": "\u0417\u0430\u043F\u0438\u0441\u044C",
     "tray.tipPaused": "\u041A\u0440\u044F\u043A\u043B \xB7 \u043F\u0430\u0443\u0437\u0430",
     "tray.tipListen": "{keys} \u2014 \u043F\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438 \u0438 \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u044C",
@@ -3578,53 +3556,42 @@
     "busy.processor": "\u043F\u0440\u043E\u0446\u0435\u0441\u043E\u0440",
     "lang.pairEnglish": "{lang} \u21C4 \u0430\u043D\u0433\u043B\u0456\u0439\u0441\u044C\u043A\u0430",
     "lang.yours": "\u0432\u0430\u0448\u0430 \u043C\u043E\u0432\u0430",
-    // ------------------------------------------------------------ the tray's panel
+    // ------------------------------------------------------------ the tray's menu
     "tray.open": "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438",
     "tray.openKryakl": "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u041A\u0440\u044F\u043A\u043B",
-    "tray.built": "\u0417\u0456\u0431\u0440\u0430\u043D\u043E {build}",
-    "tray.newVersion": "\u0412\u0438\u0439\u0448\u043B\u0430 \u0432\u0435\u0440\u0441\u0456\u044F {version}: \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0457\u0457 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443 \u043D\u0430 GitHub",
-    "tray.actions": "\u0414\u0456\u0457",
+    "tray.newVersionItem": "\u0412\u0438\u0439\u0448\u043B\u0430 \u0432\u0435\u0440\u0441\u0456\u044F {version}: \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438",
+    "tray.fromScreen": "\u0417 \u0435\u043A\u0440\u0430\u043D\u0430",
+    "tray.layoutMenu": "\u0420\u043E\u0437\u043A\u043B\u0430\u0434\u043A\u0430",
+    "tray.keepThis": "\u0417\u0430\u043B\u0438\u0448\u0438\u0442\u0438 \xAB{word}\xBB, \u043D\u0435 \xAB{fixed}\xBB",
+    "tray.groqToday": "Groq: \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E {n} % \u0431\u0435\u0437\u043F\u043B\u0430\u0442\u043D\u043E\u0433\u043E \u0434\u0435\u043D\u043D\u043E\u0433\u043E \u043B\u0456\u043C\u0456\u0442\u0443",
+    "tray.groqUnused": "Groq: \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E",
+    "tray.groqSettings": "\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F Groq\u2026",
+    "tray.reportProblem": "\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u043F\u0440\u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0443\u2026",
     "tray.listenCopied": "\u041F\u0435\u0440\u0435\u043A\u043B\u0430\u0441\u0442\u0438 \u0439 \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438 \u0432\u0433\u043E\u043B\u043E\u0441",
     "tray.translateCopied": "\u041F\u0435\u0440\u0435\u043A\u043B\u0430\u0441\u0442\u0438",
     "tray.typeToTranslate": "\u0412\u0432\u0435\u0441\u0442\u0438 \u0442\u0435\u043A\u0441\u0442 \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434\u0443\u2026",
     "tray.checkEnglish": "\u0412\u0432\u0435\u0441\u0442\u0438 \u0442\u0435\u043A\u0441\u0442 \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438\u2026",
-    "tray.listenScreen": "\u041F\u0435\u0440\u0435\u043A\u043B\u0430\u0441\u0442\u0438 \u0439 \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438 \u0435\u043A\u0440\u0430\u043D",
-    "tray.translateScreen": "\u041F\u0435\u0440\u0435\u043A\u043B\u0430\u0441\u0442\u0438 \u0437 \u0435\u043A\u0440\u0430\u043D\u0430",
     "tray.shot": "\u0417\u0440\u043E\u0431\u0438\u0442\u0438 \u0441\u043A\u0440\u0438\u043D\u0448\u043E\u0442",
     "tray.video": "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0435\u043A\u0440\u0430\u043D",
     "tray.shots": "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0421\u043A\u0440\u0438\u043D\u0448\u043E\u0442\u0438 ({n})",
     "tray.saveNote": "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043D\u043E\u0442\u0430\u0442\u043A\u0443",
     "tray.newNote": "\u041D\u043E\u0442\u0430\u0442\u043A\u0430 \u0433\u043E\u043B\u043E\u0441\u043E\u043C",
     "tray.transcripts": "\u0423\u0441\u0456 \u0440\u043E\u0437\u0448\u0438\u0444\u0440\u043E\u0432\u043A\u0438",
-    "tray.quick": "\u0428\u0432\u0438\u0434\u043A\u0456 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F",
     "tray.autoFix": "\u0412\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u0438 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u043A\u0443 \u043F\u0456\u0434 \u0447\u0430\u0441 \u043D\u0430\u0431\u043E\u0440\u0443",
     "tray.switchWith": "\u041F\u0435\u0440\u0435\u043C\u0438\u043A\u0430\u0442\u0438 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u043A\u0443: {key}",
     "tray.layoutBadge": "\u041F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u043A\u0443 \u0431\u0456\u043B\u044F \u043A\u0443\u0440\u0441\u043E\u0440\u0430",
     "tray.trayLayout": "\u041F\u043E\u043A\u0430\u0437\u0443\u0432\u0430\u0442\u0438 \u0440\u043E\u0437\u043A\u043B\u0430\u0434\u043A\u0443 \u0432 \u0442\u0440\u0435\u0457",
     "tray.yourWords": "\u0412\u0430\u0448\u0456 \u0441\u043B\u043E\u0432\u0430",
-    "tray.keepWord": "\u041D\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u0438 \u0441\u043B\u043E\u0432\u043E\u2026",
-    "tray.keepWordTitle": "\u041D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u0438 \u0446\u0435 \u0441\u043B\u043E\u0432\u043E \u0441\u0430\u043C\u043E\u0441\u0442\u0456\u0439\u043D\u043E (\u041D\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u0438)",
-    "tray.keepPlaceholder": "\u0441\u043B\u043E\u0432\u043E, \u044F\u043A \u0432\u0438 \u0439\u043E\u0433\u043E \u043D\u0430\u0431\u0438\u0440\u0430\u0454\u0442\u0435",
-    "tray.keepAria": "\u041D\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u0438 \u0441\u043B\u043E\u0432\u043E",
     "tray.kept": "\u0414\u043E\u0434\u0430\u043D\u043E: {word}",
     "tray.vocabulary": "\u0414\u043E\u0434\u0430\u0442\u0438 \u0456\u043C\u2019\u044F \u0430\u0431\u043E \u0442\u0435\u0440\u043C\u0456\u043D\u2026",
     "tray.keptList": "\u041D\u0435 \u0432\u0438\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u0438",
     "tray.phrases": "\u041D\u0430\u0434\u0438\u043A\u0442\u043E\u0432\u0430\u043D\u0456 \u0444\u0440\u0430\u0437\u0438",
     "tray.allPhrases": "\u0423\u0441\u0456 \u0444\u0440\u0430\u0437\u0438\u2026",
     "tray.copied": "\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E",
-    "tray.pausedTitle": "\u041A\u043B\u0430\u0432\u0456\u0448\u0456 \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043E",
-    "tray.pauseTitle": "\u0423\u0441\u0456 \u043A\u043B\u0430\u0432\u0456\u0448\u0456 \u0439 \u0440\u0435\u0430\u043A\u0446\u0456\u0457 \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043E, \u0434\u043E\u043A\u0438 \u043D\u0435 \u043F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0435",
     "tray.resume": "\u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438",
     "tray.pause": "\u041F\u0430\u0443\u0437\u0430",
     "tray.settings": "\u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u0438",
-    "tray.report": "\u041F\u0440\u043E\u0431\u043B\u0435\u043C\u0430",
-    "tray.reportTitle": "\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u043F\u0440\u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0443, \u0437 \u0436\u0443\u0440\u043D\u0430\u043B\u0430\u043C\u0438 \u041A\u0440\u044F\u043A\u043B\u0430",
     "tray.quit": "\u0412\u0438\u0439\u0442\u0438",
-    "tray.paused": "\u043F\u0430\u0443\u0437\u0430",
-    "tray.ready": "\u0433\u043E\u0442\u043E\u0432\u043E",
-    "tray.readyTitle": "{pair}, \u0431\u0435\u0437 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443",
-    "tray.downloading": "\u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026",
-    "tray.firstUse": "\u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434\u0430\u0447 \u2014 \u043F\u0456\u0434 \u0447\u0430\u0441 \u043F\u0435\u0440\u0448\u043E\u0433\u043E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u043D\u043D\u044F",
     "tray.tipRecording": "\u0417\u0430\u043F\u0438\u0441",
     "tray.tipPaused": "\u041A\u0440\u044F\u043A\u043B \xB7 \u043F\u0430\u0443\u0437\u0430",
     "tray.tipListen": "{keys} \u2014 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0441\u0442\u0438 \u0439 \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438",
@@ -6908,6 +6875,29 @@
   };
   var isSpeechModel = (model) => model.startsWith("whisper-");
 
+  // src/remote/usagetext.ts
+  var MODEL_JOB = {
+    "whisper-large-v3": () => t("apikeys.useDictation"),
+    "whisper-large-v3-turbo": () => t("apikeys.useRecordings"),
+    "openai/gpt-oss-120b": () => t("apikeys.useTexts"),
+    "qwen/qwen3.8-27b": () => t("apikeys.useTalk"),
+    "openai/gpt-oss-20b": () => t("apikeys.useEdit")
+  };
+  function duration(seconds2) {
+    const m = Math.round(seconds2 / 60);
+    return m >= 60 ? t("apikeys.hours", { h: Math.floor(m / 60), m: m % 60 }) : t("apikeys.minutes", { m });
+  }
+  function usageLines(usage2) {
+    return usage2.filter((u) => u.day.requests > 0).map((u) => {
+      const speech = isSpeechModel(u.model);
+      const plan = speech ? GROQ_FREE.speech : GROQ_FREE.chat;
+      const requests = t("apikeys.requests", { n: numberText(u.day.requests), of: numberText(u.limit ?? plan.perDay) });
+      const amount = speech ? t("apikeys.sound", { used: duration(u.day.seconds), of: duration(GROQ_FREE.speech.secondsPerDay) }) : t("apikeys.tokens", { used: numberText(Math.round(u.day.tokens / 1e3)), of: numberText(GROQ_FREE.chat.tokensPerDay / 1e3) });
+      const left = u.left !== void 0 ? t("apikeys.groqLeft", { n: numberText(u.left) }) : void 0;
+      return { model: u.model, job: MODEL_JOB[u.model]?.() ?? u.model, line: `${requests} \xB7 ${amount}`, left };
+    });
+  }
+
   // src/webview/speech.ts
   var SpeechError = class extends Error {
     constructor(message, status) {
@@ -7401,28 +7391,10 @@
   var GROQ_KEYS = "https://console.groq.com/keys";
   var GROQ_PRIVACY = "https://groq.com/privacy-policy";
   var replacing2 = false;
-  var MODEL_JOB = {
-    "whisper-large-v3": () => t("apikeys.useDictation"),
-    "whisper-large-v3-turbo": () => t("apikeys.useRecordings"),
-    "openai/gpt-oss-120b": () => t("apikeys.useTexts"),
-    "qwen/qwen3.8-27b": () => t("apikeys.useTalk"),
-    "openai/gpt-oss-20b": () => t("apikeys.useEdit")
-  };
-  function duration(seconds2) {
-    const m = Math.round(seconds2 / 60);
-    return m >= 60 ? t("apikeys.hours", { h: Math.floor(m / 60), m: m % 60 }) : t("apikeys.minutes", { m });
-  }
   function usageRows(v) {
-    const used = v.keys.usage.filter((u) => u.day.requests > 0);
-    if (!used.length) return [row(t("apikeys.usageNone"), [t("apikeys.usageNoneNote")], null)];
-    return used.map((u) => {
-      const speech = isSpeechModel(u.model);
-      const plan = speech ? GROQ_FREE.speech : GROQ_FREE.chat;
-      const requests = t("apikeys.requests", { n: numberText(u.day.requests), of: numberText(u.limit ?? plan.perDay) });
-      const amount = speech ? t("apikeys.sound", { used: duration(u.day.seconds), of: duration(GROQ_FREE.speech.secondsPerDay) }) : t("apikeys.tokens", { used: numberText(Math.round(u.day.tokens / 1e3)), of: numberText(GROQ_FREE.chat.tokensPerDay / 1e3) });
-      const left = u.left !== void 0 ? [t("apikeys.groqLeft", { n: numberText(u.left) })] : [];
-      return row(MODEL_JOB[u.model]?.() ?? u.model, [`${requests} \xB7 ${amount}`, ...left], null);
-    });
+    const lines = usageLines(v.keys.usage);
+    if (!lines.length) return [row(t("apikeys.usageNone"), [t("apikeys.usageNoneNote")], null)];
+    return lines.map((u) => row(u.job, [u.line, ...u.left ? [u.left] : []], null));
   }
   function groqKeyRow(v) {
     const k = v.keys.groq;
@@ -11716,6 +11688,7 @@ ${t("dictate.said", { heard: e.heard })}` : e.text,
   var OLD_TABS = { talk: "english", check: "english", listen: "translate", screen: "translate", dictate: "voice", transcribe: "recordings", keyboard: "layout" };
   function showTab(tab) {
     if (tab === "checkModel") return go("models", "forCheck");
+    if (tab === "groq") return go("models", "groq");
     if (tab !== "home" && tab !== "howto") {
       go(OLD_TABS[tab] ?? tab);
       if (tab === "vocabulary" || tab === "kept") pBody.querySelector("input[data-live]")?.focus();

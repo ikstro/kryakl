@@ -1,8 +1,8 @@
-// Fixtures for `npm run shots`: an AppView and a TrayView as the main process would send them
+// Fixtures for `npm run shots`: an AppView and the other pages' views as the main process would send them
 // (a real plan from planSpeech, an i9 with an RTX 2080 SUPER, the engine running).
 import type { DeviceProfile } from '../../src/hardware'
 import { LANGUAGES } from '../../src/languages'
-import type { AppView, MenuView, TalkSummary, TalksView, TalkTurn, TalkWindowView, TrayView } from '../../src/protocol'
+import type { AppView, MenuView, TalkSummary, TalksView, TalkTurn, TalkWindowView } from '../../src/protocol'
 import { isUiLanguage, setUiLanguage, t, type UiLanguage } from '../../src/i18n'
 import { menuGroups } from '../../src/menu'
 import { DEFAULTS } from '../../src/settings'
@@ -286,31 +286,4 @@ export function menuView(lang: UiLanguage, o: { lit?: number; fired?: number; sp
   setUiLanguage(lang)
   const groups = menuGroups(lang, o.speech ?? true).map(group => group.map(item => ({ letter: item.letter, label: t(`menu.${item.id}`) })))
   return { groups, lit: o.lit ?? 0, fired: o.fired ?? -1 }
-}
-
-export function trayView(over: Partial<TrayView> = {}): TrayView {
-  return {
-    keys: { shot: 'PrintScreen', video: 'Control+Shift+R', listenCopied: 'Control+C*2', typeToTranslate: '', checkEnglish: 'RightControl*2', snipListen: 'Control+Alt+S', snipTranslate: 'Control+Alt+T', switch: 'LeftControl', talk: '' },
-    autoFix: true,
-    switchOn: true,
-    layoutBadge: true,
-    trayLayout: false,
-    paused: false,
-    keep: { on: true, word: 'ghbdtn', fixed: 'привет' },
-    speech: { installed: true, recording: false, noteKey: 'Control+Alt+N', dictates: true, talks: true },
-    translator: 'ready',
-    shots: 3,
-    phrases: [
-      { at: new Date(Date.now() - 600e3).toISOString(), text: 'Привет, это проверка диктовки в новом бейдже.' },
-      { at: new Date(Date.now() - 1200e3).toISOString(), text: 'I will send the updated layouts before the call, and the notes after it.' },
-      { at: new Date(Date.now() - 3600e3).toISOString(), text: 'Так может проще пересобрать сборку.' },
-    ],
-    native: 'Russian',
-    // SHOTS_NEW_VERSION=0.99.0 pictures the notice of a newer version (the tray's mark, Home, Settings), on an installed copy, as only that one asks.
-    version: process.env.SHOTS_NEW_VERSION ? '0.18.0' : '0.11.0',
-    build: '30 Oct, 07:12 (ff17ba8, changed)',
-    dev: !process.env.SHOTS_NEW_VERSION,
-    newVersion: process.env.SHOTS_NEW_VERSION ?? '',
-    ...over,
-  }
 }

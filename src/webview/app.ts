@@ -3599,6 +3599,8 @@ const OLD_TABS: Partial<Record<AppTab, Page>> = { talk: 'english', check: 'engli
 function showTab(tab: AppTab): void {
   // The talk window's model: the choice of the model Check my English and the duck use.
   if (tab === 'checkModel') return go('models', 'forCheck')
+  // The tray menu's Groq: the key, what goes there and the day's use.
+  if (tab === 'groq') return go('models', 'groq')
   if (tab !== 'home' && tab !== 'howto') {
     go(OLD_TABS[tab] ?? (tab as Page))
     // From the tray's Your words: the word is typed at once.

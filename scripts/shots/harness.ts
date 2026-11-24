@@ -8,7 +8,7 @@ import type { UiLanguage } from '../../src/i18n'
 import { englishHtml, textOutHtml, translationHtml } from '../../src/render'
 import { splitText, translateLines, translatePairs, type Translate } from '../../src/translate'
 import { wordDiff } from '../../src/worddiff'
-import { appView, CAFE, menuView, talkWindowView, trayView } from './view'
+import { appView, CAFE, menuView, talkWindowView } from './view'
 
 import { resolve } from 'node:path'
 
@@ -96,7 +96,7 @@ ipcMain.handle('host-call', async (_e, r: { call: string; method?: string; route
 const heights = new Map<number, number>()
 ipcMain.on('to-host', (e, m: { type: string; px?: number }) => {
   log.push(`to-host ${e.sender.id} ${JSON.stringify(m).slice(0, 160)}`)
-  if ((m.type === 'dictationHeight' || m.type === 'trayHeight' || m.type === 'menuHeight' || m.type === 'height') && m.px) heights.set(e.sender.id, m.px)
+  if ((m.type === 'dictationHeight' || m.type === 'menuHeight' || m.type === 'height') && m.px) heights.set(e.sender.id, m.px)
 })
 
 // ---------------------------------------------------------------- the card
@@ -475,51 +475,6 @@ async function setupShots(theme: 'dark' | 'light'): Promise<void> {
   send(w, { type: 'app', view: v })
   await sleep(500)
   await shot(w, `setup-${theme}-4-going`)
-  w.destroy()
-}
-
-async function trayShots(theme: 'dark' | 'light'): Promise<void> {
-  nativeTheme.themeSource = theme
-  const w = win('tray.html', 360, 620, colors().bg)
-  await new Promise<void>(r => w.webContents.once('did-finish-load', () => r()))
-  await sleep(300)
-  const fit = async () => {
-    await sleep(400)
-    const h = heights.get(w.webContents.id)
-    if (h) w.setSize(360, h)
-    await sleep(300)
-  }
-  for (const [name, view] of [
-    ['ready', trayView()],
-    ['paused', trayView({ paused: true })],
-  ] as const) {
-    send(w, { type: 'tray', view })
-    send(w, { type: 'trayShown' })
-    await fit()
-    await shot(w, `tray-${theme}-${name}`)
-  }
-  // The two folding rows opened (Your words, Dictated phrases); their state is kept, so the rest of the run has them open.
-  send(w, { type: 'tray', view: trayView() })
-  await sleep(300)
-  log.push(`tray fold words: ${await click(w, '[data-id="fold-words"]')}`)
-  log.push(`tray fold phrases: ${await click(w, '[data-id="fold-phrases"]')}`)
-  await fit()
-  await shot(w, `tray-${theme}-open`)
-  // "Keep a word as typed…" opened into its field, the last fixed word in it; Enter; then with none.
-  log.push(`tray keep: ${await click(w, '[data-id="keepWord"]')}`)
-  log.push(`tray keep focus: ${await focus(w, '.keep-field')}`)
-  await fit()
-  await shot(w, `tray-${theme}-keep`)
-  log.push(`tray keep enter: ${await js(w, `(() => { const f = document.querySelector('.keep-field'); if (!f) return 'missing'; f.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return 'ok' })()`)}`)
-  await sleep(300)
-  await shot(w, `tray-${theme}-kept`)
-  await sleep(1700)
-  send(w, { type: 'tray', view: trayView({ keep: { on: true, word: '', fixed: '' } }) })
-  await sleep(300)
-  log.push(`tray keep empty: ${await click(w, '[data-id="keepWord"]')}`)
-  log.push(`tray keep empty focus: ${await focus(w, '.keep-field')}`)
-  await fit()
-  await shot(w, `tray-${theme}-keep-empty`)
   w.destroy()
 }
 
@@ -978,11 +933,11 @@ app.whenReady().then(async () => {
       await cardShots('dark')
       await cardShots('light')
     }
-    // SHOTS=card: the card alone; SHOTS=tray: the tray panel; SHOTS=menu: the menu on one key; SHOTS=shot: a screenshot's page alone; SHOTS=daily: the card, the tray panel, the menu, the badge, the talk window and the setup.
-    // SHOTS=app: the app window's pages in the dark theme, and the tray panel.
+    // SHOTS=card: the card alone; SHOTS=menu: the menu on one key; SHOTS=shot: a screenshot's page alone; SHOTS=daily: the card, the menu, the badge, the talk window and the setup.
+    // The tray's menu is Windows' own (traymenu.ts): it cannot be pictured offscreen.
+    // SHOTS=app: the app window's pages in the dark theme.
     if (process.env.SHOTS === 'app') {
       await appShots('dark')
-      await trayShots('dark')
     } else if (process.env.SHOTS === 'dictation') {
       await badgeShots('dark')
       await badgeShots('light')
@@ -993,16 +948,11 @@ app.whenReady().then(async () => {
       await shotShots('light')
       await recordShots('dark')
       await recordShots('light')
-    } else if (process.env.SHOTS === 'tray') {
-      await trayShots('dark')
-      await trayShots('light')
     } else if (process.env.SHOTS === 'menu') {
       await menuShots('dark')
       await menuShots('light')
     } else if (process.env.SHOTS === 'daily') {
       await setupShots('dark')
-      await trayShots('dark')
-      await trayShots('light')
       await menuShots('dark')
       await badgeShots('dark')
       await talkShots('dark')
@@ -1020,8 +970,6 @@ app.whenReady().then(async () => {
       await appShots('light', true)
       await setupShots('dark')
       await setupShots('light')
-      await trayShots('dark')
-      await trayShots('light')
       await menuShots('dark')
       await menuShots('light')
       await badgeShots('dark')

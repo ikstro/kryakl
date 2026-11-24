@@ -6,7 +6,9 @@ const at = (page: string) => `file:///C:/Users/you/AppData/Local/Programs/kryakl
 
 describe('which page sent a message', () => {
   test('each of Kryakl\'s pages by its file; anything else is another', () => {
-    expect([pageOf(at('app.html')), pageOf(at('card.html')), pageOf(at('tray.html')), pageOf(at('dictation.html')), pageOf(at('talk.html'))]).toEqual(['app', 'card', 'tray', 'dictation', 'talk'])
+    expect([pageOf(at('app.html')), pageOf(at('card.html')), pageOf(at('dictation.html')), pageOf(at('talk.html'))]).toEqual(['app', 'card', 'dictation', 'talk'])
+    // The tray's panel is gone (2026-11-24): its page is no one's.
+    expect(pageOf(at('tray.html'))).toBe('other')
     expect(pageOf(at('badge.html'))).toBe('other')
     expect(pageOf('https://evil.example/app.html')).toBe('other')
     expect(pageOf('')).toBe('other')
@@ -15,7 +17,7 @@ describe('which page sent a message', () => {
 
 describe('a page that shows text from outside opens, removes and exports nothing', () => {
   const dangerous = ['openPath', 'showInFolder', 'openLink', 'installSpeech', 'removeStored', 'cleanUp', 'removeSpare', 'useRecommended', 'moveToKryakl', 'importBackup', 'exportBackup', 'resetSettings', 'restartSpeech', 'reportProblem', 'openLogs', 'recordKeys']
-  test.each(['card', 'tray', 'dictation', 'talk'] as const)('the %s', page => {
+  test.each(['card', 'dictation', 'talk'] as const)('the %s', page => {
     for (const type of dangerous) expect(messageAllowed(page, type), type).toBe(false)
   })
   test('the app window may', () => {
@@ -23,17 +25,16 @@ describe('a page that shows text from outside opens, removes and exports nothing
   })
   test('each page keeps what it does', () => {
     for (const type of ['ready', 'speak', 'speakNatural', 'stop', 'close', 'pin', 'maximize', 'height', 'copyText', 'pasteText', 'translateText', 'checkText', 'lookup', 'saveWord', 'unsaveWord', 'saveSettings', 'downloadNatural', 'openSpeechSettings']) expect(messageAllowed('card', type), type).toBe(true)
-    for (const type of ['trayReady', 'trayHeight', 'trayClose', 'tray', 'keepWord', 'saveSettings']) expect(messageAllowed('tray', type), type).toBe(true)
     for (const type of ['dictationReady', 'dictationTuck', 'dictationText', 'dictationAudio', 'dictationNote', 'dictationHeight', 'dictationCancelled', 'dictationFailed']) expect(messageAllowed('dictation', type), type).toBe(true)
   })
   test('a phrase\'s sound for Groq comes from the badge alone', () => {
     expect(messageAllowed('dictation', 'dictationPcm')).toBe(true)
-    for (const page of ['app', 'card', 'tray', 'talk', 'menu', 'shot', 'shots', 'record'] as const) expect(messageAllowed(page, 'dictationPcm'), page).toBe(false)
+    for (const page of ['app', 'card', 'talk', 'menu', 'shot', 'shots', 'record'] as const) expect(messageAllowed(page, 'dictationPcm'), page).toBe(false)
   })
   test('only the talk window talks to the duck: a model\'s words in the card cannot start a talk or speak for the person', () => {
     for (const type of ['talkStart', 'talkSay', 'talkInterrupt', 'talkClear', 'talkListen', 'talkReady', 'talkPin', 'talkWindow', 'talkContinue', 'talkDelete', 'talksClear']) {
       expect(messageAllowed('talk', type), type).toBe(true)
-      for (const page of ['app', 'card', 'tray', 'dictation'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+      for (const page of ['app', 'card', 'dictation'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
     }
     // It reads aloud, opens the word card, keeps a word and shows the red dot as the card and the Transcribe page do.
     for (const type of ['speak', 'speakNatural', 'stop', 'lookup', 'saveWord', 'unsaveWord', 'micRecording']) expect(messageAllowed('talk', type), type).toBe(true)
@@ -41,7 +42,7 @@ describe('a page that shows text from outside opens, removes and exports nothing
   })
   test('the talk window is opened from the app window only', () => {
     expect(messageAllowed('app', 'talkOpen')).toBe(true)
-    for (const page of ['card', 'tray', 'dictation', 'talk'] as const) expect(messageAllowed(page, 'talkOpen'), page).toBe(false)
+    for (const page of ['card', 'dictation', 'talk'] as const) expect(messageAllowed(page, 'talkOpen'), page).toBe(false)
   })
   test('an unknown page sends nothing', () => {
     expect(messageAllowed('other', 'ready')).toBe(false)
@@ -53,7 +54,7 @@ describe('the menu on one key', () => {
     expect(pageOf('file:///C:/app/media/menu.html?lang=ru')).toBe('menu')
     for (const type of ['menuReady', 'menuHeight', 'menuHover', 'menuPick']) {
       expect(messageAllowed('menu', type), type).toBe(true)
-      for (const page of ['app', 'card', 'tray', 'dictation', 'talk'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+      for (const page of ['app', 'card', 'dictation', 'talk'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
     }
     for (const type of ['saveSettings', 'copyText', 'speak', 'tray', 'lookup', 'openLink']) expect(messageAllowed('menu', type), type).toBe(false)
   })
@@ -69,7 +70,7 @@ describe('a screenshot', () => {
     expect(pageOf('file:///C:/app/media/shot.html?lang=ru')).toBe('shot')
     for (const type of ['shotReady', 'shotShown', 'shotBegan', 'shotHover', 'shotCancel', 'shotStyle', 'shotDone']) {
       expect(messageAllowed('shot', type), type).toBe(true)
-      for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+      for (const page of ['app', 'card', 'dictation', 'talk', 'menu'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
     }
     for (const type of ['saveSettings', 'copyText', 'speak', 'tray', 'lookup', 'openLink', 'menuPick']) expect(messageAllowed('shot', type), type).toBe(false)
   })
@@ -82,7 +83,7 @@ describe('a screenshot', () => {
   test('its page alone asks to record a frame', () => {
     for (const type of ['shotRecord', 'shotSound']) {
       expect(messageAllowed('shot', type), type).toBe(true)
-      for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu', 'record', 'shots'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+      for (const page of ['app', 'card', 'dictation', 'talk', 'menu', 'record', 'shots'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
     }
   })
 })
@@ -92,7 +93,7 @@ describe('the Screenshots window', () => {
     expect(pageOf('file:///C:/app/media/shots.html?lang=uk')).toBe('shots')
     for (const type of ['shotsReady', 'shotsWant', 'shotsEdit', 'shotsAction', 'shotsDrag', 'shotsWindow']) {
       expect(messageAllowed('shots', type), type).toBe(true)
-      for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu', 'shot', 'record'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+      for (const page of ['app', 'card', 'dictation', 'talk', 'menu', 'shot', 'record'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
     }
     for (const type of ['shotStyle', 'shotTool']) expect(messageAllowed('shots', type), type).toBe(true)
     for (const type of ['saveSettings', 'copyText', 'openPath', 'shotDone', 'shotKeep', 'shotRecord', 'openLink']) expect(messageAllowed('shots', type), type).toBe(false)
@@ -109,7 +110,7 @@ describe('a recording', () => {
     expect(pageOf('file:///C:/app/media/record.html?lang=ru')).toBe('record')
     for (const type of ['recordReady', 'recordSize', 'recordRolling', 'recordChunk', 'recordEnded', 'recordAct']) {
       expect(messageAllowed('record', type), type).toBe(true)
-      for (const page of ['app', 'card', 'tray', 'dictation', 'talk', 'menu', 'shot'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
+      for (const page of ['app', 'card', 'dictation', 'talk', 'menu', 'shot'] as const) expect(messageAllowed(page, type), `${page} ${type}`).toBe(false)
     }
     for (const type of ['saveSettings', 'copyText', 'openPath', 'showInFolder', 'openLink', 'shotDone']) expect(messageAllowed('record', type), type).toBe(false)
   })
@@ -123,26 +124,20 @@ describe('a recording', () => {
 describe('the microphone and the screen', () => {
   test('only for the pages that record', () => {
     for (const page of ['app', 'dictation', 'talk', 'record'] as const) expect(mediaAllowed(page), page).toBe(true)
-    for (const page of ['card', 'tray', 'menu', 'shot', 'other'] as const) expect(mediaAllowed(page), page).toBe(false)
+    for (const page of ['card', 'menu', 'shot', 'other'] as const) expect(mediaAllowed(page), page).toBe(false)
   })
 })
 
 describe('which settings a page may change', () => {
-  test('the card its reading mode, the tray panel its switches, the app window any', () => {
+  test('the card its reading mode, the app window any', () => {
     expect(patchAllowed('card', { oneAtATime: true })).toBe(true)
-    expect(patchAllowed('tray', { autoFix: false })).toBe(true)
-    expect(patchAllowed('tray', { paused: true })).toBe(true)
     expect(patchAllowed('app', { translationLevel: 'most', keepWords: [] })).toBe(true)
   })
   test('nothing more, nothing else', () => {
     expect(patchAllowed('card', { oneAtATime: true, translationLevel: 'most', model: 'most' })).toBe(false)
-    expect(patchAllowed('tray', { keepWords: [] })).toBe(false)
     expect(patchAllowed('card', { doubleCopy: false })).toBe(false)
-    // Ctrl+C twice is a key now, set in the window only.
-    expect(patchAllowed('tray', { doubleCopy: false })).toBe(false)
-    expect(patchAllowed('tray', { selectKey: 'Control+C*2' })).toBe(false)
     for (const page of ['dictation', 'other'] as const) expect(patchAllowed(page, { paused: true })).toBe(false)
-    expect(patchAllowed('tray', undefined)).toBe(false)
+    expect(patchAllowed('card', undefined)).toBe(false)
   })
 })
 
@@ -168,7 +163,7 @@ describe('calls with an answer', () => {
     for (const route of ['/recordings', '/settings', '/transcripts', '/dictate/%2e%2e/transcripts', '/dictateX']) expect(callAllowed('talk', speech('GET', route)), route).toBe(false)
   })
   test('the card and the tray panel call nothing; the app window everything', () => {
-    for (const page of ['card', 'tray', 'other'] as const) expect(callAllowed(page, speech('GET', '/health'))).toBe(false)
+    for (const page of ['card', 'other'] as const) expect(callAllowed(page, speech('GET', '/health'))).toBe(false)
     expect(callAllowed('app', speech('PUT', '/settings'))).toBe(true)
     expect(callAllowed('app', { call: 'pickFolder', title: 't', current: '' })).toBe(true)
   })

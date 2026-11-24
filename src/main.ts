@@ -36,7 +36,7 @@ import * as path from 'node:path'
 
 import { execFile, execFileSync } from 'node:child_process'
 
-import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, Notification, safeStorage, screen, session, shell, Tray, type Rectangle } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, Menu, nativeImage, nativeTheme, Notification, safeStorage, screen, session, shell, Tray, type Rectangle } from 'electron'
 
 import { backupSummary, makeBackup, readBackup, type BackupRead } from './backup'
 import { callAllowed, messageAllowed, openable, pageOf, patchAllowed, type Page, mediaAllowed } from './bridge'
@@ -94,7 +94,7 @@ import { ScreenRecorder } from './recordwindow'
 import { dropFiles } from './recordmodel'
 import { ShotsEditor } from './shotseditor'
 import { ShotOverlay, type ShotOutcome } from './shotwindow'
-import { placeByTray, placeNear, resize, type Point } from './placement'
+import { placeNear, resize, type Point } from './placement'
 import type { AppTab, AppView, BusyPart, CardKind, CardState, CheckResult, DictationMode, DictionaryStatus, GlossMissing, HostCall, HostVoice, Refused, ShotAction, StorageId, StoragePart, StorageView, TalkWindowView, TextResult, ToHost, ToView, TranslationState, TrayCommand, TrayView, ViewConfig } from './protocol'
 import { draftsIn, englishHtml, textOutHtml, translationHtml } from './render'
 import { issueUrl, mailUrl, makeReport, namesHere, reportName, type ReportFacts } from './report'
@@ -130,6 +130,7 @@ import {
   type Translate,
 } from './translate'
 import { TranslationLog } from './translationlog'
+import { trayMenuTemplate } from './traymenu'
 import type { Translator } from './translator'
 import manifest from './voice-manifest.json'
 import { vocabularyFor } from './vocabulary'
@@ -202,12 +203,10 @@ const SHOT_AFTER_MS = 80
 const SHOT_SAY_MS = 1400
 /** A recording's own word by the cursor may say why it stopped: long enough to read. */
 const RECORD_SAY_MS = 4000
-/** The tray's panel: its width; a click on the tray icon this soon after the panel hid on that click's blur only closes it. */
-const TRAY_WIDTH = 360
-const TRAY_REOPEN_MS = 300
-/** The tray's last dictated phrases, a click copying one (3: with 5 the panel outgrew a 1080p screen); "Copied" shows this long before the panel goes. */
+/** The tray menu's last dictated phrases, a click copying one. */
 const TRAY_PHRASES = 3
-const TRAY_COPIED_MS = 700
+/** "Copied" or "Kept" by the cursor after a tray menu's item, this long. */
+const TRAY_SAY_MS = 1200
 /** Ctrl+C pressed twice, a key of an action on the selection (settings.ts COPY_TWICE_KEYS), as a card's header draws it too. */
 const DOUBLE_COPY = COPY_TWICE
 /** The settings that are keys of actions. */
@@ -372,13 +371,8 @@ let rivals: string[] = []
 let shotApps: string[] = []
 let keyboardApps: string[] = []
 let foreignKeys = false
-let trayPanel: BrowserWindow | undefined
-let trayReady = false
-let trayHeight = 600
-/** The last word fixed by itself, as typed and as fixed, for the tray's "Keep a word as typed…"; kept in memory only. */
+/** The last word fixed by itself, as typed and as fixed, for the tray menu's "Keep … as typed"; kept in memory only. */
 let lastAutoFix: { word: string; fixed: string } | undefined
-let trayShownAt = 0
-let trayHiddenAt = 0
 /** The Transcribe page records from the microphone (its `micRecording` message): the tray shows the red dot. */
 let micRecording = false
 /**
@@ -639,10 +633,6 @@ function applyUiLanguage(): void {
     talkReady = false
     void talkWin.loadFile(media('talk.html'), pageOptions())
   }
-  if (trayPanel && !trayPanel.isDestroyed()) {
-    trayReady = false
-    void trayPanel.loadFile(media('tray.html'), pageOptions())
-  }
   dictation?.languageChanged()
   oneKeyMenu?.languageChanged()
   shots?.languageChanged()
@@ -664,10 +654,6 @@ function applyColors(): void {
   if (appWin && !appWin.isDestroyed()) {
     appWin.setBackgroundColor(appColor())
     frameWindow(appWin, { corner: 'default', border: borderColor() })
-  }
-  if (trayPanel && !trayPanel.isDestroyed()) {
-    trayPanel.setBackgroundColor(appColor())
-    frameWindow(trayPanel, { corner: 'round', border: borderColor() })
   }
   if (talkWin && !talkWin.isDestroyed()) {
     talkWin.setBackgroundColor(cardColor())
@@ -1572,7 +1558,7 @@ function openCard(kind: CardKind, state: CardState, at: Point, via?: string): nu
   if (!win) return id
   // A card open already (pinned) keeps the window it came from.
   const front = foreground().hwnd
-  const ours = [win, trayPanel].some(w => w && !w.isDestroyed() && handleOf(w) === front)
+  const ours = !win.isDestroyed() && handleOf(win) === front
   if (!ours && front !== 0n) cameFrom = front
   if (!win.isVisible()) {
     const area = screen.getDisplayNearestPoint(at).workArea
@@ -1714,7 +1700,6 @@ function onMessage(message: ToHost, page: Page): void {
     case 'forgetPhrase':
       dictationLog.remove(message.at)
       postApp()
-      sendTrayView()
       return
     case 'forgetTranslation':
       translationLog.remove(message.at)
@@ -2052,37 +2037,6 @@ function onMessage(message: ToHost, page: Page): void {
     case 'talksClear':
       talks.clear()
       postTalk()
-      return
-    case 'trayReady':
-      trayReady = true
-      refreshTray()
-      return
-    case 'trayHeight':
-      trayHeight = Math.ceil(message.px)
-      if (trayPanel?.isVisible()) placeTrayPanel()
-      return
-    case 'trayClose':
-      hideTrayPanel()
-      return
-    case 'trayCopy': {
-      // As Copy on the Dictated phrases page: the person's own copy. The row says "Copied" a moment, then the panel goes.
-      const phrase = dictationLog.list().find(e => e.at === message.at)
-      if (!phrase) return
-      clipboard.writeText(phrase.text).catch(error => console.warn('Kryakl: could not copy the phrase', error))
-      setTimeout(hideTrayPanel, TRAY_COPIED_MS)
-      return
-    }
-    case 'keepWord': {
-      // As the Kept as typed page adds one (and as Backspace after a fix does): fixed by itself no more.
-      const keepWords = addKept(settings.keepWords, message.word)
-      if (!keepWords) return
-      learned.kept(keptForm(message.word))
-      saveSettings({ keepWords })
-      return
-    }
-    case 'tray':
-      hideTrayPanel()
-      runTrayCommand(message.command)
       return
   }
 }
@@ -3667,9 +3621,9 @@ function putAwayForShot(): boolean {
   return any
 }
 
-/** The screen is copied with the card and the tray panel in it: they would cover the frame, so they go now, a pinned card staying as it always did. */
+/** The screen is copied with the card and the tray menu in it: they would cover the frame, so they go now, a pinned card staying as it always did. */
 function afterShotCopy(): void {
-  hideTrayPanel()
+  tray?.closeContextMenu()
   if (shown && !pinned) hideCard()
 }
 
@@ -3910,7 +3864,7 @@ function keyLabel(hotkey: string): string {
   return hotkeyLabel(hotkey)
 }
 
-/** What the tray's panel shows. */
+/** What the tray's menu shows. */
 function trayView(): TrayView {
   return {
     keys: {
@@ -3940,14 +3894,10 @@ function trayView(): TrayView {
       dictates: !!speech?.installed || remoteDictate(),
       talks: !!speech?.installed || remoteLlm(),
     },
-    translator: activeTranslator().state(langCode(settings.native)).status,
     shots: shotsEditor?.count ?? 0,
     phrases: (dictationLog?.list(TRAY_PHRASES) ?? []).map(e => ({ at: e.at, text: e.text })),
-    native: settings.native,
-    version: app.getVersion(),
-    build: buildText(),
-    dev: !app.isPackaged,
     newVersion: newVersion(),
+    groq: groqKey() && Object.values(settings.remote).some(Boolean) ? (usage?.view(GROQ_MODELS) ?? []) : undefined,
   }
 }
 
@@ -3955,12 +3905,39 @@ function refreshTray(): void {
   if (!tray) return
   tray.setToolTip(tooltip())
   void refreshTrayIcon()
-  sendTrayView()
 }
 
-/** The tray's panel drawn again, the icon left as it is. */
-function sendTrayView(): void {
-  if (trayPanel && trayReady && !trayPanel.isDestroyed()) trayPanel.webContents.send('to-view', { type: 'tray', view: trayView() } satisfies ToView)
+/** The tray's menu, made afresh from the state of now: Windows' own look, light or dark with Kryakl's theme. */
+function showTrayMenu(): void {
+  if (!tray) return
+  const menu = Menu.buildFromTemplate(
+    trayMenuTemplate(trayView(), {
+      command: runTrayCommand,
+      set: patch => saveSettings(patch),
+      copy: copyPhrase,
+      keep: keepAsTyped,
+    }),
+  )
+  tray.popUpContextMenu(menu)
+}
+
+/** A dictated phrase from the tray's menu: onto the clipboard as the person's own copy, as Copy on the Dictated phrases page; "Copied" by the cursor. */
+function copyPhrase(at: string): void {
+  const phrase = dictationLog.list().find(e => e.at === at)
+  if (!phrase) return
+  clipboard
+    .writeText(phrase.text)
+    .then(() => keyboard.say(t('tray.copied'), TRAY_SAY_MS))
+    .catch(error => console.warn('Kryakl: could not copy the phrase', error))
+}
+
+/** The last word fixed by itself, kept as typed from the tray's menu, as the Kept as typed page adds one: fixed by itself no more. */
+function keepAsTyped(word: string): void {
+  const keepWords = addKept(settings.keepWords, word)
+  if (!keepWords) return
+  learned.kept(keptForm(word))
+  saveSettings({ keepWords })
+  keyboard.say(t('tray.kept', { word: keptForm(word) }), TRAY_SAY_MS)
 }
 
 /** Something records now: dictation listening (any of its keys), the microphone on the Transcribe page, or a meeting through the Chrome extension. */
@@ -3995,7 +3972,7 @@ async function refreshTrayIcon(): Promise<void> {
 }
 
 /**
- * Runs in the tray panel's page: a layout's short name ("en") on a keycap in
+ * Runs in the card's page: a layout's short name ("en") on a keycap in
  * the tray duck's colours (scripts/icons.mjs), `size` pixels, as a PNG data
  * URL: the cap in the taskbar's ink, its lower edge in the duck's colour, the
  * letters (underlined with Caps Lock on) cut out of it, so the taskbar shows
@@ -4032,11 +4009,12 @@ async function layoutIcon(short: string, caps: boolean, dark: boolean): Promise<
   const key = `${short}${caps ? '^' : ''}${dark ? ':dark' : ':light'}`
   const known = layoutIcons.get(key)
   if (known) return known
-  if (!trayPanel || !trayReady || trayPanel.isDestroyed()) return undefined
+  // Drawn in the card's page, which lives as long as Kryakl (hidden between uses) and has the mono font.
+  if (!card || !cardReady || card.isDestroyed()) return undefined
   const [ink, duck] = TASKBAR_COLOURS[dark ? 'dark' : 'light']
   try {
     const draw = (size: number) =>
-      trayPanel?.webContents.executeJavaScript(`(${drawLayoutCap.toString()})(${size}, ${JSON.stringify(short)}, ${caps}, ${JSON.stringify(ink)}, ${JSON.stringify(duck)})`) as Promise<string>
+      card?.webContents.executeJavaScript(`(${drawLayoutCap.toString()})(${size}, ${JSON.stringify(short)}, ${caps}, ${JSON.stringify(ink)}, ${JSON.stringify(duck)})`) as Promise<string>
     const icon = nativeImage.createEmpty()
     icon.addRepresentation({ scaleFactor: 1, dataURL: await draw(16) })
     icon.addRepresentation({ scaleFactor: 2, dataURL: await draw(32) })
@@ -4073,84 +4051,10 @@ function trayIcon(picture: TrayPicture): Electron.NativeImage {
 
 function createTray(): Tray {
   const t = new Tray(trayIcon(`${darkTaskbar() ? 'dark' : 'light'}${settings.paused ? '-paused' : ''}`))
-  // Either button opens Kryakl's own panel: Windows' menu cannot take Kryakl's look.
-  t.on('click', () => toggleTrayPanel())
-  t.on('right-click', () => toggleTrayPanel())
+  // As most of Windows' programs: the left button opens the window, the right one the menu (2026-11-24, the owner's pick).
+  t.on('click', () => openApp())
+  t.on('right-click', () => showTrayMenu())
   return t
-}
-
-/** The tray's panel: a window of Kryakl's own by the tray icon, made once and hidden between uses. */
-function createTrayPanel(): BrowserWindow {
-  const win = new BrowserWindow({
-    width: TRAY_WIDTH,
-    height: trayHeight,
-    show: false,
-    frame: false,
-    resizable: false,
-    movable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    title: t('app.name'),
-    backgroundColor: appColor(),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-      spellcheck: false,
-    },
-  })
-  frameWindow(win, { corner: 'round', border: borderColor() })
-  calmWhenHidden(win)
-  win.setAlwaysOnTop(true, 'pop-up-menu')
-  win.removeMenu()
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  win.webContents.on('will-navigate', event => event.preventDefault())
-  logPageErrors(win, 'tray panel')
-  if (!app.isPackaged) win.webContents.on('console-message', m => m.level !== 'error' && console.warn(`Kryakl tray panel: ${m.message} (${m.sourceId}:${m.lineNumber})`))
-  // A click anywhere else puts it away, as a menu goes.
-  win.on('blur', () => {
-    if (Date.now() - trayShownAt > 200) hideTrayPanel()
-  })
-  win.on('closed', () => {
-    trayPanel = undefined
-    trayReady = false
-  })
-  void win.loadFile(path.join(app.getAppPath(), 'media', 'tray.html'), pageOptions())
-  return win
-}
-
-function toggleTrayPanel(): void {
-  if (trayPanel?.isVisible()) return hideTrayPanel()
-  // The click on the icon took the focus from the open panel, which hid: that click only closes it.
-  if (Date.now() - trayHiddenAt < TRAY_REOPEN_MS) return
-  showTrayPanel()
-}
-
-function showTrayPanel(): void {
-  if (!trayPanel || trayPanel.isDestroyed()) trayPanel = createTrayPanel()
-  refreshTray()
-  placeTrayPanel()
-  trayShownAt = Date.now()
-  trayPanel.show()
-  trayPanel.focus()
-  if (trayReady) trayPanel.webContents.send('to-view', { type: 'trayShown' } satisfies ToView)
-}
-
-/** By the tray icon, as tall as its content. */
-function placeTrayPanel(): void {
-  if (!tray || !trayPanel || trayPanel.isDestroyed()) return
-  const icon = tray.getBounds()
-  trayPanel.setBounds(placeByTray(icon, { width: TRAY_WIDTH, height: trayHeight }, screen.getDisplayMatching(icon).workArea))
-}
-
-function hideTrayPanel(): void {
-  if (!trayPanel || trayPanel.isDestroyed() || !trayPanel.isVisible()) return
-  trayHiddenAt = Date.now()
-  trayPanel.hide()
 }
 
 /** An empty translator or checker by the pointer, to type into (the tray's rows, their keys); nothing to paste back into. */
@@ -4193,7 +4097,7 @@ function runTrayCommand(command: TrayCommand): void {
       setTimeout(() => snip('translate'), SHOT_AFTER_MS)
       return
     case 'note':
-      // A note, not typing: the panel took the focus, so there is no cursor to type at.
+      // A note, not typing: the menu took the focus, so there is no cursor to type at.
       dictation.press('note', settings.noteKey)
       return
     case 'transcripts':
@@ -4216,6 +4120,9 @@ function runTrayCommand(command: TrayCommand): void {
       return
     case 'newVersion':
       void shell.openExternal(DOWNLOAD_PAGE)
+      return
+    case 'groq':
+      openApp('groq')
       return
     case 'open':
       openApp()
@@ -4395,10 +4302,7 @@ function setUpSpeechEngine(): void {
       refreshTray()
     },
     log: dictationLog,
-    logged: () => {
-      postApp()
-      sendTrayView()
-    },
+    logged: () => postApp(),
     panel: () => settings.dictationPanel,
     trayPoint,
     offset: () => settings.dictationBadge,
@@ -4567,8 +4471,6 @@ function start(): void {
   tray = createTray()
   tray.on('balloon-click', () => balloonClick?.())
   setUpSpeechEngine()
-  // Made now, so the first click on the tray icon opens it at once.
-  trayPanel = createTrayPanel()
   refreshTray()
   registerShortcuts()
   keyboard = new KeyboardHelper(unpacked('dist', 'kbd-worker.js'), path.join(app.getAppPath(), 'media', 'layout'), unpacked('media'), {
@@ -4579,7 +4481,6 @@ function start(): void {
     // The tray's "Keep a word as typed…" offers the last one (only from a field not known to be a password).
     autoFixed: (word, fixed) => {
       lastAutoFix = { word, fixed }
-      sendTrayView()
     },
     // A word fixed by hand twice is fixed by itself from then on, and kept as typed no more.
     // kryakl.log says each step, never the word.

@@ -164,6 +164,7 @@ export type AppTab =
   | 'settings'
   | 'models'
   | 'checkModel'
+  | 'groq'
   | 'storage'
   | 'about'
   | 'report'
@@ -360,7 +361,7 @@ export type StorageView = { measuring: boolean; root: string; drive: string; fre
 export type Refused = { id: StorageId; item?: string; why: string }
 export type OldFolder = { dir: string; why?: string; moving: boolean }
 
-/** What the tray's panel shows, sent whole whenever any of it changes. */
+/** What the tray's menu shows (traymenu.ts), made afresh each time it opens. */
 export type TrayView = {
   /** The keys of its commands, hotkey.ts notation ("Control+C*2" for Ctrl+C twice); empty when there is none. */
   keys: { shot: string; video: string; listenCopied: string; typeToTranslate: string; checkEnglish: string; talk: string; snipListen: string; snipTranslate: string; switch: string }
@@ -378,22 +379,18 @@ export type TrayView = {
    * `talks`: the talk window answers, by the engine here or by Groq's model (typed only then).
    */
   speech: { installed: boolean; recording: boolean; noteKey: string; dictates: boolean; talks: boolean }
-  /** The translator between English and the person's language (as `AppView.translator`). */
-  translator: AppView['translator']
   /** How many screenshots the Screenshots window holds: its row shows while there are any. */
   shots: number
   /** The last dictated phrases, newest first (3 at most): a click copies one. */
   phrases: { at: string; text: string }[]
-  native: string
-  version: string
-  build: string
-  dev: boolean
-  /** A newer release than this copy (as `AppView.newVersion`): a mark beside the version, a click opens its page. */
+  /** A newer release than this copy (as `AppView.newVersion`): an item that opens its page. */
   newVersion: string
+  /** Groq's use of the day per model, while any part goes to Groq with a key saved; else none. */
+  groq?: UsageView[]
 }
 
-/** What the tray's panel can do; each puts the panel away first. */
-export type TrayCommand = 'newVersion' | 'shot' | 'shots' | 'video' | 'listenCopied' | 'translateCopied' | 'typeToTranslate' | 'checkEnglish' | 'talk' | 'listenScreen' | 'translateScreen' | 'note' | 'transcripts' | 'vocabulary' | 'kept' | 'phrases' | 'settings' | 'report' | 'open' | 'quit'
+/** What the tray's menu can do. */
+export type TrayCommand = 'newVersion' | 'shot' | 'shots' | 'video' | 'listenCopied' | 'translateCopied' | 'typeToTranslate' | 'checkEnglish' | 'talk' | 'listenScreen' | 'translateScreen' | 'note' | 'transcripts' | 'vocabulary' | 'kept' | 'phrases' | 'settings' | 'report' | 'groq' | 'open' | 'quit'
 
 /**
  * Why a word has no meanings: no dictionary exists for the person's language,
@@ -427,8 +424,6 @@ export type ToView =
   | { type: 'appWindow'; maximized: boolean }
   /** A key went down or up while a key field waits for one (`recordKeys`), read by the keyboard thread's hook: KeyboardEvent.code ('' for a key no hotkey names), at (ms since 1970). */
   | { type: 'keyEvent'; code: string; down: boolean; at: number }
-  /** The tray's panel's whole state. */
-  | { type: 'tray'; view: TrayView }
   /** Show this transcript in the app window (a finished note's balloon, the extension). */
   | { type: 'openTranscript'; id: string }
   /** A report was made at `file` for the person to attach, or could not be. */
@@ -454,8 +449,6 @@ export type ToView =
   | { type: 'dictationError'; message: string }
   /** The phrase is over and the badge is out of sight: its page keeps nothing on it (a spinner left there would turn for good). */
   | { type: 'dictationRest' }
-  /** The tray's panel was just shown: focus its first command. */
-  | { type: 'trayShown' }
   /** Kryakl's menu on one key: what it draws now. */
   | { type: 'menu'; view: MenuView }
   /** A screenshot: this monitor as it was at the press, in its physical pixels (`rgba`, handed over to the page), how wide the window is in CSS pixels, and the windows on it, the top one first; `video`: opened to record; `quick`: only for the text in a frame. */
@@ -625,17 +618,6 @@ export type ToHost =
   | { type: 'recordChunk'; seq: number; extension: 'mp4' | 'webm'; data: ArrayBuffer }
   | { type: 'recordEnded'; seconds: number; trouble?: string }
   | { type: 'recordAct'; action: RecordAction }
-  // The tray's panel.
-  | { type: 'trayReady' }
-  /** The panel's content is this tall, in CSS pixels; the window follows. */
-  | { type: 'trayHeight'; px: number }
-  | { type: 'tray'; command: TrayCommand }
-  /** The tray's "Keep a word as typed…" field: add it to Kept as typed (the panel stays). */
-  | { type: 'keepWord'; word: string }
-  /** A dictated phrase in the tray clicked: onto the clipboard as the person's own copy, then the panel goes. */
-  | { type: 'trayCopy'; at: string }
-  /** Esc, or a click outside it. */
-  | { type: 'trayClose' }
   // The speech engine; `models` are downloaded once the service runs (the setup's picks).
   | { type: 'installSpeech'; parts: SpeechPart[]; models?: string[] }
   /** The first-run setup: the translator for the person's language and its word dictionary, downloaded ahead of use. */

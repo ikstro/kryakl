@@ -87,8 +87,6 @@ const card = {
 /** The app window: the notebook, the settings and how to use. */
 const appWindow = { ...card, entryPoints: ['src/webview/app.ts'], outfile: 'media/app.js' }
 
-/** The tray's panel, in place of Windows' menu. */
-const trayPanel = { ...card, entryPoints: ['src/webview/tray.ts'], outfile: 'media/tray.js' }
 /** Dictate's badge by the pointer. */
 const dictation = { ...card, entryPoints: ['src/webview/dictation.ts'], outfile: 'media/dictation.js' }
 /** Kryakl's menu on one key, by the text cursor. */
@@ -104,7 +102,7 @@ const recordPage = { ...card, entryPoints: ['src/webview/record.ts'], outfile: '
 /** The badge's audio thread: the microphone as 16 kHz samples for the engine (an AudioWorklet, loaded by URL). */
 const pcmWorklet = { ...card, entryPoints: ['src/webview/pcm-worklet.ts'], outfile: 'media/pcm-worklet.js' }
 
-const all = [main, preload, voice, translator, keyboard, field, shotWorker, elementsWorker, card, appWindow, trayPanel, dictation, menuWindow, talkWindow, shotPage, shotsPage, recordPage, pcmWorklet]
+const all = [main, preload, voice, translator, keyboard, field, shotWorker, elementsWorker, card, appWindow, dictation, menuWindow, talkWindow, shotPage, shotsPage, recordPage, pcmWorklet]
 if (watch) {
   const contexts = await Promise.all(all.map(o => context(o)))
   await Promise.all(contexts.map(c => c.watch()))

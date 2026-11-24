@@ -3,9 +3,9 @@
 // spoke when, the one place it serves. Each key is entered in one place. A key typed here goes to
 // main at once and the field is emptied; the page only ever learns its last four letters back.
 
-import { numberText, t } from '../i18n'
+import { t } from '../i18n'
 import type { AppView, Settings } from '../protocol'
-import { GROQ_FREE, isSpeechModel } from '../remote/plan'
+import { usageLines } from '../remote/usagetext'
 import { el } from './dom'
 import { hfKeyRows } from './speech'
 import { aside, btn, card, grp, link, linkBtn, post, row, toggleCard, warn } from './ui'
@@ -16,35 +16,11 @@ const GROQ_PRIVACY = 'https://groq.com/privacy-policy'
 /** "Replace" was tapped: the field comes back over a saved key. */
 let replacing = false
 
-/** What each model of Groq's does in Kryakl, as the usage lines name it. */
-const MODEL_JOB: Record<string, () => string> = {
-  'whisper-large-v3': () => t('apikeys.useDictation'),
-  'whisper-large-v3-turbo': () => t('apikeys.useRecordings'),
-  'openai/gpt-oss-120b': () => t('apikeys.useTexts'),
-  'qwen/qwen3.8-27b': () => t('apikeys.useTalk'),
-  'openai/gpt-oss-20b': () => t('apikeys.useEdit'),
-}
-
-/** 2 h 5 min, 12 min. */
-function duration(seconds: number): string {
-  const m = Math.round(seconds / 60)
-  return m >= 60 ? t('apikeys.hours', { h: Math.floor(m / 60), m: m % 60 }) : t('apikeys.minutes', { m })
-}
-
 /** The free day spent, per model used today: requests, and the sound or the words. */
 function usageRows(v: AppView): HTMLElement[] {
-  const used = v.keys.usage.filter(u => u.day.requests > 0)
-  if (!used.length) return [row(t('apikeys.usageNone'), [t('apikeys.usageNoneNote')], null)]
-  return used.map(u => {
-    const speech = isSpeechModel(u.model)
-    const plan = speech ? GROQ_FREE.speech : GROQ_FREE.chat
-    const requests = t('apikeys.requests', { n: numberText(u.day.requests), of: numberText(u.limit ?? plan.perDay) })
-    const amount = speech
-      ? t('apikeys.sound', { used: duration(u.day.seconds), of: duration(GROQ_FREE.speech.secondsPerDay) })
-      : t('apikeys.tokens', { used: numberText(Math.round(u.day.tokens / 1000)), of: numberText(GROQ_FREE.chat.tokensPerDay / 1000) })
-    const left = u.left !== undefined ? [t('apikeys.groqLeft', { n: numberText(u.left) })] : []
-    return row(MODEL_JOB[u.model]?.() ?? u.model, [`${requests} · ${amount}`, ...left], null)
-  })
+  const lines = usageLines(v.keys.usage)
+  if (!lines.length) return [row(t('apikeys.usageNone'), [t('apikeys.usageNoneNote')], null)]
+  return lines.map(u => row(u.job, [u.line, ...(u.left ? [u.left] : [])], null))
 }
 
 /** The key's line: saved (its last four letters and how its check went), or the field to paste one into. */
