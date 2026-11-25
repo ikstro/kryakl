@@ -6,7 +6,7 @@ export default {
   langLabel: 'Мова',
   html: [
     // Head
-    [`content="Kryakl fixes the keyboard layout, translates, reads English aloud, checks your English, types what you say and talks with you in English, on AI models that run on your own Windows computer: no cloud, no subscription."`, `content="Крякл виправляє розкладку, перекладає, читає англійську вголос, перевіряє вашу англійську, друкує те, що ви кажете, і розмовляє з вами англійською. На нейромережах, що працюють на вашому комп’ютері з Windows: без хмари й без підписки."`],
+    [`content="Kryakl fixes the keyboard layout, translates, reads English aloud, checks your English, types what you say and talks with you in English, on AI models on your own Windows computer, or on the cloud Groq by your own key: no subscription."`, `content="Крякл виправляє розкладку, перекладає, читає англійську вголос, перевіряє вашу англійську, друкує те, що ви кажете, і розмовляє з вами англійською. На нейромережах на вашому комп’ютері з Windows або в хмарному Groq за вашим ключем: без підписки."`],
     // Screenshots and screen recording
     [`</span>Screenshots and screen recording</div>`, `</span>Скриншоти й запис екрана</div>`],
     [`<h2 id="sh-h">Print Screen. Draw. Ctrl+C.</h2>`, `<h2 id="sh-h">Print Screen. Намалюйте. Ctrl+C.</h2>`],
@@ -45,7 +45,7 @@ export default {
     [`</svg>Source on GitHub</a>`, `</svg>Код на GitHub</a>`],
     [`</svg>Gemma 4, Whisper and Parakeet on your graphics card or processor</li>`, `</svg>Gemma 4, Whisper і Parakeet на вашій відеокарті або процесорі</li>`],
     [`</svg>No subscription, no pay per word, no account</li>`, `</svg>Без підписки, без оплати за слова, без акаунта</li>`],
-    [`</svg>No cloud of ours: your texts, voice and talks stay on your computer unless you send them to Groq yourself</li>`, `</svg>Своєї хмари немає: тексти, голос і розмови лишаються на комп’ютері, якщо ви самі не надішлете їх у Groq</li>`],
+    [`</svg>Your texts, voice and talks stay on your computer until you connect the cloud Groq yourself</li>`, `</svg>Тексти, голос і розмови лишаються на комп’ютері, поки ви самі не підключите хмарний Groq</li>`],
     [`</svg>Open source, MIT</li>`, `</svg>Відкритий код, MIT</li>`],
     [`</svg><span>All of Kryakl on this computer wants a graphics card with 4 GB of its own memory; with your own Groq key, any PC will do. <a href="#where">Here or by key</a></span></li>`, `</svg><span>Для всього Крякла на цьому комп’ютері потрібна відеокарта з 4 ГБ власної пам’яті; з вашим ключем Groq підійде будь-який. <a href="#where">У себе чи за ключем</a></span></li>`],
     // The stage
@@ -155,7 +155,7 @@ export default {
     [`<li><b>Names and terms.</b> They come out written your way, in dictation and in transcripts.</li>`, `<li><b>Імена й терміни.</b> Пишуться так, як вам треба, і в диктуванні, і в транскрипціях.</li>`],
     // Privacy
     [`<h2 id="pv-h">Nothing you read leaves your computer.</h2>`, `<h2 id="pv-h">Ніщо з прочитаного не покидає ваш комп’ютер.</h2>`],
-    [`<p class="sec-lead">Kryakl has no account, no cloud of its own and no telemetry. The models download once and then work offline; only what you send to Groq yourself leaves the computer.</p>`, `<p class="sec-lead">У Крякла немає акаунта, власної хмари й телеметрії. Моделі завантажуються один раз і далі працюють без інтернету; з комп’ютера йде тільки те, що ви самі надсилаєте в Groq.</p>`],
+    [`<p class="sec-lead">Kryakl has no account, no servers and no telemetry. The models download once and then work offline; until you connect the cloud Groq yourself, your texts and voice never leave the computer.</p>`, `<p class="sec-lead">У Крякла немає акаунта, власних серверів і телеметрії. Моделі завантажуються один раз і далі працюють без інтернету; поки ви самі не підключите хмарний Groq, ваші тексти й голос не залишають комп’ютер.</p>`],
     [`<h3>The code</h3>`, `<h3>Код</h3>`],
     [`</svg>Open source</span>`, `</svg>Відкритий</span>`],
     [`<p>MIT license. Every line is on GitHub, so you can check what Kryakl reads, keeps and sends. <a href="https://github.com/ikstro/kryakl">Read the code</a></p>`, `<p>Ліцензія MIT. Кожен рядок — на GitHub, тож можна перевірити, що Крякл читає, зберігає й надсилає. <a href="https://github.com/ikstro/kryakl">Читати код</a></p>`],
