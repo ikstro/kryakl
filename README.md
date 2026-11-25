@@ -47,7 +47,7 @@ The first translation downloads the translator for your language (about 85 MB fo
 | **RU** (your language's code) | hide or show the translation |
 | pin | keep the card open when another window is clicked |
 
-The tray icon opens a panel: the actions, the layout's quick settings and your words. **Open** opens the window: Home with Kryakl's state and your keys, then Translate, English, Voice typing, Recordings and meetings, Keyboard layout, Settings, Models, Disk space and About. One key can also open Kryakl's menu by the cursor, where a letter picks the action (Settings › Keys).
+A click on the tray icon opens the window, a right click Windows' own menu: the actions, then Keyboard layout (its switches), Your words, Dictated phrases and, while anything goes to Groq, the day's use of Groq. The window has Home with Kryakl's state and your keys, then Translate, English, Voice typing, Recordings and meetings, Keyboard layout, Settings, Models, Disk space and About. One key can also open Kryakl's menu by the cursor, where a letter picks the action (Settings › Keys).
 
 From a launcher or a mouse button: `Kryakl.exe --clipboard` listens to the copied text and `--translate` translates it; `--snip` snips to listen, `--text` to translate.
 
@@ -55,7 +55,7 @@ The keyboard helper looks only at the keys of what you are typing, since your la
 
 ## Report a problem
 
-Press **Report** at the bottom of the tray menu (or open Kryakl › Report a problem), write what happened, then pick **Email** or **GitHub issue**. Kryakl saves `Kryakl report <date>.zip` in `Documents\Kryakl\Reports`, shows it in File Explorer and opens the message with your text in it: attach the zip and send it. Kryakl sends nothing by itself.
+Right-click the tray icon and pick **Report a problem…** (or open Kryakl › Report a problem), write what happened, then pick **Email** or **GitHub issue**. Kryakl saves `Kryakl report <date>.zip` in `Documents\Kryakl\Reports`, shows it in File Explorer and opens the message with your text in it: attach the zip and send it. Kryakl sends nothing by itself.
 
 The zip holds Kryakl's logs (Kryakl's own, the speech engine's, the translation model's), the processor, memory, graphics card and versions, and your settings with your own lists only counted. It never holds your texts, words, mistakes, translations, dictated phrases, transcripts, your Groq key or your Hugging Face key; your Windows name and the computer's name are replaced. Open it before sending if you like: it is plain text.
 
@@ -70,7 +70,7 @@ You choose where the models run: on this computer (up to 12 GB to download, quic
 - **Accurate translation, Check my English, Talk and text editing** by Groq's language models. Fast translation, the voice and notes stay on your computer;
 - **Text from screenshots** by Groq's vision model, a switch of its own, as a screenshot may show anything: it reads dark code and small or Ukrainian text far better than Windows (2 words wrong in a hundred against 30). Without a connection Windows reads it.
 
-Getting a key: open [console.groq.com/keys](https://console.groq.com/keys), sign in (no card is asked for), press **Create API Key**, name it **Kryakl**, copy it and paste it into Kryakl. Groq has a free plan, and it is enough for a working day: 8 hours of speech a day on each speech model, and a thousand requests a day on each language model; Models › Groq shows the day's use. While no card is linked to your Groq account, nothing is charged: past the limit Groq only pauses until it lifts, and Kryakl uses this computer's models meanwhile. If you move to a paid Groq plan, Groq bills what you use.
+Getting a key: open [console.groq.com/keys](https://console.groq.com/keys), sign in (no card is asked for), press **Create API Key**, name it **Kryakl**, copy it and paste it into Kryakl. Groq has a free plan, and it is enough for a working day: 8 hours of speech a day on each speech model, and a thousand requests a day on each language model; Models › Groq and the tray menu show the day's use. While no card is linked to your Groq account, nothing is charged: past the limit Groq only pauses until it lifts, and Kryakl uses this computer's models meanwhile. If you move to a paid Groq plan, Groq bills what you use.
 
 What leaves your computer: the sound of your phrases and recordings, and the texts you translate, check or say to the duck, only for the actions you turn on. Groq does not train on them and by default does not keep them ([its privacy policy](https://groq.com/privacy-policy)). A cloud icon marks everything Groq did. With no connection, or once the free day is spent, Kryakl uses the model on your computer if it is downloaded, and translation falls back to Fast.
 
