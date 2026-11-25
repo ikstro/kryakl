@@ -13,7 +13,7 @@ So, with the help of Claude and GLM, I put together this thing.
 
 Kryakl (')> — local AI for Windows 10 and 11
 
-A small app (about 12 GB with its models :)))) in the tray, instead of four things: a layout switcher, a translator tab, a grammar checker and a screenshot tool. Everything runs on your computer. No cloud, no subscription, no account.
+A small app (about 12 GB with its models :)))) in the tray, instead of four things: a layout switcher, a translator tab, a grammar checker and a screenshot tool. Everything runs on your computer until you connect the cloud Groq yourself. No subscription, no Kryakl account.
 
 What it does
 
@@ -35,7 +35,7 @@ What it does
 
 Gemma 4, Whisper and Parakeet run on your graphics card or processor. Open source (MIT). Free.
 
-A gaming PC is best. On a laptop with an i7 and a GTX 1660 Ti, everything runs on medium settings. For the most accurate settings, of course, you want a graphics card with 9 GB of memory or more.
+A gaming PC is best. On a laptop with an i7 and a GTX 1660 Ti, everything runs on medium settings. For the most accurate settings, of course, you want a graphics card with 9 GB of memory or more. No such PC? Connect the cloud Groq with your own key, and dictation, translation, Check my English and Talk fly on any laptop. Groq's free plan is enough for a working day.
 
 🎙 Along the way, I tuned dictation. It now makes 6–9% fewer mistakes. I dictated the Ukrainian original of this post and fixed nothing. So it more or less works :)
 

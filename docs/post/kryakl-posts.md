@@ -37,7 +37,7 @@ My old PC under the desk, an i9 with an RTX 2080, was using about 20% of its pow
 
 So I made Kryakl (')>, a local AI duck for Windows 10 and 11. My part was the scenarios and the rules; AI agents, Claude and GLM, wrote the code.
 
-It is a small tray app (about 12 GB with its models :) that replaces four things: a layout switcher, a translator tab, a grammar checker and a screenshot tool. Everything runs on your computer. No cloud, no subscription, no account.
+It is a small tray app (about 12 GB with its models :) that replaces four things: a layout switcher, a translator tab, a grammar checker and a screenshot tool. Everything runs on your computer until you connect the cloud Groq yourself. No subscription, no Kryakl account.
 
 What it does:
 1. Fixes text typed in the wrong keyboard layout.
@@ -51,7 +51,7 @@ What it does:
 
 Gemma 4, Whisper and Parakeet run on your graphics card or processor. Open source (MIT), free.
 
-A gaming PC is best: a laptop with an i7 and a GTX 1660 Ti runs it on medium; the most accurate models want 9 GB of graphics memory.
+A gaming PC is best: a laptop with an i7 and a GTX 1660 Ti runs it on medium; the most accurate models want 9 GB of graphics memory. No such PC? Connect the cloud Groq with your own key, and dictation, translation, Check my English and Talk fly on any laptop. Groq's free plan is enough for a working day.
 
 I also tuned dictation by measurement: it now makes 6–9% fewer mistakes than before. I dictated the original of this post and fixed nothing. So it more or less works :)
 
@@ -73,7 +73,7 @@ So I made Kryakl (')>, a local AI duck for Windows 10 and 11. 🧵
 
 **2/7**
 ```text
-My old PC with an i9 and an RTX 2080 was using about 20% of its power. Now it runs everything. No cloud, no subscription, no account.
+My old PC with an i9 and an RTX 2080 was using about 20% of its power. Now it runs everything, no subscription.
 
 One tray app (about 12 GB with its models) instead of four: a layout switcher, a translator tab, a grammar checker and a screenshot tool.
 ```
@@ -114,7 +114,7 @@ My part: the scenarios and the rules. AI agents (Claude and GLM) wrote the code.
 
 Dictation now makes 6–9% fewer mistakes. I dictated this post's original and fixed nothing.
 
-Best on a gaming PC. A laptop with an i7 and a GTX 1660 Ti runs it on medium.
+Best on a gaming PC; any laptop, with the cloud Groq on your own key.
 
 ikstro.com/kryakl
 ```
